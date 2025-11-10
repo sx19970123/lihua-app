@@ -4,7 +4,6 @@
 /.idea/
 # 依赖目录
 /node_modules/
-/uni_modules/
 # 编译目录
 /unpackage/
 # 依赖文件
