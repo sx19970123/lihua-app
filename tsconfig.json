@@ -23,10 +23,6 @@
 		"sard-uniapp/global"
     ]
   },
-  "include": [
-      "src/**/*",
-      "env.d.ts"
-	],
   "exclude": [
     "node_modules",
     "unpackage",

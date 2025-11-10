@@ -1,19 +1,13 @@
-# 忽略以下文件和目录
-node_modules/
-dist/
-dev/
-.DS_Store/
-
-# 忽略编辑器自动生成的文件
-.idea/
-.vscode/
-.hbuilderx/
- 
-# 忽略UniApp编译生成的小程序相关目录
+# 编译器
+/.hbuilderx/
+/.vscode/
+/.idea/
+# 依赖目录
+/node_modules/
+/uni_modules/
+# 编译目录
 /unpackage/
- 
-# 忽略构建工具自动生成的文件
-/build/
- 
-# 忽略npm安装的包文件
+# 依赖文件
 /package-lock.json
+# Mac OS
+.DS_Store
