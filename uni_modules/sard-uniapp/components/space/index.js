@@ -1,0 +1,1 @@
+export { spaceSizes, } from './common';

@@ -1,0 +1,73 @@
+@use '../style/base' as *;
+
+@include bem(fab) {
+  @include b() {
+    @include universal;
+    position: fixed;
+    right: var(--sar-fab-right);
+    bottom: var(--sar-fab-bottom);
+    z-index: var(--sar-fab-z-index);
+    opacity: 0;
+    touch-action: none;
+  }
+
+  @include e(content) {
+    @include universal;
+    position: absolute;
+  }
+
+  @include m(draggable) {
+    top: 0;
+    left: 0;
+    right: auto;
+    bottom: auto;
+  }
+
+  @include m(zoom-enter-from, zoom-leave-to) {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+
+  @include m(zoom-enter-to, zoom-leave-from) {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  @include m(zoom-enter-active, zoom-leave-active) {
+    transition:
+      transform var(--sar-fab-duration) ease-out,
+      opacity var(--sar-fab-duration) ease-out;
+  }
+
+  @include m(top) {
+    @include e(content) {
+      top: calc(100% + var(--sar-fab-item-gap));
+    }
+  }
+
+  @include m(bottom) {
+    @include e(content) {
+      bottom: calc(100% + var(--sar-fab-item-gap));
+    }
+  }
+
+  @include m(left) {
+    @include e(content) {
+      left: 0;
+    }
+  }
+
+  @include m(right) {
+    @include e(content) {
+      right: 0;
+    }
+  }
+
+  @include m(initialized) {
+    opacity: 1;
+  }
+
+  @include m(animated) {
+    transition: transform var(--sar-fab-duration);
+  }
+}

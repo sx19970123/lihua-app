@@ -1,0 +1,35 @@
+{
+	// 主包
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "首页"
+			}
+		}
+	],
+	// 分包
+	"subpackages": [{
+		"root": "subpackages/profile",
+		"pages": [{
+			"path": "/Profile",
+			"style": {
+				"navigationBarTitleText": "个人中心"
+			}
+		}]
+	}],
+	"globalStyle": {
+		"navigationBarBackgroundColor": "@navBgColor",
+		"navigationBarTextStyle": "@navTxtStyle",
+		"backgroundColor": "@bgColor",
+		"backgroundTextStyle": "@bgTxtStyle",
+		"backgroundColorTop": "@bgColorTop",
+		"backgroundColorBottom": "@bgColorBottom"
+	},
+	"uniIdRouter": {},
+	"easycom": {
+		"custom": {
+		  "^sar-(.*)": "@/uni_modules/sard-uniapp/components/$1/$1.vue"
+		}
+	}
+}

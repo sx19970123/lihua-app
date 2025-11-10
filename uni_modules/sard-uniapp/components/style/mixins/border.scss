@@ -1,0 +1,222 @@
+@mixin border-base {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  touch-action: none;
+  opacity: 1;
+  content: '';
+  @content;
+}
+
+@mixin border-vertical-base {
+  @include border-base {
+    left: 0;
+    right: 0;
+    transform: scaleY(0.5);
+    @content;
+  }
+}
+
+@mixin border-horizontal-base {
+  @include border-base {
+    top: 0;
+    bottom: 0;
+    transform: scaleX(0.5);
+    @content;
+  }
+}
+
+@mixin border-top(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-vertical-base {
+    top: 0;
+    border-top: $width $style $color;
+    transform-origin: top center;
+    @content;
+  }
+}
+
+@mixin border-bottom(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-vertical-base {
+    bottom: 0;
+    border-bottom: $width $style $color;
+    transform-origin: bottom center;
+    @content;
+  }
+}
+
+@mixin border-left(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-horizontal-base {
+    left: 0;
+    border-left: $width $style $color;
+    transform-origin: left center;
+    @content;
+  }
+}
+
+@mixin border-right(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-horizontal-base {
+    right: 0;
+    border-right: $width $style $color;
+    transform-origin: right center;
+    @content;
+  }
+}
+
+@mixin border-cover-base(
+  $width: var(--sar-border-width),
+  $style: var(--sar-border-style)
+) {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  bottom: -50%;
+  left: -50%;
+  z-index: 1;
+  border: $width $style transparent;
+  transform: scale(0.5);
+  transform-origin: center;
+  pointer-events: none;
+  touch-action: none;
+  content: '';
+  @content;
+}
+
+@mixin border-top-right(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-top-color: $color;
+  border-right-color: $color;
+  @content;
+}
+
+@mixin border-bottom-right(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-bottom-color: $color;
+  border-right-color: $color;
+  @content;
+}
+
+@mixin border-top-left(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-top-color: $color;
+  border-left-color: $color;
+  @content;
+}
+
+@mixin border-bottom-left(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-bottom-color: $color;
+  border-left-color: $color;
+  @content;
+}
+
+@mixin border-horizontal(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-left-color: $color;
+  border-right-color: $color;
+  @content;
+}
+
+@mixin border-vertical(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-top-color: $color;
+  border-bottom-color: $color;
+  @content;
+}
+
+@mixin border-lack-top(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-left-color: $color;
+  border-right-color: $color;
+  border-bottom-color: $color;
+  @content;
+}
+
+@mixin border-lack-right(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-top-color: $color;
+  border-bottom-color: $color;
+  border-left-color: $color;
+  @content;
+}
+
+@mixin border-lack-bottom(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-top-color: $color;
+  border-right-color: $color;
+  border-left-color: $color;
+  @content;
+}
+
+@mixin border-lack-left(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-top-color: $color;
+  border-right-color: $color;
+  border-bottom-color: $color;
+  @content;
+}
+
+@mixin border-surround(
+  $color: var(--sar-border-color),
+  $style: var(--sar-border-style),
+  $width: var(--sar-border-width)
+) {
+  @include border-cover-base($width, $style);
+  border-color: $color;
+  @content;
+}

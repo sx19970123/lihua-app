@@ -1,0 +1,8 @@
+@use '../style/base' as *;
+
+@include bem(picker) {
+  @include b() {
+    @include universal;
+    height: var(--sar-picker-height);
+  }
+}
