@@ -1,6 +1,35 @@
+// tsconfig.json
 {
   "compilerOptions": {
+    "target": "esnext",
     "module": "esnext",
-    "target": "esnext"
-  }
+    "strict": true,
+    "jsx": "preserve",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "importHelpers": true,
+    "allowSyntheticDefaultImports": true,
+    "useDefineForClassFields": true,
+    "resolveJsonModule": true,
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "types": [
+		"vite/client",
+		"@dcloudio/types",
+		"sard-uniapp/global"
+    ]
+  },
+  "include": [
+      "src/**/*",
+      "env.d.ts"
+	],
+  "exclude": [
+    "node_modules",
+    "unpackage",
+    "src/**/*.nvue"
+  ]
 }

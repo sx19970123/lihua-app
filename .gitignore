@@ -1,18 +1,19 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+# 忽略以下文件和目录
+node_modules/
+dist/
+dev/
+.DS_Store/
 
-# Other files and folders
-.settings/
-
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
-
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# 忽略编辑器自动生成的文件
+.idea/
+.vscode/
+.hbuilderx/
+ 
+# 忽略UniApp编译生成的小程序相关目录
+/unpackage/
+ 
+# 忽略构建工具自动生成的文件
+/build/
+ 
+# 忽略npm安装的包文件
+/package-lock.json
