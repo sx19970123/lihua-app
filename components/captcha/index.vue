@@ -1,14 +1,13 @@
 <template>
-	<view class="verify-wrap" v-if="verifyShow">
+	<view class="verify-wrap" @touchmove.stop.prevent @touchMove.stop.prevent v-if="verifyShow">
 		<view class="verify-code">
 			<!-- SLIDER  ROTATE  CONCAT 类型 -->
 			<block v-if="captchaProcess.type !== 'WORD_IMAGE_CLICK'">
-				<view class="verify-tip">拖动下方滑块完成拼图</view>
+				<view class="verify-tip">拖动滑块完成拼图</view>
 				<view class="verify-content">
 					<view class="verify-body">
 						<view class="verify-bg">
-							<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix">
-							</image>
+							<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix"></image>
 						</view>
 						<view v-if="captchaProcess.type === 'CONCAT'" id="verify-concat-bg" class="verify-concat-bg" :style="imgStyle">
 						</view>
@@ -22,14 +21,22 @@
 							<text>{{ verifyResult.errorMsg }}</text>
 						</view>
 					</view>
-					<view @touchstart="touchstart" @touchmove="touchmove" @touchend="touchend" v-if="isActive"
-						class="move-area">
+					<view v-if="isActive" class="move-area">
 						<movable-area class="move-block" :animation="true">
 							<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
 							<view class="move-shadow"></view>
-							<movable-view class="block-button" :x="x" :animation="true" direction="horizontal"
-								@change="startMove">
-								<text style="font-size: 50rpx"> → </text>
+							<movable-view 
+								class="block-button" 
+								:x="x" 
+								:animation="true" 
+								direction="horizontal"
+								@change="startMove" 
+								@touchstart="touchstart" 
+								@touchmove="touchmove" 
+								@touchend="touchend" >
+								<text style="font-size: 50rpx"> 
+									<sar-icon name="right" />
+								</text>
 							</movable-view>
 						</movable-area>
 					</view>
@@ -39,7 +46,7 @@
 			<!-- 点选 -->
 			<view v-else class="verify-content">
 				<view class="image-click-tips">
-					<text>请依次点击:</text>
+					<text class="verify-tip">请依次点击:</text>
 					<image :src="captchaProcess.sliderImage" mode="scaleToFill" />
 				</view>
 				<view class="verify-body">
@@ -62,7 +69,7 @@
 					</view>
 				</view>
 			</view>
-
+			</uni-transition>
 			<!-- 刷新，关闭 操作区 -->
 			<view class="verify-opts">
 				<image class="opts-icon" @click="refresh" :src="refreshIcon" mode="aspectFill" />
@@ -77,7 +84,7 @@
 	import { getCaptchaData, check } from "@/api/system/captcha/Captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/CaptchaType"
 	import { toast } from '@/uni_modules/sard-uniapp'
-	
+
 	const emits = defineEmits(['success'])
 	
 	// 图标类型
@@ -511,230 +518,306 @@
 </script>
 
 <style scoped lang="scss">
-	.verify-wrap {
-		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		background-color: rgba(0, 0, 0, 0.5);
+.verify-wrap {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 999;
+	overflow: hidden;
+
+	.verify-code {
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		width: 640rpx;
+		height: 610rpx;
+		background-color: #ffffff;
+		padding: 10rpx 0 20rpx;
 		z-index: 999;
+		box-shadow: 0 0 10rpx rgba(227, 227, 227, 0.7);
+		border-radius: 10px;
 		overflow: hidden;
 
-		.verify-code {
-			position: absolute;
-			left: 50%;
-			top: 50%;
-			transform: translate(-50%, -50%);
-			width: 640rpx;
-			max-height: 740rpx;
+		.verify-tip {
+			font-size: 32rpx;
+			font-weight: bold;
+			color: #686868;
+			padding: 10rpx 10rpx 0 20rpx;
+		}
+
+		.verify-content {
+			width: 100%;
+			padding: 20rpx 20rpx;
 			background-color: #ffffff;
-			padding: 40rpx 0 20rpx;
-			z-index: 999;
-			box-shadow: 0 0 10rpx rgba(227, 227, 227, 0.7);
-			border-radius: 10px;
+			box-sizing: border-box;
 			overflow: hidden;
 
-			.verify-tip {
-				font-size: 32rpx;
-				font-weight: bold;
-				color: #686868;
-				padding: 0 20rpx;
+			.verify-concat-bg {
+				width: 100%;
+				position: absolute;
+				top: 0;
+				left: 0;
 			}
 
-			.verify-content {
+			.image-click-tips {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 20rpx;
+
+				image {
+					width: 336rpx;
+					height: 64rpx;
+				}
+			}
+
+			.image-click-mask {
 				width: 100%;
-				padding: 20rpx 20rpx;
-				background-color: #ffffff;
-				box-sizing: border-box;
+				height: 100%;
+				position: absolute;
+				top: 0;
+				left: 0;
+				z-index: 999;
+
+				.click-item {
+					position: absolute;
+					left: 0;
+					top: 0;
+					z-index: 1000;
+					border-radius: 50px;
+					background-color: #409eff;
+					width: 50rpx;
+					height: 50rpx;
+					text-align: center;
+					line-height: 50rpx;
+					color: #fff;
+					border: 4rpx solid #fff;
+					box-sizing: content-box;
+				}
+			}
+
+			.verify-body {
+				width: 100%;
+				height: 360rpx;
+				border-radius: 6px;
+				position: relative;
 				overflow: hidden;
 
-				.verify-concat-bg {
+				.verify-bg {
 					width: 100%;
+					height: 100%;
 					position: absolute;
-					top: 0;
-					left: 0;
-				}
-
-				.image-click-tips {
-					display: flex;
-					align-items: center;
-					justify-content: space-between;
-					margin-bottom: 40rpx;
 
 					image {
-						width: 420rpx;
-						height: 80rpx;
-					}
-				}
-
-				.image-click-mask {
-					width: 100%;
-					height: 100%;
-					position: absolute;
-					top: 0;
-					left: 0;
-					z-index: 999;
-
-					.click-item {
-						position: absolute;
-						left: 0;
-						top: 0;
-						z-index: 1000;
-						border-radius: 50px;
-						background-color: #409eff;
-						width: 50rpx;
-						height: 50rpx;
-						text-align: center;
-						line-height: 50rpx;
-						color: #fff;
-						border: 4rpx solid #fff;
-						box-sizing: content-box;
-					}
-				}
-
-				.verify-body {
-					width: 100%;
-					height: 360rpx;
-					border-radius: 6px;
-					position: relative;
-					overflow: hidden;
-
-					.verify-bg {
 						width: 100%;
 						height: 100%;
-						position: absolute;
-
-						image {
-							width: 100%;
-							height: 100%;
-						}
-					}
-
-					.verify-slider {
-						height: 100%;
-						position: absolute;
-						left: 0;
-						top: 0;
-
-						image {
-							overflow: hidden;
-							width: 55px;
-							height: 100%;
-							position: relative;
-						}
+						margin-right: 20rpx;
 					}
 				}
 
-				.move-area {
-					overflow: hidden;
-					width: 100%;
-					height: 80rpx;
-					margin-top: 20rpx;
-				}
-
-				.move-block {
-					width: 100%;
+				.verify-slider {
 					height: 100%;
-					background-color: #f0f0f0;
-					border-radius: 100rpx;
-					position: relative;
-					overflow: hidden;
-
-					.move-shadow {
-						height: 100%;
-						width: 4px;
-						background-color: rgba(255, 255, 255, 0.5);
-						position: absolute;
-						top: 0;
-						left: 0;
-						box-shadow: 1px 1px 1px #fff;
-						border-radius: 50%;
-						animation: moveAnimate 2s linear infinite;
-					}
-
-					@keyframes moveAnimate {
-						0% {
-							left: 0;
-							opacity: 0.5;
-						}
-
-						50% {
-							left: 50%;
-							opacity: 1;
-						}
-
-						100% {
-							left: 100%;
-							opacity: 0.5;
-						}
-					}
-
-					.color-change {
-						height: 80rpx;
-						border-radius: 100rpx;
-						background-color: #c6a876;
-						z-index: 2;
-					}
-
-					.block-button {
-						border-radius: 100rpx;
-						background-color: #b48d4d;
-						height: 80rpx;
-						width: 80rpx;
-						margin-top: -10rpx;
-						touch-action: none;
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-						justify-content: center;
-						color: #fff;
-					}
-				}
-
-				.check-status {
 					position: absolute;
 					left: 0;
-					right: 0;
-					bottom: -1px;
-					height: 50rpx;
-					line-height: 50rpx;
-					width: 100%;
-					text-align: center;
-					font-size: 24rpx;
-					color: #fff;
+					top: 0;
 
-					&.check-success {
-						background: #5ac725;
-					}
-
-					&.check-error {
-						background: #f56c6c;
+					image {
+						overflow: hidden;
+						width: 55px;
+						height: 100%;
+						position: relative;
 					}
 				}
 			}
 
-			.verify-opts {
-				display: flex;
-				justify-content: flex-end;
-				align-items: center;
-				margin: 0 20rpx;
+			.move-area {
+				overflow: hidden;
+				width: 100%;
+				height: 80rpx;
+				margin-top: 20rpx;
+			}
 
-				.opts-icon {
-					width: 40rpx;
-					height: 40rpx;
+			.move-block {
+				width: 100%;
+				height: 100%;
+				background-color: #f0f0f0;
+				border-radius: 100rpx;
+				position: relative;
+				overflow: hidden;
 
-					&:nth-last-child(1) {
-						width: 50rpx;
-						height: 50rpx;
+				.move-shadow {
+					height: 100%;
+					width: 4px;
+					background-color: rgba(255, 255, 255, 0.5);
+					position: absolute;
+					top: 0;
+					left: 0;
+					box-shadow: 1px 1px 1px #fff;
+					border-radius: 50%;
+					animation: moveAnimate 2s linear infinite;
+				}
+
+				@keyframes moveAnimate {
+					0% {
+						left: 0;
+						opacity: 0.5;
+					}
+
+					50% {
+						left: 50%;
+						opacity: 1;
+					}
+
+					100% {
+						left: 100%;
+						opacity: 0.5;
 					}
 				}
 
-				.divide {
-					height: 20px;
-					width: 40rpx;
+				.color-change {
+					height: 80rpx;
+					border-radius: 100rpx;
+					background-color: #c6a876;
+					z-index: 2;
+				}
+
+				.block-button {
+					border-radius: 100rpx;
+					background-color: #b48d4d;
+					height: 80rpx;
+					width: 80rpx;
+					margin-top: -10rpx;
+					touch-action: none;
+					display: flex;
+					flex-direction: row;
+					align-items: center;
+					justify-content: center;
+					color: #fff;
+					position: relative;
+					z-index: 10;
+				}
+				&::before {
+					content: '';
+					position: absolute;
+					top: -10rpx;
+					left: -10rpx;
+					right: -10rpx;
+					bottom: -10rpx;
+					background-color: #b48d4d;
+					border-radius: 100rpx;
+					z-index: -1;
+				}
+			}
+			.move-block::after {
+				content: "向右滑动完成验证";
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				color: rgba(0, 0, 0, 0.35);
+				font-size: 14px;
+			}
+			.check-status {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: -1px;
+				height: 50rpx;
+				line-height: 50rpx;
+				width: 100%;
+				text-align: center;
+				font-size: 24rpx;
+				color: #fff;
+
+				&.check-success {
+					background: #5ac725;
+				}
+
+				&.check-error {
+					background: #f56c6c;
+				}
+			}
+		}
+
+		.verify-opts {
+			display: flex;
+			justify-content: flex-end;
+			align-items: center;
+			margin: 0 20rpx;
+			position: absolute;
+			bottom: 20rpx;
+			right: 10rpx;
+			.opts-icon {
+				width: 40rpx;
+				height: 40rpx;
+
+				&:nth-last-child(1) {
+					width: 50rpx;
+					height: 50rpx;
+				}
+			}
+
+			.divide {
+				height: 20px;
+				width: 40rpx;
+			}
+		}
+	}
+}
+/** 暗色模式颜色适配 */
+@media(prefers-color-scheme: dark) {
+	.verify-wrap {
+		.verify-code {
+			background-color: var(--sar-emphasis-bg);
+			box-shadow: var(--sar-shadow-sm);
+			.verify-tip {
+				color: var(--sar-secondary-color);
+			}
+			.verify-content {
+				background-color: var(--sar-emphasis-bg);
+				.move-block {
+					background-color: var(--sar-active-bg);
+					.move-shadow {
+						background-color: rgba(0, 0, 0, 0.1);
+						box-shadow: var(--sar-shadow-sm);
+					}
+					.color-change {
+						background-color: #655843;
+					}
+					
+					.block-button {
+						background-color: #9a7a40;
+						color: var(--sar-secondary-color);
+					}
+					&::before {
+						background-color: #9a7a40;
+					}
+				}
+				.move-block::after {
+					color: rgba(255, 255, 255, 0.35);
+				}
+				.image-click-mask {
+					.click-item {
+						background-color: #2a6fc7;
+						color: var(--sar-secondary-color);
+						border: 4rpx solid var(--sar-secondary-color);
+					}
+				}
+				.check-status {
+					color: var(--sar-secondary-color);
+					&.check-success {
+						background: #306317;
+					}
+					&.check-error {
+						background: #7e2e2f;
+					}
 				}
 			}
 		}
 	}
+}
 </style>
