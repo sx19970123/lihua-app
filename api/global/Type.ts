@@ -5,6 +5,8 @@ export interface ResponseType<T> {
     code: number
     msg: string
     data: T
+	// 验证码特有属性
+	success?: boolean
 }
 
 /**

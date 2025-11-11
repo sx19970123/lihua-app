@@ -27,11 +27,25 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
 	(response: Response) => {
+		const data = response.data as ResponseType<any>
+		// 登录信息失效，调用store中的登录失效逻辑
+		if (data.code === 401) {
+			// todo 等待用户相关store开发完成
+		}
+		// 非法ip访问
+		if (data.code === 407) {
+			// todo 等待系统开发完善
+		}
+		// 服务器处理文件异常，提示异常信息
+		if (data.code === 501) {
+			new ResponseError(data.code, data.msg)
+		}
 		
 		return response
 	},
 	(error) => {
-		return Promise.reject(error)
+		// 请求出现异常
+		return Promise.reject(new ResponseError(500, error.errMsg));
 	}
 )
 

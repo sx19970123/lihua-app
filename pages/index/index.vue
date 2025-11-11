@@ -1,24 +1,24 @@
 <template>
-	<view>
-		<view class="dark-font">
-			暗色模式
-		</view>
+	<view class="dark-font">
 		<sar-button @click="gotoProfile">
-			去分包
+			登录
 		</sar-button>
+		<captcha ref="captchaRef" @success="handleSuccess"/>
 	</view>
 </template>
 
 <script setup lang="ts">
-	import {test} from "@/api/test/test"
-	const gotoProfile = () => {
-		test().then(resp => {
-			console.log(resp);
-		})
-		// uni.navigateTo({
-		// 	url: "/subpackages/profile/Profile"
-		// })
+import {ref} from "vue"
+import Captcha from '@/components/captcha/index.vue'
+const captchaRef = ref<InstanceType<typeof Captcha>>()
+const gotoProfile = () => {
+	if (captchaRef.value) {
+		captchaRef.value.open()
 	}
+}
+const handleSuccess = (id: string) => {
+	console.log("成功", id)
+}
 </script>
 
 <style>

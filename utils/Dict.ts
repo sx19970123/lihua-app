@@ -1,5 +1,5 @@
 import { useDictStore } from "@/stores/dict";
-import {getDictDataOption, getDictDataOptionByCodeList} from "@/api/system/DictData.ts";
+import {getDictDataOption, getDictDataOptionByCodeList} from "@/api/system/dict/DictData.ts";
 import { ref, toRefs} from "vue";
 import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType.ts";
 import {ResponseError, type ResponseType} from "@/api/global/Type.ts";
