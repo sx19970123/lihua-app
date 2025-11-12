@@ -12,7 +12,7 @@
 	"subpackages": [{
 		"root": "subpackages/profile",
 		"pages": [{
-			"path": "/Profile",
+			"path": "Profile",
 			"style": {
 				"navigationBarTitleText": "个人中心"
 			}

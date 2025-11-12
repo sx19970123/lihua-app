@@ -8,8 +8,9 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from "vue"
+import {ref, nextTick} from "vue"
 import Captcha from '@/components/captcha/index.vue'
+
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 const gotoProfile = () => {
 	if (captchaRef.value) {

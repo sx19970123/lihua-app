@@ -19,4 +19,5 @@
 @import '@/uni_modules/sard-uniapp/index.scss';
 /* sard-uniapp组件库暗色模式 */
 @import '@/uni_modules/sard-uniapp/dark.scss';
+
 </style>

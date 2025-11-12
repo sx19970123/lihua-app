@@ -1,89 +1,93 @@
 <template>
 	<view class="verify-wrap" @touchmove.stop.prevent @touchMove.stop.prevent v-if="verifyShow">
 		<view class="verify-code">
-			<!-- SLIDER  ROTATE  CONCAT 类型 -->
-			<block v-if="captchaProcess.type !== 'WORD_IMAGE_CLICK'">
-				<view class="verify-tip">拖动滑块完成拼图</view>
-				<view class="verify-content">
+			<!-- 切换动画 -->
+			<view class="captcha-loading" v-show="captchaLoading">
+			</view>
+			<view :class="captchaTransition">
+				<!-- SLIDER  ROTATE  CONCAT 类型 -->
+				<block v-if="captchaProcess.type !== 'WORD_IMAGE_CLICK'">
+					<view class="verify-tip">拖动滑块完成拼图</view>
+					<view class="verify-content">
+						<view class="verify-body">
+							<view class="verify-bg">
+								<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix"></image>
+							</view>
+							<view v-if="captchaProcess.type === 'CONCAT'" id="verify-concat-bg" class="verify-concat-bg" :style="imgStyle"></view>
+							<view v-else class="verify-slider" :style="imgStyle">
+								<image id="slider-img" :src="captchaProcess.sliderImage" mode="heightFix"></image>
+							</view>
+							<view v-if="verifyResult.isSuccess" class="check-status check-success">
+								<text>{{verifyResult.successMsg}}</text>
+							</view>
+							<view v-if="verifyResult.isError" class="check-status check-error">
+								<text>{{ verifyResult.errorMsg }}</text>
+							</view>
+						</view>
+						<view v-if="isActive" class="move-area">
+							<movable-area class="move-block" :animation="true">
+								<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
+								<view class="move-shadow"></view>
+								<movable-view 
+									class="block-button" 
+									:x="x" 
+									:animation="true" 
+									direction="horizontal"
+									@change="startMove" 
+									@touchstart="touchstart" 
+									@touchmove="touchmove" 
+									@touchend="touchend" >
+									<text style="font-size: 32rpx"> 
+										➜
+									</text>
+								</movable-view>
+							</movable-area>
+						</view>
+					</view>
+				</block>
+				
+				<!-- 点选 -->
+				<view v-else class="verify-content">
+					<view class="image-click-tips">
+						<text class="verify-tip">请依次点击:</text>
+						<image :src="captchaProcess.sliderImage" mode="scaleToFill" />
+					</view>
 					<view class="verify-body">
 						<view class="verify-bg">
-							<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix"></image>
-						</view>
-						<view v-if="captchaProcess.type === 'CONCAT'" id="verify-concat-bg" class="verify-concat-bg" :style="imgStyle">
-						</view>
-						<view v-else class="verify-slider" :style="imgStyle">
-							<image id="slider-img" :src="captchaProcess.sliderImage" mode="heightFix"></image>
+							<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix">
+							</image>
 						</view>
 						<view v-if="verifyResult.isSuccess" class="check-status check-success">
-							<text>验证成功</text>
+							<text>{{verifyResult.successMsg}}</text>
 						</view>
 						<view v-if="verifyResult.isError" class="check-status check-error">
 							<text>{{ verifyResult.errorMsg }}</text>
 						</view>
-					</view>
-					<view v-if="isActive" class="move-area">
-						<movable-area class="move-block" :animation="true">
-							<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
-							<view class="move-shadow"></view>
-							<movable-view 
-								class="block-button" 
-								:x="x" 
-								:animation="true" 
-								direction="horizontal"
-								@change="startMove" 
-								@touchstart="touchstart" 
-								@touchmove="touchmove" 
-								@touchend="touchend" >
-								<text style="font-size: 50rpx"> 
-									<sar-icon name="right" />
-								</text>
-							</movable-view>
-						</movable-area>
-					</view>
-				</view>
-			</block>
-
-			<!-- 点选 -->
-			<view v-else class="verify-content">
-				<view class="image-click-tips">
-					<text class="verify-tip">请依次点击:</text>
-					<image :src="captchaProcess.sliderImage" mode="scaleToFill" />
-				</view>
-				<view class="verify-body">
-					<view class="verify-bg">
-						<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix">
-						</image>
-					</view>
-					<view v-if="verifyResult.isSuccess" class="check-status check-success">
-						<text>验证成功</text>
-					</view>
-					<view v-if="verifyResult.isError" class="check-status check-error">
-						<text>{{ verifyResult.errorMsg }}</text>
-					</view>
-					<!-- 点击蒙层 -->
-					<view id="image-click-mask" class="image-click-mask" @click="recordClickItem">
-						<view v-for="(item, index) in captchaProcess.trackArr" :key="index" class="click-item"
-							:style="{ left: `${item.x - 15}px`, top: `${item.y - 15}px` }">
-							{{ index + 1 }}
+						<!-- 点击蒙层 -->
+						<view id="image-click-mask" class="image-click-mask" @click="recordClickItem">
+							<view v-for="(item, index) in captchaProcess.trackArr" :key="index" class="click-item"
+								:style="{ left: `${item.x - 15}px`, top: `${item.y - 15}px` }">
+								{{ index + 1 }}
+							</view>
 						</view>
 					</view>
 				</view>
 			</view>
 			<!-- 刷新，关闭 操作区 -->
 			<view class="verify-opts">
-				<image class="opts-icon" @click="refresh" :src="refreshIcon" mode="aspectFill" />
+				<image class="opts-icon" @click="refresh(false)" :src="refreshIcon" mode="aspectFill" />
 				<view class="divide"></view>
-				<image class="opts-icon" @click="verifyShow = false" :src="closeIcon" mode="aspectFill" />
+				<image class="opts-icon" @click="close" :src="closeIcon" mode="aspectFill" />
 			</view>
 		</view>
 	</view>
 </template>
 <script setup lang="ts">
-	import { computed, ref, nextTick } from "vue"
+	import { onMounted, computed, ref, nextTick, getCurrentInstance, ComponentInternalInstance } from "vue"
 	import { getCaptchaData, check } from "@/api/system/captcha/Captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/CaptchaType"
 	import { toast } from '@/uni_modules/sard-uniapp'
-
+	// 抛出方法
 	const emits = defineEmits(['success'])
 	
 	// 图标类型
@@ -134,6 +138,8 @@
 		isSuccess: boolean,
 		// 是否失败
 		isError: boolean,
+		// 成功信息
+		successMsg?: string
 		// 错误信息
 		errorMsg?: string
 	}
@@ -155,10 +161,14 @@
 	// x滑动距离
 	const xpos = ref<number>(0)
 	const colorWidth = ref<number>(uni.upx2px(80))
+	// 过度动效
+	const captchaTransition = ref<'slide-in' | 'slide-out' | 'slide-hidden' | ''>('')
+	const captchaLoading = ref<boolean>(false)
 	// 显示滑块
 	const isActive = ref<boolean>(true)
 	// 点击滑块次数
 	const clickCount = ref<number>(0)
+	const instanceScope = ref<ComponentInternalInstance>();
 	// 刷新 关闭图标
 	const refreshIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAJFBMVEVHcEyfn59xcXFgYGBbW1tYWFhYWFhXV1dYWFhXV1dXV1dXV1eOJtjUAAAAC3RSTlMAAgkQMUd0iKbR8IVomssAAABwSURBVHjapdFBDsMgDAXR7ya2MXP/+1ZNvUCwzNsxEkjY+vNRc9Zwk5p50aarBVTc13VHQUohKSGs7wRkIDm42nMCWRFaDECbADjbGT8PvTR/cosAqTMOLWKWCfZvukTuA5GU2+hCzYtWy0vW6+j0BSLdBQYxmJeMAAAAAElFTkSuQmCC"
 	const closeIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAHlBMVEVHcExiYmJeXl5YWFhYWFhZWVlYWFhYWFhXV1dXV1dh3LwmAAAACXRSTlMADRxPbYyl1/NFQhX5AAAAd0lEQVR42m2R0QoDMQgEx+hl3f//4dLmeqXgPIQwIOrKIbe6tZMfKd/o0ZetWhGrZF9f18VN9bHpTh6ynYBcQHA/ZUFawKUFSxcgJ9sFIWstWQHljbyAt5D1+Vq0g2OPI9yjHMvHRuNI4/DzmnMgc3RzyBD/53gBSd8FOjnClmAAAAAASUVORK5CYII="
@@ -168,7 +178,7 @@
 	 */
 	const open = () => {
 		verifyShow.value = true
-		getCaptcha()
+		getCaptcha(true)
 	}
 	
 	/**
@@ -178,7 +188,7 @@
 		verifyShow.value = false
 		nextTick(() => {
 			captchaProcess.value = defaultCaptchaProcess
-			refresh(false)
+			refresh(true)
 		})
 	}
 	
@@ -187,8 +197,16 @@
 	 */
 	const initCaptchaData = () => {
 		// 加载验证码和滑块
-		const getCaptcha = async () => {
+		const getCaptcha = async (isShow: boolean = false) => {
 			try {
+				captchaLoading.value = true
+				// 第一次打开时不展示移除动画
+				if (!isShow) {
+					captchaTransition.value = 'slide-out'
+					await new Promise(r => setTimeout(r, 300))
+				}
+				// 动画执行完成后隐藏，并重置transformX为0，防止影响点选
+				captchaTransition.value = 'slide-hidden'
 				const captchaResp = await getCaptchaData()
 				if (captchaResp.code === 200) {
 					const data = captchaResp.data
@@ -198,35 +216,42 @@
 					captchaProcess.value.sliderImage = data.templateImage
 					// 等待dom更新完成
 					await nextTick()
+					const scope = (instanceScope.value?.proxy as any).$scope
 					// 加载背景
-					await initBackground()
+					await initBackground(scope)
 					// 根据验证码类型加载
 					switch (data.type) {
 						case "ROTATE":
 						case "SLIDER":
-							await initRoateAndSlider()
+							await initRoateAndSlider(scope)
 							break
 						case "CONCAT":
-							await initConcat(data)
+							await initConcat(data, scope)
 							break
 						case "WORD_IMAGE_CLICK":
-							await initWordClick()
+							await initWordClick(scope)
 							break
 					}
 					// 加载验证码运行时需要的参数
 					initProcess()
+					// 加载完成后执行进入动画
+					captchaTransition.value = 'slide-in'
+					await new Promise(r => setTimeout(r, 300))
+					captchaLoading.value = false
 				}
 			} catch(err) {
 				console.error(err);
+				captchaTransition.value = ''
+				captchaLoading.value = false
 			}
 		}
 
 		/**
 		 * 加载背景图
 		 */
-		const initBackground = () => {
+		const initBackground = (scope: any) => {
 			return new Promise<void>((resolve, reject) => {
-				const query = uni.createSelectorQuery().in(this)
+				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#bg")
 					.boundingClientRect((data) => {
@@ -244,9 +269,9 @@
 		/**
 		 * 加载旋转和滑块验证码
 		 */
-		const initRoateAndSlider = () => {
+		const initRoateAndSlider = (scope: any) => {
 			return new Promise<void>((resolve, reject) => {
-				const query = uni.createSelectorQuery().in(this)
+				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#slider-img")
 					.boundingClientRect((data) => {
@@ -264,9 +289,9 @@
 		/**
 		 * 加载拼接验证码
 		 */
-		const initConcat = (captchaData : CaptchaResponseData) => {
+		const initConcat = (captchaData : CaptchaResponseData, scope: any) => {
 			return new Promise<void>((resolve, reject) => {
-				const query = uni.createSelectorQuery().in(this)
+				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#verify-concat-bg")
 					.boundingClientRect((data) => {
@@ -285,9 +310,9 @@
 		/**
 		 * 加载点选验证码
 		 */
-		const initWordClick = () => {
+		const initWordClick = (scope: any) => {
 			return new Promise<void>((resolve, reject) => {
-				const query = uni.createSelectorQuery().in(this)
+				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#image-click-mask")
 					.boundingClientRect((data) => {
@@ -300,7 +325,6 @@
 						}
 					}).exec();
 			})
-		
 		}
 
 		/**
@@ -331,6 +355,7 @@
 			let startY = e.changedTouches[0].pageY
 			captchaProcess.value.startX = startX
 			captchaProcess.value.startY = startY
+			captchaProcess.value.startTime = new Date()
 			
 			const startTime = captchaProcess.value.startTime
 			const trackArr = captchaProcess.value.trackArr
@@ -411,9 +436,11 @@
 			const relativeX = sliderImg.value.left - x
 			const relativeY = sliderImg.value.top - y
 		
-			clickCount.value ++
+			if (clickCount.value === 0) {
+				captchaProcess.value.startTime = new Date()
+			}
 			
-			const startTime = captchaProcess.value.startTime
+			clickCount.value ++
 			
 			if (clickCount.value > 4) {
 			  return;
@@ -425,7 +452,7 @@
 			  x: Math.abs(relativeX),
 			  y: Math.abs(relativeY),
 			  type: "click",
-			  t: new Date().getTime() - startTime.getTime()
+			  t: new Date().getTime() - captchaProcess.value.startTime.getTime()
 			};
 			
 			captchaProcess.value.trackArr.push(track)
@@ -445,25 +472,27 @@
 	/**
 	 * 刷新
 	 */
-	const refresh = (reget: boolean = true) => {
+	const refresh = (isClose: boolean) => {
 		isActive.value = false
-		nextTick(() => isActive.value = true)
 		colorWidth.value = 0
 		x.value = xpos.value
 		nextTick(() => {
 			x.value = 0
 			colorWidth.value = uni.upx2px(80)
+			isActive.value = true
 		})
 		verifyResult.value.isError = false
 		verifyResult.value.isSuccess = false
 		verifyResult.value.errorMsg = undefined
+		verifyResult.value.successMsg = undefined
 		leftDistance.value = 0
 		clickCount.value = 0
 		captchaProcess.value.trackArr = []
-		if (reget) {
+		// 关闭验证码调用方法不获取新验证码
+		// 验证码正在获取中不获取新验证码
+		if (!isClose && !captchaLoading.value) {
 			getCaptcha()
 		}
-		
 	}
 	
 	// 滑动校验
@@ -491,6 +520,7 @@
 			// 校验成功
 			if (resp.code === 200 && resp.success) {
 				verifyResult.value.isSuccess = true
+				verifyResult.value.successMsg = `验证成功，耗时${(stopTime.getTime() - startTime.getTime()) / 1000}秒`
 				setTimeout(() => {
 					close()
 					emits('success', resp.data.id)
@@ -509,13 +539,13 @@
 						verifyResult.value.errorMsg = resp.msg
 				}
 				setTimeout(() => {
-					refresh()
+					refresh(false)
 				}, 750)
 			}
 		} catch(err) {
 			// 异常刷新
 			console.error(err)
-			refresh()
+			refresh(false)
 		}
 	}
 	
@@ -532,6 +562,10 @@
 			default: 
 				return ''
 		}
+	})
+	
+	onMounted(() => {
+		instanceScope.value = getCurrentInstance() || undefined
 	})
 	
 	// 向外部抛出方法
@@ -562,7 +596,75 @@
 		box-shadow: 0 0 10rpx rgba(227, 227, 227, 0.7);
 		border-radius: 10px;
 		overflow: hidden;
+		
+		/* 验证码切换过渡动画 */
+		.captcha-loading {
+		  width: 320rpx;
+		  height: 24rpx;
+		  position: fixed;
+		  border-radius: 16rpx;
+		  top: 50%;
+		  left: 50%;
+		  transform: translate(-50%, -50%);
+		  background: rgba(221, 221, 221, .42);
+		  overflow: hidden;
+		}
+		
+		/* 闪光条用伪元素做 */
+		.captcha-loading::after {
+		  content: '';
+		  position: absolute;
+		  top: 0;
+		  left: -30%;
+		  width: 30%;
+		  height: 100%;
+		  background: linear-gradient(90deg, rgba(247,182,69,0) 0%, rgba(247,182,69,0.6) 50%, rgba(247,182,69,0) 100%);
+		  animation: shine 1s infinite;
+		}
+		
+		@keyframes shine {
+		  0% { left: -30%; }
+		  100% { left: 100%; }
+		}
 
+
+		.slide-in {
+		  animation: slideIn 300ms ease-in-out forwards;
+		}
+		
+		.slide-out {
+		  animation: slideOut 300ms ease-out forwards;
+		}
+		
+		.slide-hidden {
+			visibility: hidden;
+			transform: translateX(0);
+		}
+		
+		@keyframes slideIn {
+		  from {
+		    transform: translateX(-100%);
+		  }
+		  to {
+		    transform: translateX(0);
+		  }
+		}
+		
+		@keyframes slideOut {
+		  from {
+		    transform: translateX(0);
+		  }
+		  to {
+		    transform: translateX(100%);
+		  }
+		}
+
+		
+		.transition {
+			transform: translateX(-100%);
+			transition: transform 300ms ease;
+		}
+		
 		.verify-tip {
 			font-size: 32rpx;
 			font-weight: bold;
@@ -795,6 +897,9 @@
 		.verify-code {
 			background-color: var(--sar-emphasis-bg);
 			box-shadow: var(--sar-shadow-sm);
+			.captcha-loading {
+				background: linear-gradient(#b58d2a 0%, #b58d2a 0%) 0 0 / 0 no-repeat rgba(221, 221, 221, .42);
+			}
 			.verify-tip {
 				color: var(--sar-secondary-color);
 			}
@@ -803,7 +908,7 @@
 				.move-block {
 					background-color: var(--sar-active-bg);
 					.move-shadow {
-						background-color: rgba(0, 0, 0, 0.1);
+						background-color: rgba(0, 0, 0, 0.05);
 						box-shadow: var(--sar-shadow-sm);
 					}
 					.color-change {
