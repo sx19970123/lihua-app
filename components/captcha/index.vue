@@ -69,7 +69,6 @@
 					</view>
 				</view>
 			</view>
-			</uni-transition>
 			<!-- 刷新，关闭 操作区 -->
 			<view class="verify-opts">
 				<image class="opts-icon" @click="refresh" :src="refreshIcon" mode="aspectFill" />
@@ -197,25 +196,25 @@
 					captchaProcess.value.id = data.id
 					captchaProcess.value.backgroundImage = data.backgroundImage
 					captchaProcess.value.sliderImage = data.templateImage
-					nextTick(() => {
-						// 加载背景
-						initBackground()
-						// 根据验证码类型加载
-						switch (data.type) {
-							case "ROTATE":
-							case "SLIDER":
-								initRoateAndSlider()
-								break
-							case "CONCAT":
-								initConcat(data)
-								break
-							case "WORD_IMAGE_CLICK":
-								initWordClick()
-								break
-						}
-						// 加载验证码运行时需要的参数
-						initProcess()
-					})
+					// 等待dom更新完成
+					await nextTick()
+					// 加载背景
+					await initBackground()
+					// 根据验证码类型加载
+					switch (data.type) {
+						case "ROTATE":
+						case "SLIDER":
+							await initRoateAndSlider()
+							break
+						case "CONCAT":
+							await initConcat(data)
+							break
+						case "WORD_IMAGE_CLICK":
+							await initWordClick()
+							break
+					}
+					// 加载验证码运行时需要的参数
+					initProcess()
 				}
 			} catch(err) {
 				console.error(err);
@@ -226,60 +225,82 @@
 		 * 加载背景图
 		 */
 		const initBackground = () => {
-			const query = uni.createSelectorQuery().in(this)
-			query
-				.select("#bg")
-				.boundingClientRect((data) => {
-					if (!Array.isArray(data)) {
-						bgImg.value.width = data.width
-						bgImg.value.height = data.height
-					}
-				}).exec();
+			return new Promise<void>((resolve, reject) => {
+				const query = uni.createSelectorQuery().in(this)
+				query
+					.select("#bg")
+					.boundingClientRect((data) => {
+						if (!Array.isArray(data)) {
+							bgImg.value.width = data.width
+							bgImg.value.height = data.height
+							resolve()
+						} else {
+							reject()
+						}
+					}).exec();
+			})
 		}
 
 		/**
 		 * 加载旋转和滑块验证码
 		 */
 		const initRoateAndSlider = () => {
-			const query = uni.createSelectorQuery().in(this)
-			query
-				.select("#slider-img")
-				.boundingClientRect((data) => {
-					if (!Array.isArray(data)) {
-						sliderImg.value.width = data.width
-						sliderImg.value.height = data.height
-					}
-				}).exec();
+			return new Promise<void>((resolve, reject) => {
+				const query = uni.createSelectorQuery().in(this)
+				query
+					.select("#slider-img")
+					.boundingClientRect((data) => {
+						if (!Array.isArray(data)) {
+							sliderImg.value.width = data.width
+							sliderImg.value.height = data.height
+							resolve()
+						} else {
+							reject()
+						}
+					}).exec();
+			})
 		}
 
 		/**
 		 * 加载拼接验证码
 		 */
 		const initConcat = (captchaData : CaptchaResponseData) => {
-			const query = uni.createSelectorQuery().in(this)
-			query
-				.select("#verify-concat-bg")
-				.boundingClientRect((data) => {
-					if (!Array.isArray(data) && captchaData && captchaData.backgroundImageHeight && captchaData.data?.randomY) {
-						const height = ((captchaData.backgroundImageHeight - captchaData.data.randomY) / captchaData.backgroundImageHeight) * uni.upx2px(captchaData.backgroundImageHeight);
-						sliderImg.value.height = height
-					}
-				}).exec();
+			return new Promise<void>((resolve, reject) => {
+				const query = uni.createSelectorQuery().in(this)
+				query
+					.select("#verify-concat-bg")
+					.boundingClientRect((data) => {
+						if (!Array.isArray(data) && captchaData && captchaData.backgroundImageHeight && captchaData.data?.randomY) {
+							const height = ((captchaData.backgroundImageHeight - captchaData.data.randomY) / captchaData.backgroundImageHeight) * uni.upx2px(captchaData.backgroundImageHeight);
+							sliderImg.value.height = height
+							resolve()
+						} else {
+							reject()
+						}
+					}).exec();
+			})
+			
 		}
 
 		/**
 		 * 加载点选验证码
 		 */
 		const initWordClick = () => {
-			const query = uni.createSelectorQuery().in(this)
-			query
-				.select("#image-click-mask")
-				.boundingClientRect((data) => {
-					if (!Array.isArray(data)) {
-						sliderImg.value.left = data.left
-						sliderImg.value.top = data.top
-					}
-				}).exec();
+			return new Promise<void>((resolve, reject) => {
+				const query = uni.createSelectorQuery().in(this)
+				query
+					.select("#image-click-mask")
+					.boundingClientRect((data) => {
+						if (!Array.isArray(data)) {
+							sliderImg.value.left = data.left
+							sliderImg.value.top = data.top
+							resolve()
+						} else {
+							reject()
+						}
+					}).exec();
+			})
+		
 		}
 
 		/**
