@@ -2,6 +2,15 @@
 	// 主包
 	"pages": [
 		{
+			"path": "pages/login/index",
+			"style": {
+				"navigationStyle": "custom",
+				"app-plus": {
+					"softinputMode": "adjustResize"
+				}
+			}
+		},
+		{
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "首页"
