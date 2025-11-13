@@ -2,9 +2,9 @@
 	<view class="verify-wrap" @touchmove.stop.prevent @touchMove.stop.prevent v-if="verifyShow">
 		<view class="verify-code">
 			<!-- 切换动画 -->
-			<view class="captcha-loading" v-show="captchaLoading">
-			</view>
-			<view :class="captchaTransition">
+			<view class="captcha-loading" v-show="captchaLoading"></view>
+			<view class="loading-error" v-if="!captchaLoading && loadingError">{{loadingError}}</view>
+			<view :class="captchaTransition" v-if="!loadingError">
 				<!-- SLIDER  ROTATE  CONCAT 类型 -->
 				<block v-if="captchaProcess.type !== 'WORD_IMAGE_CLICK'">
 					<view class="verify-tip">拖动滑块完成拼图</view>
@@ -169,6 +169,8 @@
 	// 点击滑块次数
 	const clickCount = ref<number>(0)
 	const instanceScope = ref<ComponentInternalInstance>();
+	// 连接失败
+	const loadingError = ref<string>()
 	// 刷新 关闭图标
 	const refreshIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAJFBMVEVHcEyfn59xcXFgYGBbW1tYWFhYWFhXV1dYWFhXV1dXV1dXV1eOJtjUAAAAC3RSTlMAAgkQMUd0iKbR8IVomssAAABwSURBVHjapdFBDsMgDAXR7ya2MXP/+1ZNvUCwzNsxEkjY+vNRc9Zwk5p50aarBVTc13VHQUohKSGs7wRkIDm42nMCWRFaDECbADjbGT8PvTR/cosAqTMOLWKWCfZvukTuA5GU2+hCzYtWy0vW6+j0BSLdBQYxmJeMAAAAAElFTkSuQmCC"
 	const closeIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAHlBMVEVHcExiYmJeXl5YWFhYWFhZWVlYWFhYWFhXV1dXV1dh3LwmAAAACXRSTlMADRxPbYyl1/NFQhX5AAAAd0lEQVR42m2R0QoDMQgEx+hl3f//4dLmeqXgPIQwIOrKIbe6tZMfKd/o0ZetWhGrZF9f18VN9bHpTh6ynYBcQHA/ZUFawKUFSxcgJ9sFIWstWQHljbyAt5D1+Vq0g2OPI9yjHMvHRuNI4/DzmnMgc3RzyBD/53gBSd8FOjnClmAAAAAASUVORK5CYII="
@@ -201,10 +203,11 @@
 			try {
 				captchaLoading.value = true
 				// 第一次打开时不展示移除动画
-				if (!isShow) {
+				if (!isShow && !loadingError.value) {
 					captchaTransition.value = 'slide-out'
 					await new Promise(r => setTimeout(r, 300))
 				}
+				loadingError.value = undefined
 				// 动画执行完成后隐藏，并重置transformX为0，防止影响点选
 				captchaTransition.value = 'slide-hidden'
 				const captchaResp = await getCaptchaData()
@@ -243,6 +246,7 @@
 				console.error(err);
 				captchaTransition.value = ''
 				captchaLoading.value = false
+				loadingError.value = '验证码加载失败'
 			}
 		}
 
@@ -606,11 +610,11 @@
 		  top: 50%;
 		  left: 50%;
 		  transform: translate(-50%, -50%);
-		  background: rgba(221, 221, 221, .42);
+		  background: #f0f0f0;
 		  overflow: hidden;
 		}
 		
-		/* 闪光条用伪元素做 */
+		/* 闪光条 */
 		.captcha-loading::after {
 		  content: '';
 		  position: absolute;
@@ -627,6 +631,15 @@
 		  100% { left: 100%; }
 		}
 
+		.loading-error {
+			position: absolute;
+			transform: translate(-50%, -50%);
+			color: #f56c6c;
+			top: 50%;
+			left: 50%;
+			font-weight: bold;
+			text-align: center;
+		}
 
 		.slide-in {
 		  animation: slideIn 300ms ease-in-out forwards;
@@ -898,10 +911,16 @@
 			background-color: var(--sar-emphasis-bg);
 			box-shadow: var(--sar-shadow-sm);
 			.captcha-loading {
-				background: linear-gradient(#b58d2a 0%, #b58d2a 0%) 0 0 / 0 no-repeat rgba(221, 221, 221, .42);
+				background-color: var(--sar-active-bg);
+			}
+			.captcha-loading::after {
+			  background: linear-gradient(90deg, rgba(180,130,40,0) 0%, rgba(180,130,40,0.7) 50%, rgba(180,130,40,0) 100%);
 			}
 			.verify-tip {
 				color: var(--sar-secondary-color);
+			}
+			.loading-error {
+				color: #7e2e2f;
 			}
 			.verify-content {
 				background-color: var(--sar-emphasis-bg);
