@@ -2,10 +2,19 @@
 	// 主包
 	"pages": [
 		{
-			"path": "pages/login/index",
+			"path": "pages/login/Login",
 			"style": {
 				"navigationStyle": "custom",
-				"app-plus": {
+				"app": {
+					"softinputMode": "adjustResize"
+				}
+			}
+		},
+		{
+			"path": "pages/login/Register",
+			"style": {
+				"navigationStyle": "custom",
+				"app": {
 					"softinputMode": "adjustResize"
 				}
 			}

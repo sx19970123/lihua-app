@@ -15,3 +15,8 @@ declare module '*.vue' {
   const component: DefineComponent<{}, {}, any>
   export default component
 }
+
+declare module 'uuid'
+
+declare module 'wxmp-rsa';
+
