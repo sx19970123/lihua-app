@@ -10,9 +10,9 @@ export interface LoginType {
 	/**
 	 * 验证码信息
 	 */
-    captchaVerification: string
+    captchaVerification?: string
 	/**
 	 * 请求key
 	 */
-    requestKey: string
+    requestKey?: string
 }

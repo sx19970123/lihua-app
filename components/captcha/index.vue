@@ -86,7 +86,6 @@
 	import { onMounted, computed, ref, nextTick, getCurrentInstance, ComponentInternalInstance } from "vue"
 	import { getCaptchaData, check } from "@/api/system/captcha/Captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/CaptchaType"
-	import { toast } from '@/uni_modules/sard-uniapp'
 	// 抛出方法
 	const emits = defineEmits(['success'])
 	

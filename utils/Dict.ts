@@ -3,7 +3,7 @@ import {getDictDataOption, getDictDataOptionByCodeList} from "@/api/system/dict/
 import { ref, toRefs} from "vue";
 import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType.ts";
 import {ResponseError, type ResponseType} from "@/api/global/Type.ts";
-import {toast} from '@/uni_modules/sard-uniapp';
+import {toast} from '@/utils/Toast'
 
 // 初始化组件中需要的字典数据
 export const initDict = (...dictTypeCodes: string[]) => {
@@ -39,11 +39,11 @@ export const initDict = (...dictTypeCodes: string[]) => {
             }
           })
         } else {
-          toast(resp.msg)
+			toast(resp.msg)
         }
       }).catch(e => {
         if (e instanceof ResponseError) {
-          toast(e.msg)
+		  toast(e.msg)
         } else {
           console.error(e)
         }

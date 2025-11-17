@@ -1,6 +1,14 @@
 {
 	// 主包
 	"pages": [
+		// 首屏页
+		{
+			"path": "pages/splash/index",
+			"style": {
+				"navigationStyle": "custom"
+			}
+		},
+		// 登录页
 		{
 			"path": "pages/login/Login",
 			"style": {
@@ -10,6 +18,7 @@
 				}
 			}
 		},
+		// 注册页
 		{
 			"path": "pages/login/Register",
 			"style": {
@@ -19,6 +28,7 @@
 				}
 			}
 		},
+		// 首页
 		{
 			"path": "pages/index/index",
 			"style": {

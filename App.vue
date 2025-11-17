@@ -1,20 +1,18 @@
-<script>
-	export default {
-		onLaunch: function() {
-			console.log('App Launch')
-		},
-		onShow: function() {
-			console.log('App Show')
-		},
-		onHide: function() {
-			console.log('App Hide')
-		}
-	}
+<script setup lang="ts">
+import {onLaunch, onShow, onHide} from "@dcloudio/uni-app"
+
+onLaunch(() => {
+	console.log("app launch")
+})
+onShow(() => {
+	console.log("app show");
+})
+onHide(() => {
+	console.log("app hide");
+})
 </script>
 
 <style lang="scss">
-	/* 引入自定义图标 */
-
 /* 全局样式 */
 @import "@/uni.scss";
 /* sard-uniapp组件库样式 */

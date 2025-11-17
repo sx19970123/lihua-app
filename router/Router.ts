@@ -1,4 +1,7 @@
 import { Router } from '@/uni_modules/sard-uniapp'
+import { getToken } from '@/utils/Token'
+import { useUserStore } from '@/stores/user'
+
 const router = new Router()
 
 /**
@@ -8,9 +11,18 @@ const router = new Router()
  * 返回Route跳转到指定页面
  */
 router.beforeEach((to, from) => {
-	// todo 检查目标页面是否允许访问
-	console.log("to",to)
-	console.log("form",from)
+	const userStore = useUserStore()
+	if (getToken()) {
+		// 用户信息不存在，获取用户信息
+		if (!userStore.userId) {
+			userStore.initUserInfo()
+		} else {
+			return true
+		}
+	} else {
+		// token 不存在跳转到登录页
+		return '/pages/login/Login'
+	}
 })
 
 export default router
