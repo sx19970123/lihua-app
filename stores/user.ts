@@ -5,12 +5,14 @@ import { SysDept } from "@/api/system/dept/type/SysDept";
 import { SysPost } from "@/api/system/post/type/SysPost";
 import { AvatarType } from "@/api/system/profile/type/AvatarType";
 import {rasEncryptPassword} from "@/utils/Crypto.ts";
-import { login } from "@/api/system/login/Login";
-import { setToken } from "@/utils/Token.ts";
+import { login, logout } from "@/api/system/login/Login";
+import { setToken, removeToken } from "@/utils/Token.ts";
 import { queryAuthInfo } from "@/api/system/auth/Auth";
 import {publicAttachmentDownload} from "@/api/system/attachment/AttachmentStorage.ts";
 import {ResponseError, type ResponseType} from "@/api/global/Type.ts";
-import {toast} from '@/utils/Toast'
+import {toast} from '@/utils/Toast';
+import router from "@/router/Router";
+
 
 export const useUserStore = defineStore('user', {
 	state: () => {
@@ -54,6 +56,9 @@ export const useUserStore = defineStore('user', {
 		}
 	},
 	actions: {
+		/**
+		 * 账号密码登录
+		 */
 		async login(username: string, password: string, captchaVerification?: string) {
 			// 对密码进行加密处理，获取密文和requestKey
 			const {ciphertext, requestKey} = await rasEncryptPassword(password)
@@ -65,7 +70,31 @@ export const useUserStore = defineStore('user', {
 			}
 			return resp
 		},
-		// 初始化用户信息
+		/**
+		 * 退出登录
+		 */
+		async handleLogout() {
+			try {
+				await logout()
+			} catch(err) {
+				console.error(err)
+			} finally {
+				this.authenticationFailure()
+			}
+		},
+		/**
+		 * 认证失效
+		 */
+		authenticationFailure() {
+			removeToken()
+			this.clearUserInfo()
+			router.reLaunch({
+				url: "/pages/login/Login"
+			})
+		},
+		/**
+		 * 初始化用户信息
+		 */
 		initUserInfo(): Promise<ResponseType<AuthInfoType>> {
 			return new Promise((resolve, reject) => {
 				queryAuthInfo().then((resp) => {
@@ -106,7 +135,37 @@ export const useUserStore = defineStore('user', {
 				})
 			})
 		},
-		// 处理头像
+		/**
+		 * 清空用户信息
+		 */
+		clearUserInfo() {
+			const userState = this.$state
+
+			// 用户相关赋值
+			userState.userInfo = {}
+			userState.userId = ''
+			userState.nickname = ''
+			userState.username = ''
+			userState.avatar = this.getDefaultAvatar()
+
+			// 角色权限相关赋值
+			userState.roles = []
+			userState.roleCodes = []
+			userState.permissions = []
+
+			// 部门相关赋值
+			userState.deptTrees = []
+			userState.defaultDept = {}
+			userState.defaultDeptName = ''
+			userState.defaultDeptCode = ''
+
+			// 岗位相关赋值
+			userState.posts = []
+			userState.defaultDeptPosts = []
+		},
+		/**
+		 * 处理头像
+		 */
 		handleAvatar() {
 			const avatar = this.$state.avatar
 			if (avatar.type === 'image') {
@@ -127,7 +186,9 @@ export const useUserStore = defineStore('user', {
 				}
 			}
 		},
-		// 默认头像
+		/**
+		 * 默认头像
+		 */
 		getDefaultAvatar() {
 			return {type: 'text', backgroundColor: 'rgb(191, 191, 191)', value: this.$state.nickname, url: ''}
 		}

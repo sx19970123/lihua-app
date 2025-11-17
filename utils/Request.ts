@@ -1,6 +1,7 @@
 import { Request, RequestConfig, Response} from '@/uni_modules/sard-uniapp'
 import {type ResponseErrorType, ResponseError, type ResponseType} from "@/api/global/Type.ts"
 import {getToken} from '@/utils/Token.ts'
+import {useUserStore} from '@/stores/user'
 
 const service = new Request({
 	baseURL: import.meta.env.VITE_APP_BASE_API,
@@ -30,7 +31,8 @@ service.interceptors.response.use(
 		const data = response.data as ResponseType<any>
 		// 登录信息失效，调用store中的登录失效逻辑
 		if (data.code === 401) {
-			// todo 等待用户相关store开发完成
+			const userStore = useUserStore()
+			userStore.authenticationFailure()
 		}
 		// 非法ip访问
 		if (data.code === 407) {

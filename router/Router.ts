@@ -5,6 +5,15 @@ import { useUserStore } from '@/stores/user'
 const router = new Router()
 
 /**
+ * 无需登录即可访问的路由列表
+ */
+const publicRoutesList = [
+	"/pages/splash/index",
+	"/pages/login/Login",
+	"/pages/login/Register"
+	]
+
+/**
  * 路由守卫
  * 返回true或不返回数据正常跳转
  * 返回false阻止跳转
@@ -12,6 +21,8 @@ const router = new Router()
  */
 router.beforeEach((to, from) => {
 	const userStore = useUserStore()
+	console.log("getToken()=", getToken());
+
 	if (getToken()) {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {
@@ -20,7 +31,12 @@ router.beforeEach((to, from) => {
 			return true
 		}
 	} else {
-		// token 不存在跳转到登录页
+		
+		// 访问的页面是公开页面，可直接访问
+		if (publicRoutesList.includes(to.url)) {
+			return true
+		}
+		// 非公开页面跳转到登录页
 		return '/pages/login/Login'
 	}
 })

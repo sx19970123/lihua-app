@@ -1,25 +1,23 @@
 <template>
 	<view class="dark-font">
-		<sar-button @click="gotoProfile">
-			登录
+		<sar-button @click="handleLogout">
+			退出登录
 		</sar-button>
-		<captcha ref="captchaRef" @success="handleSuccess"/>
 	</view>
 </template>
 
 <script setup lang="ts">
-import {ref, nextTick} from "vue"
-import Captcha from '@/components/captcha/index.vue'
+import {ref, nextTick, onMounted} from "vue"
+import { useUserStore } from "@/stores/user";
+const userStore = useUserStore()
+const handleLogout = () => {
+	userStore.handleLogout()
+}
 
-const captchaRef = ref<InstanceType<typeof Captcha>>()
-const gotoProfile = () => {
-	if (captchaRef.value) {
-		captchaRef.value.open()
-	}
-}
-const handleSuccess = (id: string) => {
-	console.log("成功", id)
-}
+onMounted(() => {
+	console.log("userStore.userInfo", userStore.userInfo);
+})
+
 </script>
 
 <style>

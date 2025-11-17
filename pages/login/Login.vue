@@ -1,23 +1,23 @@
 <template>
-	<view class="login-body">
-		<view class="login-content" :style="{ transform: openKeyboard ? 'translateY(-30%)' : 'translateY(0)' }">
+	<view class="auth-body">
+		<view class="auth-content" :style="{ transform: openKeyboard ? 'translateY(-30%)' : 'translateY(0)' }">
 			<sar-space direction="vertical" justify="center" size="large">
-				<text class="login-title">欢迎登录狸花猫</text>
+				<text class="auth-title">欢迎登录狸花猫</text>
 				<sar-space align="center" size="0rpx">
 					<text class="text-font">没有账号？</text>
 					<sar-button type="pale-text" inline root-class="text-btn" @click="toRegister">
-						快速注册<sar-icon name="right" />
+						快速注册
 					</sar-button>
 				</sar-space>
 
-				<sar-input placeholder="用户名" v-model="loginData.username" root-class="login-item" :class="{ 'show-caret': openKeyboard }"
+				<sar-input placeholder="用户名" v-model="loginData.username" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="user" />
 					</template>
 				</sar-input>
 
-				<sar-input placeholder="密码" v-model="loginData.password" type="password" root-class="login-item" :class="{ 'show-caret': openKeyboard }"
+				<sar-input placeholder="密码" v-model="loginData.password" type="password" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="lock" />
@@ -26,14 +26,14 @@
 
 				<sar-checkbox size="28rpx"><text class="text-font">记住账号</text></sar-checkbox>
 				<sar-button 
-					root-class="login-item login-item-btn" 
+					root-class="auth-item auth-item-btn" 
 					:loading="loginLoading"
 					@click="() => enableCaptcha ? openCaptcha() : handleLogin()">登 录</sar-button>
 			</sar-space>
 		</view>
 
 		<!-- 用户协议，键盘弹起后隐藏 -->
-		<view class="protocol" v-if="!openKeyboard">
+		<view class="auth-protocol" v-if="!openKeyboard">
 			<sar-space align="center" size="0rpx">
 				<sar-checkbox type="circle">我已阅读并同意</sar-checkbox>
 				<sar-button type="pale-text" inline root-class="text-btn">用户协议</sar-button>
@@ -41,6 +41,7 @@
 				<sar-button type="pale-text" inline root-class="text-btn">隐私政策</sar-button>
 			</sar-space>
 		</view>
+		<!-- 验证码 -->
 		<Captcha @success="handleLogin" ref="captchaRef" v-if="enableCaptcha"/>
 	</view>
 </template>
@@ -53,13 +54,16 @@ import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
 import Captcha from '@/components/captcha/index'
 import {toast} from '@/utils/Toast'
+import {onShow, onHide} from "@dcloudio/uni-app"
+
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 
 // 前往注册
 const toRegister = () => {
 	router.navigateTo({
-		url: "/pages/login/Register"
+		url: "/pages/login/Register",
+		animationType: "slide-in-bottom"
 	})
 }
 
@@ -149,7 +153,6 @@ const initCaptcha = () => {
 		if (!checkLoginData()) {
 			return
 		}
-		console.log("进来了")
 		// 打开验证码
 		const ref = captchaRef.value
 		if (ref) {
@@ -176,7 +179,7 @@ const initKeyboardStatus = () => {
 	const handleChangeKeyboardHeight = (data : UniNamespace.OnKeyboardHeightChangeResult) => {
 		openKeyboard.value = data.height > 0
 	}
-	
+		
 	return {
 		openKeyboard,
 		handleChangeKeyboardHeight
@@ -186,71 +189,18 @@ const initKeyboardStatus = () => {
 const {openKeyboard, handleChangeKeyboardHeight} = initKeyboardStatus()
 
 onMounted(() => {
-	uni.onKeyboardHeightChange(handleChangeKeyboardHeight)
 	captcha()
 })
 
-onUnmounted(() => {
+onShow(() => {
+	uni.onKeyboardHeightChange(handleChangeKeyboardHeight)
+})
+
+onHide(() => {
 	uni.offKeyboardHeightChange(handleChangeKeyboardHeight)
 })
 </script>
 
 <style lang="scss">
-page {
-	/* 页面固定不出现滚动条 */
-	position: fixed;
-	overflow: hidden;
-}
-
-.login-body {
-	padding: 48rpx;
-	margin-top: 40%;
-
-	.login-title {
-		font-size: 48rpx;
-		margin-bottom: 32rpx;
-		font-weight: bold;
-		line-height: 40rpx;
-	}
-
-	.login-item {
-		height: 90rpx;
-		border-radius: 24rpx;
-		caret-color: transparent;
-		transition: caret-color 0.3s linear;
-	}
-
-	.login-item.show-caret {
-		caret-color: var(--sar-primary-text);
-	}
-
-	.login-item-btn {
-		margin-top: 64rpx;
-	}
-
-	.protocol {
-		position: fixed;
-		bottom: 64rpx;
-		left: 50%;
-		transform: translateX(-50%);
-		white-space: nowrap;
-		color: var(--sar-tertiary-color);
-	}
-
-	.text-btn {
-		padding: 0 !important;
-	}
-
-	.text-font {
-		font-size: var(--sar-text-base);
-	}
-	
-	/* app 中输入框弹出动画 */
-	/* #ifdef APP-PLUS */
-	.login-content {
-		width: 100%;
-		transition: transform 0.3s ease;
-	}
-	/* #endif */
-}
+@import "@/assets/style/auth.scss";
 </style>
