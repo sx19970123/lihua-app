@@ -22,7 +22,7 @@ export const logout = () => {
 // 是否开启用户注册功能
 export const enableRegister = () => {
     return request<boolean>({
-        url: 'system/enableRegister',
+        url: '/system/enableRegister',
         method: 'GET'
     })
 }
@@ -30,7 +30,7 @@ export const enableRegister = () => {
 // 检查用户名是否可用
 export const checkUserName = (username: string) => {
     return request<boolean>({
-        url: 'system/checkUserName/' + username,
+        url: '/system/checkUserName/' + username,
         method: 'POST'
     })
 }
