@@ -10,7 +10,9 @@ const router = new Router()
 const publicRoutesList = [
 	"/pages/splash/index",
 	"/pages/login/Login",
-	"/pages/login/Register"
+	"/pages/login/Register",
+	"/subpackages/protocol/PrivacyPolicy",
+	"/subpackages/protocol/UserAgreement"
 	]
 
 /**
@@ -21,8 +23,7 @@ const publicRoutesList = [
  */
 router.beforeEach((to, from) => {
 	const userStore = useUserStore()
-	console.log("getToken()=", getToken());
-
+	
 	if (getToken()) {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {

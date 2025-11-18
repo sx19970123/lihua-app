@@ -3,7 +3,7 @@
 		<view class="auth-content" :style="{ transform: openKeyboard ? 'translateY(-30%)' : 'translateY(0)' }">
 			<sar-space direction="vertical" justify="center" size="large">
 				<text class="auth-title">欢迎登录狸花猫</text>
-				<sar-space align="center" size="0rpx">
+				<sar-space align="center" size="0rpx" v-if="isRegistrationEnable">
 					<text class="text-font">没有账号？</text>
 					<sar-button type="pale-text" inline root-class="text-btn" @click="toRegister">
 						快速注册
@@ -24,7 +24,7 @@
 					</template>
 				</sar-input>
 
-				<sar-checkbox size="28rpx"><text class="text-font">记住账号</text></sar-checkbox>
+				<sar-checkbox size="28rpx" v-model:checked="enableRememberMe"><text class="text-font">记住账号</text></sar-checkbox>
 				<sar-button 
 					root-class="auth-item auth-item-btn" 
 					:loading="loginLoading"
@@ -35,10 +35,10 @@
 		<!-- 用户协议，键盘弹起后隐藏 -->
 		<view class="auth-protocol" v-if="!openKeyboard">
 			<sar-space align="center" size="0rpx">
-				<sar-checkbox type="circle">我已阅读并同意</sar-checkbox>
-				<sar-button type="pale-text" inline root-class="text-btn">用户协议</sar-button>
+				<sar-checkbox type="circle" v-model:checked="checkProtocol" @change="cacheProtocol">我已阅读并同意</sar-checkbox>
+				<sar-button type="pale-text" inline root-class="text-btn" @click="toUserAgreement">用户协议</sar-button>
 				与
-				<sar-button type="pale-text" inline root-class="text-btn">隐私政策</sar-button>
+				<sar-button type="pale-text" inline root-class="text-btn" @click="toPrivacyPolicy">隐私政策</sar-button>
 			</sar-space>
 		</view>
 		<!-- 验证码 -->
@@ -47,25 +47,19 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { enable } from '@/api/system/captcha/Captcha'
 import type { LoginType } from '@/api/system/login/type/LoginType'
+import { enableRegister } from '@/api/system/login/Login'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
 import Captcha from '@/components/captcha/index'
 import {toast} from '@/utils/Toast'
-import {onShow, onHide} from "@dcloudio/uni-app"
+import {onShow, onHide} from '@dcloudio/uni-app'
+import {rememberMe, getRememberedInfo} from '@/utils/Token'
 
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
-
-// 前往注册
-const toRegister = () => {
-	router.navigateTo({
-		url: "/pages/login/Register",
-		animationType: "slide-in-bottom"
-	})
-}
 
 /**
  * 初始化登录相关
@@ -90,6 +84,11 @@ const initLogin = () => {
 			return false
 		}
 		
+		if (!checkProtocol.value) {
+			toast("请先阅读并勾选用户协议")
+			return false
+		}
+		
 		return true
 	}
 	
@@ -102,10 +101,13 @@ const initLogin = () => {
 		
 		try {
 			loginLoading.value = true
-			const data = loginData.value as LoginType
-			const resp = await userStore.login(data.username, data.password, captchaId)
+			
+			const {username, password} = loginData.value as LoginType
+			const resp = await userStore.login(username, password, captchaId)
 			// 登录成功
 			if (resp.code === 200) {
+				// 处理记住账号
+				handleRememberMe()
 				// 跳转至首页
 				router.reLaunch({
 					url: "/pages/index/index"
@@ -169,6 +171,95 @@ const initCaptcha = () => {
 
 const {enableCaptcha, captcha, openCaptcha} = initCaptcha()
 
+
+/**
+ * 初始化记住我相关
+ */
+const initRememberMe = () => {
+	// 是否启用记住我
+	const enableRememberMe = ref<boolean>(false)
+	// 获取记住我信息
+	const initRememberMeInfo = () => {
+		const rememberedInfo = getRememberedInfo()
+		if (rememberedInfo) {
+			enableRememberMe.value = true
+			loginData.value = rememberedInfo
+		} else {
+			enableRememberMe.value = false
+		}
+	}
+	// 处理记住我
+	const handleRememberMe = () => {
+		const {username, password} = loginData.value
+		rememberMe(enableRememberMe.value, username, password)
+	}
+	
+	return {
+		enableRememberMe,
+		initRememberMeInfo,
+		handleRememberMe
+	}
+}
+
+const {enableRememberMe, initRememberMeInfo, handleRememberMe} = initRememberMe()
+
+
+/**
+ * 初始化用户协议相关
+ */
+const initProtocol = () => {
+	// 缓存key常量
+	const key = "lihua_protocol"
+	
+	// 检查用户协议
+	const checkProtocol = ref<boolean>(false)
+	
+	// 缓存用户协议勾选状态
+	const cacheProtocol = () => {
+		if (checkProtocol.value) {
+			uni.setStorageSync(key, checkProtocol)
+		} else {
+			uni.removeStorageSync(key)
+		}
+	}
+	
+	// 回显用户协议勾选状态
+	const initProtocolStatus = () => {
+		checkProtocol.value = !!uni.getStorageSync(key)
+	}
+	
+	return {
+		checkProtocol,
+		cacheProtocol,
+		initProtocolStatus
+	}
+}
+
+const {checkProtocol, cacheProtocol, initProtocolStatus} = initProtocol()
+
+/**
+ * 用户注册相关
+ */
+const initRegister = () => {
+	// 是否启用用户注册
+	const isRegistrationEnable = ref<boolean>(false)
+	
+	// 获取用户注册状态
+	const getRegisterStatus = async () => {
+		const resp = await enableRegister()
+		if (resp.code === 200) {
+			isRegistrationEnable.value = resp.data
+		}
+	}
+	
+	return {
+		isRegistrationEnable,
+		getRegisterStatus
+	}
+}
+
+const {isRegistrationEnable, getRegisterStatus} = initRegister()
+
 /**
  * 初始化键盘监听
  */
@@ -188,8 +279,54 @@ const initKeyboardStatus = () => {
 
 const {openKeyboard, handleChangeKeyboardHeight} = initKeyboardStatus()
 
+
+// 前往注册
+const toRegister = () => {
+	if (!checkProtocol.value) {
+		toast("请先阅读并勾选用户协议")
+		return
+	}
+	openKeyboard.value = false
+	router.navigateTo({
+		url: "/pages/login/Register",
+		animationType: "slide-in-bottom"
+	})
+}
+
+// 前往隐私政策
+const toPrivacyPolicy = () => {
+	router.navigateTo({
+		url: "/subpackages/protocol/PrivacyPolicy",
+	})
+}
+
+// 前往用户协议
+const toUserAgreement = () => {
+	router.navigateTo({
+		url: "/subpackages/protocol/UserAgreement",
+	})
+}
+
+/**
+ * 监听注册成功返回数据
+ */
+const onRegisterSuccess = (username: string) => {
+	loginData.value = {username, password: ''}
+	rememberMe(false)
+	enableRememberMe.value = false
+	nextTick(() => toast("注册成功，用户名已自动代入", 2500))
+}
+
 onMounted(() => {
 	captcha()
+	getRegisterStatus()
+	initRememberMeInfo()
+	initProtocolStatus()
+	uni.$on('registerSuccess', onRegisterSuccess)
+})
+
+onUnmounted(() => {
+	uni.$off('registerSuccess', onRegisterSuccess)
 })
 
 onShow(() => {

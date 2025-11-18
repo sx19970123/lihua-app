@@ -22,5 +22,5 @@ export interface RegisterType {
 	/**
 	 * 验证码信息
 	 */
-	captchaVerification: string
+	captchaVerification?: string
 }

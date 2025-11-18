@@ -45,6 +45,19 @@
 				"navigationBarTitleText": "个人中心"
 			}
 		}]
+	},{
+		"root": "subpackages/protocol",
+		"pages": [{
+			"path": "PrivacyPolicy",
+			"style": {
+				"navigationBarTitleText": "隐私政策"
+			}
+		},{
+			"path": "UserAgreement",
+			"style": {
+				"navigationBarTitleText": "用户协议"
+			}
+		}]
 	}],
 	"globalStyle": {
 		"navigationBarBackgroundColor": "@navBgColor",

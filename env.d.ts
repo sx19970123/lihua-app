@@ -16,7 +16,11 @@ declare module '*.vue' {
   export default component
 }
 
-declare module 'uuid'
+declare module 'uuid';
+
+declare module 'lodash-es';
 
 declare module 'wxmp-rsa';
+
+declare module 'crypto-js';
 

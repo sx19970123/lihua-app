@@ -5,40 +5,44 @@
 				<text class="auth-title">欢迎注册狸花猫</text>
 				<sar-space align="center" size="0rpx">
 					<text class="text-font">已有账号？</text>
-					<sar-button type="pale-text" inline root-class="text-btn" @click="router.navigateBack()">
+					<sar-button type="pale-text" inline root-class="text-btn" @click="toLogin">
 						返回登录
 					</sar-button>
 				</sar-space>
-
+	
 				<sar-input 
 					placeholder="用户名" 
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus
+					v-model="registerData.username"
+					@blur="handleCheckUsername"
 				>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="user" />
 					</template>
 				</sar-input>
-
+	
 				<sar-input 
 					placeholder="密码" 
 					type="password" 
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus
+					v-model="registerData.password"
 				>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="lock" />
 					</template>
 				</sar-input>
-
+	
 				<sar-input 
 					placeholder="再次输入" 
 					type="password" 
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus
+					v-model="registerData.confirmPassword"
 				>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="lock" />
@@ -47,92 +51,166 @@
 				
 				<sar-button 
 					root-class="auth-item auth-item-btn" 
-					:loading="loginLoading"
-					@click="() => enableCaptcha ? openCaptcha() : handleLogin()">注 册</sar-button>
+					:loading="registerLoading"
+					@click="() => enableCaptcha ? openCaptcha() : handleRegister()">注 册</sar-button>
 			</sar-space>
 		</view>
 		
 		<!-- 验证码 -->
-		<Captcha @success="handleLogin" ref="captchaRef" v-if="enableCaptcha"/>
+		<Captcha @success="handleRegister" ref="captchaRef" v-if="enableCaptcha"/>
 	</view>
 </template>
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { enable } from '@/api/system/captcha/Captcha'
-import type { LoginType } from '@/api/system/login/type/LoginType'
+import type { RegisterType } from '@/api/system/login/type/RegisterType'
+import {register, checkUserName} from '@/api/system/login/Login'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
 import Captcha from '@/components/captcha/index'
 import {toast} from '@/utils/Toast'
 import {onShow, onHide} from "@dcloudio/uni-app"
+import {rasEncryptPassword} from "@/utils/Crypto"
+import {cloneDeep} from "lodash-es"
 
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 
+/**
+ * 返回登录
+ */
+const toLogin = () => {
+	openKeyboard.value = false
+	router.navigateBack({})
+}
 
 /**
  * 初始化登录相关
  */
-const initLogin = () => {
-	// 用户登录数据
-	const loginData = ref<LoginType>({username: '', password: ''})
-	// 登录loading
-	const loginLoading = ref<boolean>(false)
+const initRegister = () => {
+	// 用户注册数据
+	const registerData = ref<RegisterType>({username: '', password: '', passwordRequestKey: '', confirmPassword: '', confirmPasswordRequestKey: ''})
+	// 用户名是否已存在
+	const usernameExists = ref<boolean>(false)
+	// 用户注册loading
+	const registerLoading = ref<boolean>(false)
 	
-	// 检查登录信息是否填写完整
-	const checkLoginData = () => {
-		const data = loginData.value
+	// 检查注册信息是否填写完整
+	const checkRegisterData = async () => {
+		const data = registerData.value
 		
+		// 用户名非空校验
 		if (!data.username) {
 			toast("请输入用户名")
 			return false
 		}
 		
+		// 用户名规则校验
+		if (!(/^[a-zA-Z0-9@.]+$/.test(data.username))) {
+			toast("用户名只允许大小写英文、数字、@、.")
+			return false
+		}
+		
+		// 提交时用户名重复情况下再次验证
+		if (usernameExists.value) {
+			await handleCheckUsername()
+			if (usernameExists.value) {
+				return false
+			}
+		}
+		
+		// 密码非空校验
 		if (!data.password) {
 			toast("请输入密码")
+			return false
+		}
+		
+		// 密码长度校验
+		if (!(data.password.length >= 6 && data.password.length <= 30)) {
+			toast("密码长度6-30位")
+			return false
+		}
+		
+		// 二次密码校验
+		if (data.password !== data.confirmPassword) {
+			toast("两次密码不一致")
 			return false
 		}
 		
 		return true
 	}
 	
-	// 用户登录
-	const handleLogin = async (captchaId?: string) => {
+	/**
+	 * 检查用户名是否存在
+	 */
+	const handleCheckUsername = async () => {
+		const username = registerData.value.username
+		if (!username) {
+			return
+		}
+		
+		const resp = await checkUserName(username)
+		if (resp.code === 200) {
+			if (!resp.data) {
+				toast("该用户名已存在")
+			}
+			usernameExists.value = !resp.data
+		} else {
+			toast(resp.msg)
+		}
+	}
+	
+	/**
+	 * 用户注册
+	 */
+	const handleRegister = async (captchaId?: string) => {
 		// 检查表单填写是否完整
-		if (!checkLoginData()) {
+		if (!await checkRegisterData()) {
 			return
 		}
 		
 		try {
-			loginLoading.value = true
-			const data = loginData.value as LoginType
-			const resp = await userStore.login(data.username, data.password, captchaId)
-			// 登录成功
+			registerLoading.value = true
+			const data = cloneDeep(registerData.value) as RegisterType
+			// 密码加密
+			const passwordEncrypt = await rasEncryptPassword(data.password)
+			// 确认密码加密
+			const confirmPasswordEncrypt = await rasEncryptPassword(data.confirmPassword)
+			
+			// 加密后的密码和密码加密key
+			data.password = passwordEncrypt.ciphertext
+			data.confirmPassword = confirmPasswordEncrypt.ciphertext
+			data.passwordRequestKey = passwordEncrypt.requestKey
+			data.confirmPasswordRequestKey = confirmPasswordEncrypt.requestKey
+			// 验证码id
+			data.captchaVerification = captchaId
+			// 注册
+			const resp = await register(data)
+			// 注册成功
 			if (resp.code === 200) {
-				// 跳转至首页
-				router.reLaunch({
-					url: "/pages/index/index"
-				})
+				uni.$emit('registerSuccess', data.username)
+				toLogin()
 			} else {
 				toast(resp.msg)
 			}
 		} catch(err) {
 			console.error(err)
 		} finally {
-			loginLoading.value = false
+			registerLoading.value = false
 		}
 	}
 	
 	return {
-		loginData,
-		loginLoading,
-		checkLoginData,
-		handleLogin
+		registerData,
+		registerLoading,
+		checkRegisterData,
+		handleCheckUsername,
+		handleRegister
 	}
 }
 
-const {loginData, loginLoading, checkLoginData, handleLogin} = initLogin()
+const {registerData, registerLoading, checkRegisterData, handleCheckUsername, handleRegister} = initRegister()
 
 /**
  * 初始化验证码相关
@@ -152,9 +230,9 @@ const initCaptcha = () => {
 	}
 	
 	// 打开验证码
-	const openCaptcha = () => {
+	const openCaptcha = async () => {
 		// 检查表单填写是否完整
-		if (!checkLoginData()) {
+		if (!await checkRegisterData()) {
 			return
 		}
 		// 打开验证码
