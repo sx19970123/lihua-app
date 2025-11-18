@@ -18,7 +18,7 @@ service.interceptors.request.use(
 		if (token) {
 			config.header['Authorization'] = "Bearer " + token
 		}
-		console.log("发送请求===>", config.url);
+		console.info("发送请求===>", config.url);
 		return config
 	},
 	(error) => {
@@ -30,7 +30,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
 	(response: Response) => {
 		const data = response.data as ResponseType<any>
-		console.log("接收响应===>", data);
+		console.info("接收响应===>", data);
 		// 登录信息失效，调用store中的登录失效逻辑
 		if (data.code === 401) {
 			const userStore = useUserStore()

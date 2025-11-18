@@ -1,29 +1,27 @@
 <template>
-	<view class="dark-font">
-		<sar-button @click="handleLogout">
-			退出登录
-		</sar-button>
+	<view class="home">
+		<text class="title">狸花猫后台管理系统APP</text>
 	</view>
 </template>
 
 <script setup lang="ts">
-import {ref, nextTick, onMounted} from "vue"
-import { useUserStore } from "@/stores/user";
-const userStore = useUserStore()
-const handleLogout = () => {
-	userStore.handleLogout()
-}
 
-onMounted(() => {
-	console.log("userStore.userInfo", userStore.userInfo);
-})
 
 </script>
 
-<style>
-	@media(prefers-color-scheme: dark) {
-		.dark-font {
-			color: red;
-		}
-	}
+<style lang="scss" scoped>
+.home {
+	position: relative;
+	width: 100vw;
+	height: 100vh;
+}
+
+.title {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	font-weight: bold;
+}
+
 </style>

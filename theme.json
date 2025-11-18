@@ -6,7 +6,11 @@
 		"bgColor": "#ffffff",
 		"bgTxtStyle": "light",
 		"bgColorTop": "#eeeeee",
-		"bgColorBottom": "#efefef"
+		"bgColorBottom": "#efefef",
+		"home-icon": "static/tab-bar/home.png",
+		"home-selected-icon": "static/tab-bar/home-active.png",
+		"user-icon": "static/tab-bar/user.png",
+		"user-selected-icon": "static/tab-bar/user-active.png"
 	},
 	"dark": {
 		"navBgColor": "#292929",
@@ -14,6 +18,10 @@
 		"bgColor": "#1f1f1f",
 		"bgTxtStyle": "dark",
 		"bgColorTop": "#292929",
-		"bgColorBottom": "#1f1f1f"
+		"bgColorBottom": "#1f1f1f",
+		"home-icon": "static/tab-bar/home-dark.png",
+		"home-selected-icon": "static/tab-bar/home-active.png",
+		"user-icon": "static/tab-bar/user-dark.png",
+		"user-selected-icon": "static/tab-bar/user-active.png"
 	}
 }

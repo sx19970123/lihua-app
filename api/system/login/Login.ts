@@ -5,7 +5,7 @@ import type { RegisterType } from "@/api/system/login/type/RegisterType";
 // 用户登录
 export const login = (data: LoginType) => {
     return request<string>({
-        url: '/system/login',
+        url: 'system/login',
         method: 'POST',
         data: data
     })
@@ -14,7 +14,7 @@ export const login = (data: LoginType) => {
 // 退出登录
 export const logout = () => {
     return request({
-        url: "/logout",
+        url: "logout",
         method: 'POST'
     })
 }
@@ -22,7 +22,7 @@ export const logout = () => {
 // 是否开启用户注册功能
 export const enableRegister = () => {
     return request<boolean>({
-        url: '/system/enableRegister',
+        url: 'system/enableRegister',
         method: 'GET'
     })
 }
@@ -30,7 +30,7 @@ export const enableRegister = () => {
 // 检查用户名是否可用
 export const checkUserName = (username: string) => {
     return request<boolean>({
-        url: '/system/checkUserName/' + username,
+        url: 'system/checkUserName/' + username,
         method: 'POST'
     })
 }
@@ -38,7 +38,7 @@ export const checkUserName = (username: string) => {
 // 用户注册
 export const register = (data: RegisterType) => {
     return request<string>({
-        url: '/system/register',
+        url: 'system/register',
         method: 'POST',
         data: data
     })
@@ -47,7 +47,7 @@ export const register = (data: RegisterType) => {
 // 登录后必要信息校验
 export const getLoginSetting = () => {
     return request<string[]>({
-        url: '/system/checkLoginSetting',
+        url: 'system/checkLoginSetting',
         method: 'GET',
     })
 }

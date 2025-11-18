@@ -32,20 +32,19 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "首页"
+				"navigationStyle": "custom"
+			}
+		},
+		// 首页
+		{
+			"path": "pages/profile/Profile",
+			"style": {
+				"navigationStyle": "custom"
 			}
 		}
 	],
 	// 分包
 	"subpackages": [{
-		"root": "subpackages/profile",
-		"pages": [{
-			"path": "Profile",
-			"style": {
-				"navigationBarTitleText": "个人中心"
-			}
-		}]
-	},{
 		"root": "subpackages/protocol",
 		"pages": [{
 			"path": "PrivacyPolicy",
@@ -59,6 +58,24 @@
 			}
 		}]
 	}],
+	"tabBar": {
+		"selectedColor": "#3b82f6",
+		"backgroundColor": "@bgColor",
+		"list": [
+			      {
+			        "pagePath": "pages/index/index",
+			        "text": "首页",
+					"iconPath": "@home-icon",
+					"selectedIconPath": "@home-selected-icon"
+			      },
+			      {
+			        "pagePath": "pages/profile/Profile",
+			        "text": "个人中心",
+					"iconPath": "@user-icon",
+					"selectedIconPath": "@user-selected-icon"
+			      }
+		]
+	},
 	"globalStyle": {
 		"navigationBarBackgroundColor": "@navBgColor",
 		"navigationBarTextStyle": "@navTxtStyle",

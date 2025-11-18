@@ -6,7 +6,7 @@ import type {CaptchaRequestData, CaptchaResponseData} from "@/api/system/captcha
  */
 export const enable = () => {
     return request<boolean>({
-        url: '/captcha/enable',
+        url: 'captcha/enable',
         method: 'GET'
     })
 }
@@ -16,7 +16,7 @@ export const enable = () => {
  */
 export const getCaptchaData = () => {
 	return request<CaptchaResponseData>({
-		url: '/captcha/get',
+		url: 'captcha/get',
 		method: 'POST'
 	})
 }
@@ -26,7 +26,7 @@ export const getCaptchaData = () => {
  */
 export const check = (data: CaptchaRequestData) => {
 	return request<CaptchaResponseData>({
-		url: '/captcha/check',
+		url: 'captcha/check',
 		method: 'POST',
 		data: data
 	})
