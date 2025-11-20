@@ -1,7 +1,0 @@
-@use '../style/base' as *;
-
-@include bem(statusBar) {
-  @include b() {
-    @include universal;
-  }
-}

@@ -1,9 +1,0 @@
-@use '../style/base' as *;
-
-@include bem(avatar-group) {
-  @include b() {
-    @include universal;
-    flex-direction: row;
-    align-items: center;
-  }
-}

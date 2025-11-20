@@ -6,6 +6,7 @@
 /node_modules/
 # 编译目录
 /unpackage/
+/dist/
 # 依赖文件
 /package-lock.json
 # Mac OS

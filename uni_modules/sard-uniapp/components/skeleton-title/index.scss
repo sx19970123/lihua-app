@@ -1,9 +1,0 @@
-@use '../style/base' as *;
-
-@include bem(skeleton) {
-  @include e(title) {
-    @include universal;
-    width: var(--sar-skeleton-title-width);
-    height: var(--sar-skeleton-title-height);
-  }
-}
