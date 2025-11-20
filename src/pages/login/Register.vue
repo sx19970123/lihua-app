@@ -63,7 +63,6 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useTemplateRef } from '@vue/runtime-core'
 import { enable } from '@/api/system/captcha/Captcha'
 import type { RegisterType } from '@/api/system/login/type/RegisterType'
 import {register, checkUserName} from '@/api/system/login/Login'
@@ -76,7 +75,7 @@ import {rasEncryptPassword} from "@/utils/Crypto"
 import {cloneDeep} from "lodash-es"
 
 const userStore = useUserStore()
-const captchaRef = useTemplateRef<InstanceType<typeof Captcha>>('captchaRef')
+const captchaRef = ref<InstanceType<typeof Captcha>>()
 
 /**
  * 返回登录
