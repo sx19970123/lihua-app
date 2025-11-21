@@ -1,4 +1,4 @@
-import request from "@/utils/Request.ts";
+import request from "@/utils/Request";
 import type { LoginType } from "@/api/system/login/type/LoginType"; 
 import type { RegisterType } from "@/api/system/login/type/RegisterType"; 
 

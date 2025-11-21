@@ -1,6 +1,6 @@
-import type {SysRole} from "@/api/system/role/type/SysRole.ts";
-import type {SysDept} from "@/api/system/dept/type/SysDept.ts";
-import type {SysPost} from "@/api/system/post/type/SysPost.ts";
+import type {SysRole} from "@/api/system/role/type/SysRole";
+import type {SysDept} from "@/api/system/dept/type/SysDept";
+import type {SysPost} from "@/api/system/post/type/SysPost";
 
 /**
  * 登陆成功后的认证数据信息，包含用户、角色、部门、岗位等所有信息

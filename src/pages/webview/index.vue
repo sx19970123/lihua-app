@@ -9,6 +9,8 @@ import { ref } from 'vue';
 const url = ref<string>('')
 
 onLoad(options => {
-	url.value = decodeURIComponent(options.url)
+	if (options) {
+		url.value = decodeURIComponent(options.url)
+	}
 })
 </script>

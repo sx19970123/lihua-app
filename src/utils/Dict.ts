@@ -1,8 +1,8 @@
 import { useDictStore } from "@/stores/dict";
-import {getDictDataOption, getDictDataOptionByCodeList} from "@/api/system/dict/DictData.ts";
+import {getDictDataOption, getDictDataOptionByCodeList} from "@/api/system/dict/DictData";
 import { ref, toRefs} from "vue";
-import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType.ts";
-import {ResponseError, type ResponseType} from "@/api/global/Type.ts";
+import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType";
+import {ResponseError, type ResponseType} from "@/api/global/Type";
 import {toast} from '@/utils/Toast'
 
 // 初始化组件中需要的字典数据

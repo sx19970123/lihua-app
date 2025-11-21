@@ -1,6 +1,6 @@
-import request from "@/utils/Request.ts";
-import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType.ts";
-import type {MapResponseType} from "@/api/global/Type.ts";
+import request from "@/utils/Request";
+import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType";
+import type {MapResponseType} from "@/api/global/Type";
 
 /**
  * 根据字典类型编码获取字典数据

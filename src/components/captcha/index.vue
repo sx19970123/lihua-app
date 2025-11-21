@@ -13,7 +13,8 @@
 							<view class="verify-bg">
 								<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix"></image>
 							</view>
-							<view v-if="captchaProcess.type === 'CONCAT'" id="verify-concat-bg" class="verify-concat-bg" :style="imgStyle"></view>
+							<view v-if="captchaProcess.type === 'CONCAT'" id="verify-concat-bg" class="verify-concat-bg"
+								:style="imgStyle"></view>
 							<view v-else class="verify-slider" :style="imgStyle">
 								<image id="slider-img" :src="captchaProcess.sliderImage" mode="heightFix"></image>
 							</view>
@@ -28,16 +29,10 @@
 							<movable-area class="move-block" :animation="true">
 								<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
 								<view class="move-shadow"></view>
-								<movable-view 
-									class="block-button" 
-									:x="x" 
-									:animation="true" 
-									direction="horizontal"
-									@change="startMove" 
-									@touchstart="touchstart" 
-									@touchmove="touchmove" 
-									@touchend="touchend" >
-									<text class="arrow"> 
+								<movable-view class="block-button" :x="x" :animation="true" direction="horizontal"
+									@change="startMove" @touchstart="touchstart" @touchmove="touchmove"
+									@touchend="touchend">
+									<text class="arrow">
 										➜
 									</text>
 								</movable-view>
@@ -45,7 +40,7 @@
 						</view>
 					</view>
 				</block>
-				
+
 				<!-- 点选 -->
 				<view v-else class="verify-content">
 					<view class="image-click-tips">
@@ -84,12 +79,12 @@
 </template>
 <script setup lang="ts">
 	import { onMounted, computed, ref, nextTick, getCurrentInstance } from "vue"
-	import type {ComponentInternalInstance} from 'vue'
+	import type { ComponentInternalInstance } from 'vue'
 	import { getCaptchaData, check } from "@/api/system/captcha/Captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/CaptchaType"
 	// 抛出方法
 	const emits = defineEmits(['success'])
-	
+
 	// 图标类型
 	type BaseImgType = {
 		width ?: number,
@@ -100,60 +95,60 @@
 	// 验证码执行需要的参数
 	type CaptchaProcessType = {
 		//当前生成的滑块ID, 后端生成
-		id?: string,
+		id ?: string,
 		//滑块背景图
-		backgroundImage?: string,
+		backgroundImage ?: string,
 		//滑块图片
-		sliderImage?: string,
+		sliderImage ?: string,
 		//起始时间
-		startTime: Date,
+		startTime : Date,
 		//停止时间
-		stopTime?: Date,
+		stopTime ?: Date,
 		//滑动轨迹
-		trackArr: Array<{ x : number, y : number, type : string, t : number }>,
+		trackArr : Array<{ x : number, y : number, type : string, t : number }>,
 		//滑动距离与背景图百分比
-		movePercent?: number,
+		movePercent ?: number,
 		//当前环境滑块背景宽
-		backgroundImageWidth: number,
+		backgroundImageWidth : number,
 		//当前环境滑块背景高
-		backgroundImageHeight: number,
+		backgroundImageHeight : number,
 		//当前环境滑块宽
-		sliderImageWidth?: number,
+		sliderImageWidth ?: number,
 		//当前环境滑块高
-		sliderImageHeight?: number,
+		sliderImageHeight ?: number,
 		// 开始时X轴坐标
-		startX?: number,
+		startX ?: number,
 		// 开始时Y轴坐标
-		startY?: number,
+		startY ?: number,
 		// x移动距离
-		moveX?: number,
+		moveX ?: number,
 		//滑块滑动界限值
-		end: number,
+		end : number,
 		// 验证码类型
-		type?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER'
+		type ?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER'
 	}
 	// 验证结果类型
 	type VeriftResultType = {
 		// 是否成功
-		isSuccess: boolean,
+		isSuccess : boolean,
 		// 是否失败
-		isError: boolean,
+		isError : boolean,
 		// 成功信息
-		successMsg?: string
+		successMsg ?: string
 		// 错误信息
-		errorMsg?: string
+		errorMsg ?: string
 	}
-	
+
 	// 是否显示验证码
 	const verifyShow = ref<boolean>(false)
 	// 背景图片尺寸
 	const bgImg = ref<BaseImgType>({})
 	const sliderImg = ref<BaseImgType>({})
 	// 验证码执行需要的参数
-	const defaultCaptchaProcess = {startTime: new Date(), backgroundImageWidth: 0, backgroundImageHeight: 0, trackArr: [], end: 206}
+	const defaultCaptchaProcess = { startTime: new Date(), backgroundImageWidth: 0, backgroundImageHeight: 0, trackArr: [], end: 206 }
 	const captchaProcess = ref<CaptchaProcessType>(defaultCaptchaProcess)
 	// 验证结果
-	const verifyResult = ref<VeriftResultType>({isSuccess: false, isError: false})
+	const verifyResult = ref<VeriftResultType>({ isSuccess: false, isError: false })
 	// 滑块初始位置
 	const leftDistance = ref<number>(0)
 	// 滑块x距离
@@ -174,7 +169,7 @@
 	// 刷新 关闭图标
 	const refreshIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAJFBMVEVHcEyfn59xcXFgYGBbW1tYWFhYWFhXV1dYWFhXV1dXV1dXV1eOJtjUAAAAC3RSTlMAAgkQMUd0iKbR8IVomssAAABwSURBVHjapdFBDsMgDAXR7ya2MXP/+1ZNvUCwzNsxEkjY+vNRc9Zwk5p50aarBVTc13VHQUohKSGs7wRkIDm42nMCWRFaDECbADjbGT8PvTR/cosAqTMOLWKWCfZvukTuA5GU2+hCzYtWy0vW6+j0BSLdBQYxmJeMAAAAAElFTkSuQmCC"
 	const closeIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAHlBMVEVHcExiYmJeXl5YWFhYWFhZWVlYWFhYWFhXV1dXV1dh3LwmAAAACXRSTlMADRxPbYyl1/NFQhX5AAAAd0lEQVR42m2R0QoDMQgEx+hl3f//4dLmeqXgPIQwIOrKIbe6tZMfKd/o0ZetWhGrZF9f18VN9bHpTh6ynYBcQHA/ZUFawKUFSxcgJ9sFIWstWQHljbyAt5D1+Vq0g2OPI9yjHMvHRuNI4/DzmnMgc3RzyBD/53gBSd8FOjnClmAAAAAASUVORK5CYII="
-	
+
 	/**
 	 * 打开
 	 */
@@ -182,7 +177,7 @@
 		verifyShow.value = true
 		getCaptcha(true)
 	}
-	
+
 	/**
 	 * 关闭
 	 */
@@ -193,13 +188,13 @@
 			refresh(true)
 		})
 	}
-	
+
 	/**
 	 * 初始化验证码
 	 */
 	const initCaptchaData = () => {
 		// 加载验证码和滑块
-		const getCaptcha = async (isShow: boolean = false) => {
+		const getCaptcha = async (isShow : boolean = false) => {
 			try {
 				captchaLoading.value = true
 				// 第一次打开时不展示移除动画
@@ -242,7 +237,7 @@
 					await new Promise(r => setTimeout(r, 300))
 					captchaLoading.value = false
 				}
-			} catch(err) {
+			} catch (err) {
 				console.error(err);
 				captchaTransition.value = ''
 				captchaLoading.value = false
@@ -253,7 +248,7 @@
 		/**
 		 * 加载背景图
 		 */
-		const initBackground = (scope: any) => {
+		const initBackground = (scope : any) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
@@ -273,7 +268,7 @@
 		/**
 		 * 加载旋转和滑块验证码
 		 */
-		const initRoateAndSlider = (scope: any) => {
+		const initRoateAndSlider = (scope : any) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
@@ -293,7 +288,7 @@
 		/**
 		 * 加载拼接验证码
 		 */
-		const initConcat = (captchaData : CaptchaResponseData, scope: any) => {
+		const initConcat = (captchaData : CaptchaResponseData, scope : any) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
@@ -308,13 +303,13 @@
 						}
 					}).exec();
 			})
-			
+
 		}
 
 		/**
 		 * 加载点选验证码
 		 */
-		const initWordClick = (scope: any) => {
+		const initWordClick = (scope : any) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
@@ -341,42 +336,42 @@
 			captchaProcess.value.sliderImageHeight = Math.round(sliderImg.value.height || 0)
 			captchaProcess.value.end = Math.round(bgImg.value.width || 0 - uni.upx2px(40))
 		}
-		
+
 		return {
 			getCaptcha
 		}
 	}
-	
-	const {getCaptcha} = initCaptchaData()
-	
+
+	const { getCaptcha } = initCaptchaData()
+
 	/**
 	 * 初始化验证码交互
 	 */
 	const initInteraction = () => {
 		// 滑块开始
-		const touchstart = (e: TouchEvent) => {
+		const touchstart = (e : TouchEvent) => {
 			let startX = e.changedTouches[0].pageX
 			let startY = e.changedTouches[0].pageY
 			captchaProcess.value.startX = startX
 			captchaProcess.value.startY = startY
 			captchaProcess.value.startTime = new Date()
-			
+
 			const startTime = captchaProcess.value.startTime
 			const trackArr = captchaProcess.value.trackArr
-			
+
 			const track = {
-				x: 0, 
-				y: 0, 
-				type: 'down', 
+				x: 0,
+				y: 0,
+				type: 'down',
 				t: new Date().getTime() - startTime?.getTime()
 			}
 			trackArr.push(track)
 		}
 		// 滑块滑动中
-		const touchmove = (e: TouchEvent) => {
+		const touchmove = (e : TouchEvent) => {
 			let pageX = Math.round(e.changedTouches[0].pageX)
 			let pageY = Math.round(e.changedTouches[0].pageY)
-			
+
 			const startX = captchaProcess.value.startX || 0
 			const startY = captchaProcess.value.startY || 0
 			const startTime = captchaProcess.value.startTime
@@ -384,26 +379,26 @@
 			const bgImageWidth = captchaProcess.value.backgroundImageWidth
 			const trackArr = captchaProcess.value.trackArr
 			let moveX = pageX - startX
-			
+
 			const track = {
-			  x: pageX - startX,
-			  y: pageY - startY,
-			  type: "move",
-			  t: new Date().getTime() - startTime.getTime()
+				x: pageX - startX,
+				y: pageY - startY,
+				type: "move",
+				t: new Date().getTime() - startTime.getTime()
 			}
 			trackArr.push(track)
-			
+
 			if (moveX < 0) {
-			  moveX = 0;
+				moveX = 0;
 			} else if (moveX > end) {
-			  moveX = end;
+				moveX = end;
 			}
-			
+
 			captchaProcess.value.moveX = moveX
 			captchaProcess.value.movePercent = moveX / bgImageWidth
 		}
 		// 滑块结束
-		const touchend = (e: TouchEvent) => {
+		const touchend = (e : TouchEvent) => {
 			captchaProcess.value.stopTime = new Date()
 			let pageX = Math.round(e.changedTouches[0].pageX)
 			let pageY = Math.round(e.changedTouches[0].pageY)
@@ -412,16 +407,16 @@
 			const startTime = captchaProcess.value.startTime
 			const trackArr = captchaProcess.value.trackArr
 			const track = {
-			  x: pageX - startX,
-			  y: pageY - startY,
-			  type: "up",
-			  t: new Date().getTime() - startTime.getTime()
+				x: pageX - startX,
+				y: pageY - startY,
+				type: "up",
+				t: new Date().getTime() - startTime.getTime()
 			};
-			 trackArr.push(track)
-			 vertifyData()
+			trackArr.push(track)
+			vertifyData()
 		}
 		// 滑块绑定卡片移动距离
-		const startMove = (e: { detail: { x: number } }) => {
+		const startMove = (e : { detail : { x : number } }) => {
 			xpos.value = e.detail.x
 			nextTick(() => {
 				colorWidth.value = xpos.value + uni.upx2px(80)
@@ -429,54 +424,54 @@
 			})
 		}
 		// 点选
-		const recordClickItem = (e: TouchEvent) => {
+		const recordClickItem = (e : TouchEvent) => {
 			if (!sliderImg.value.left || !sliderImg.value.top) {
 				return
 			}
-			
+
 			const x = e.touches[0].pageX
 			const y = e.touches[0].pageY
-			
+
 			const relativeX = sliderImg.value.left - x
 			const relativeY = sliderImg.value.top - y
-		
+
 			if (clickCount.value === 0) {
 				captchaProcess.value.startTime = new Date()
 			}
-			
-			clickCount.value ++
-			
+
+			clickCount.value++
+
 			if (clickCount.value > 4) {
-			  return;
+				return;
 			}
-			
+
 			captchaProcess.value.stopTime = new Date()
-			
+
 			const track = {
-			  x: Math.abs(relativeX),
-			  y: Math.abs(relativeY),
-			  type: "click",
-			  t: new Date().getTime() - captchaProcess.value.startTime.getTime()
+				x: Math.abs(relativeX),
+				y: Math.abs(relativeY),
+				type: "click",
+				t: new Date().getTime() - captchaProcess.value.startTime.getTime()
 			};
-			
+
 			captchaProcess.value.trackArr.push(track)
-			
+
 			if (clickCount.value == 4) {
-			  vertifyData()
+				vertifyData()
 			}
 		}
-		
+
 		return {
 			touchstart, touchmove, touchend, startMove, recordClickItem
 		}
 	}
-	
-	const {touchstart, touchmove, touchend, startMove, recordClickItem} = initInteraction()
-	
+
+	const { touchstart, touchmove, touchend, startMove, recordClickItem } = initInteraction()
+
 	/**
 	 * 刷新
 	 */
-	const refresh = (isClose: boolean) => {
+	const refresh = (isClose : boolean) => {
 		isActive.value = false
 		colorWidth.value = 0
 		x.value = xpos.value
@@ -498,15 +493,15 @@
 			getCaptcha()
 		}
 	}
-	
+
 	// 滑动校验
 	const vertifyData = async () => {
 		// 参数拼接与校验
-		const {id, backgroundImageWidth, backgroundImageHeight, startTime, stopTime, trackArr} = captchaProcess.value
+		const { id, backgroundImageWidth, backgroundImageHeight, startTime, stopTime, trackArr } = captchaProcess.value
 		if (!id || !stopTime) {
 			return
 		}
-		const captchaData: CaptchaRequestData = {
+		const captchaData : CaptchaRequestData = {
 			id: id,
 			data: {
 				bgImageWidth: backgroundImageWidth,
@@ -516,7 +511,7 @@
 				trackList: trackArr
 			}
 		}
-		
+
 		try {
 			// 验证
 			const resp = await check(captchaData)
@@ -532,7 +527,7 @@
 			} else {
 				// 校验失败
 				verifyResult.value.isError = true
-				switch(resp.code) {
+				switch (resp.code) {
 					case 4001:
 						verifyResult.value.errorMsg = "验证失败，请重新尝试！"
 						break
@@ -546,13 +541,13 @@
 					refresh(false)
 				}, 750)
 			}
-		} catch(err) {
+		} catch (err) {
 			// 异常刷新
 			console.error(err)
 			refresh(false)
 		}
 	}
-	
+
 	// 滑块样式变化
 	const imgStyle = computed(() => {
 		switch (captchaProcess.value.type) {
@@ -563,417 +558,444 @@
 				return `left: ${leftDistance.value}px;`;
 			case "CONCAT":
 				return `background-position:${leftDistance.value}px 0;background-image:url(${captchaProcess.value.backgroundImage});background-size: cover;height:${sliderImg.value.height}px`;
-			default: 
+			default:
 				return ''
 		}
 	})
-	
+
 	onMounted(() => {
 		instanceScope.value = getCurrentInstance() || undefined
 	})
-	
+
 	// 向外部抛出方法
 	defineExpose({ open })
 </script>
 
 <style scoped lang="scss">
-.verify-wrap {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-color: rgba(0, 0, 0, 0.5);
-	z-index: 999;
-	overflow: hidden;
-
-	.verify-code {
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		transform: translate(-50%, -50%);
-		width: 640rpx;
-		height: 610rpx;
-		background-color: #ffffff;
-		padding: 10rpx 0 20rpx;
+	.verify-wrap {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
 		z-index: 999;
-		box-shadow: 0 0 10rpx rgba(227, 227, 227, 0.7);
-		border-radius: 10px;
 		overflow: hidden;
-		
-		/* 验证码切换过渡动画 */
-		.captcha-loading {
-		  width: 320rpx;
-		  height: 24rpx;
-		  position: fixed;
-		  border-radius: 16rpx;
-		  top: 50%;
-		  left: 50%;
-		  transform: translate(-50%, -50%);
-		  background: #f0f0f0;
-		  overflow: hidden;
-		}
-		
-		/* 闪光条 */
-		.captcha-loading::after {
-		  content: '';
-		  position: absolute;
-		  top: 0;
-		  left: -30%;
-		  width: 30%;
-		  height: 100%;
-		  background: linear-gradient(90deg, rgba(247,182,69,0) 0%, rgba(247,182,69,0.6) 50%, rgba(247,182,69,0) 100%);
-		  animation: shine 1s infinite;
-		}
-		
-		@keyframes shine {
-		  0% { left: -30%; }
-		  100% { left: 100%; }
-		}
 
-		.loading-error {
+		.verify-code {
 			position: absolute;
-			transform: translate(-50%, -50%);
-			color: #f56c6c;
-			top: 50%;
 			left: 50%;
-			font-weight: bold;
-			text-align: center;
-		}
-
-		.slide-in {
-		  animation: slideIn 300ms ease-in-out forwards;
-		}
-		
-		.slide-out {
-		  animation: slideOut 300ms ease-out forwards;
-		}
-		
-		.slide-hidden {
-			visibility: hidden;
-			transform: translateX(0);
-		}
-		
-		@keyframes slideIn {
-		  from {
-		    transform: translateX(-100%);
-		  }
-		  to {
-		    transform: translateX(0);
-		  }
-		}
-		
-		@keyframes slideOut {
-		  from {
-		    transform: translateX(0);
-		  }
-		  to {
-		    transform: translateX(100%);
-		  }
-		}
-
-		
-		.transition {
-			transform: translateX(-100%);
-			transition: transform 300ms ease;
-		}
-		
-		.verify-tip {
-			font-size: 32rpx;
-			font-weight: bold;
-			color: #686868;
-			padding: 10rpx 10rpx 0 20rpx;
-		}
-
-		.verify-content {
-			width: 100%;
-			padding: 20rpx 20rpx;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			width: 640rpx;
+			height: 610rpx;
 			background-color: #ffffff;
-			box-sizing: border-box;
+			padding: 10rpx 0 20rpx;
+			z-index: 999;
+			box-shadow: 0 0 10rpx rgba(227, 227, 227, 0.7);
+			border-radius: 10px;
 			overflow: hidden;
 
-			.verify-concat-bg {
-				width: 100%;
-				position: absolute;
-				top: 0;
-				left: 0;
-			}
-
-			.image-click-tips {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				margin-bottom: 20rpx;
-
-				image {
-					width: 336rpx;
-					height: 64rpx;
-				}
-			}
-
-			.image-click-mask {
-				width: 100%;
-				height: 100%;
-				position: absolute;
-				top: 0;
-				left: 0;
-				z-index: 999;
-
-				.click-item {
-					position: absolute;
-					left: 0;
-					top: 0;
-					z-index: 1000;
-					border-radius: 50px;
-					background-color: #409eff;
-					width: 50rpx;
-					height: 50rpx;
-					text-align: center;
-					line-height: 50rpx;
-					color: #fff;
-					border: 4rpx solid #fff;
-					box-sizing: content-box;
-				}
-			}
-
-			.verify-body {
-				width: 100%;
-				height: 360rpx;
-				border-radius: 6px;
-				position: relative;
-				overflow: hidden;
-
-				.verify-bg {
-					width: 100%;
-					height: 100%;
-					position: absolute;
-
-					image {
-						width: 100%;
-						height: 100%;
-						margin-right: 20rpx;
-					}
-				}
-
-				.verify-slider {
-					height: 100%;
-					position: absolute;
-					left: 0;
-					top: 0;
-
-					image {
-						overflow: hidden;
-						width: 55px;
-						height: 100%;
-						position: relative;
-					}
-				}
-			}
-
-			.move-area {
-				overflow: hidden;
-				width: 100%;
-				height: 80rpx;
-				margin-top: 20rpx;
-			}
-
-			.move-block {
-				width: 100%;
-				height: 100%;
-				background-color: #f0f0f0;
-				border-radius: 100rpx;
-				position: relative;
-				overflow: hidden;
-
-				.move-shadow {
-					height: 100%;
-					width: 4px;
-					background-color: rgba(255, 255, 255, 0.5);
-					position: absolute;
-					top: 0;
-					left: 0;
-					box-shadow: 1px 1px 1px #fff;
-					border-radius: 50%;
-					animation: moveAnimate 2s linear infinite;
-				}
-
-				@keyframes moveAnimate {
-					0% {
-						left: 0;
-						opacity: 0.5;
-					}
-
-					50% {
-						left: 50%;
-						opacity: 1;
-					}
-
-					100% {
-						left: 100%;
-						opacity: 0.5;
-					}
-				}
-
-				.color-change {
-					height: 80rpx;
-					border-radius: 100rpx;
-					background-color: #c6a876;
-					z-index: 2;
-				}
-
-				.block-button {
-					border-radius: 100rpx;
-					background-color: #b48d4d;
-					height: 80rpx;
-					width: 80rpx;
-					margin-top: -10rpx;
-					touch-action: none;
-					display: flex;
-					flex-direction: row;
-					align-items: center;
-					justify-content: center;
-					position: relative;
-					z-index: 10;
-					.arrow {
-						font-size: 32rpx;
-						color: rgba(255, 255, 255, 0.9)
-					}
-				}
-				&::before {
-					content: '';
-					position: absolute;
-					top: -10rpx;
-					left: -10rpx;
-					right: -10rpx;
-					bottom: -10rpx;
-					background-color: #b48d4d;
-					border-radius: 100rpx;
-					z-index: -1;
-				}
-			}
-			.move-block::after {
-				content: "向右滑动完成验证";
-				position: absolute;
+			/* 验证码切换过渡动画 */
+			.captcha-loading {
+				width: 320rpx;
+				height: 24rpx;
+				position: fixed;
+				border-radius: 16rpx;
 				top: 50%;
 				left: 50%;
 				transform: translate(-50%, -50%);
-				color: rgba(0, 0, 0, 0.35);
-				font-size: 14px;
-			}
-			.check-status {
-				position: absolute;
-				left: 0;
-				right: 0;
-				bottom: -1px;
-				height: 50rpx;
-				line-height: 50rpx;
-				width: 100%;
-				text-align: center;
-				font-size: 24rpx;
-				
-				.check-msg {
-					color: rgba(255, 255, 255, 1)
-				}
-
-				&.check-success {
-					background: #5ac725;
-				}
-
-				&.check-error {
-					background: #f56c6c;
-				}
-			}
-		}
-
-		.verify-opts {
-			display: flex;
-			justify-content: flex-end;
-			align-items: center;
-			margin: 0 20rpx;
-			position: absolute;
-			bottom: 20rpx;
-			right: 10rpx;
-			.opts-icon {
-				width: 40rpx;
-				height: 40rpx;
-
-				&:nth-last-child(1) {
-					width: 50rpx;
-					height: 50rpx;
-				}
+				background: #f0f0f0;
+				overflow: hidden;
 			}
 
-			.divide {
-				height: 20px;
-				width: 40rpx;
-			}
-		}
-	}
-}
-/** 暗色模式颜色适配 */
-@media(prefers-color-scheme: dark) {
-	.verify-wrap {
-		.verify-code {
-			background-color: var(--sar-emphasis-bg);
-			box-shadow: var(--sar-shadow-sm);
-			.captcha-loading {
-				background-color: var(--sar-active-bg);
-			}
+			/* 闪光条 */
 			.captcha-loading::after {
-			  background: linear-gradient(90deg, rgba(180,130,40,0) 0%, rgba(180,130,40,0.7) 50%, rgba(180,130,40,0) 100%);
+				content: '';
+				position: absolute;
+				top: 0;
+				left: -30%;
+				width: 30%;
+				height: 100%;
+				background: linear-gradient(90deg, rgba(247, 182, 69, 0) 0%, rgba(247, 182, 69, 0.6) 50%, rgba(247, 182, 69, 0) 100%);
+				animation: shine 1s infinite;
 			}
-			.verify-tip {
-				color: var(--sar-secondary-color);
+
+			@keyframes shine {
+				0% {
+					left: -30%;
+				}
+
+				100% {
+					left: 100%;
+				}
 			}
+
 			.loading-error {
-				color: #7e2e2f;
+				position: absolute;
+				transform: translate(-50%, -50%);
+				color: #f56c6c;
+				top: 50%;
+				left: 50%;
+				font-weight: bold;
+				text-align: center;
 			}
+
+			.slide-in {
+				animation: slideIn 300ms ease-in-out forwards;
+			}
+
+			.slide-out {
+				animation: slideOut 300ms ease-out forwards;
+			}
+
+			.slide-hidden {
+				visibility: hidden;
+				transform: translateX(0);
+			}
+
+			@keyframes slideIn {
+				from {
+					transform: translateX(-100%);
+				}
+
+				to {
+					transform: translateX(0);
+				}
+			}
+
+			@keyframes slideOut {
+				from {
+					transform: translateX(0);
+				}
+
+				to {
+					transform: translateX(100%);
+				}
+			}
+
+
+			.transition {
+				transform: translateX(-100%);
+				transition: transform 300ms ease;
+			}
+
+			.verify-tip {
+				font-size: 32rpx;
+				font-weight: bold;
+				color: #686868;
+				padding: 10rpx 10rpx 0 20rpx;
+			}
+
 			.verify-content {
-				background-color: var(--sar-emphasis-bg);
-				.move-block {
-					background-color: var(--sar-active-bg);
-					.move-shadow {
-						background-color: rgba(0, 0, 0, 0.05);
-						box-shadow: var(--sar-shadow-sm);
+				width: 100%;
+				padding: 20rpx 20rpx;
+				background-color: #ffffff;
+				box-sizing: border-box;
+				overflow: hidden;
+
+				.verify-concat-bg {
+					width: 100%;
+					position: absolute;
+					top: 0;
+					left: 0;
+				}
+
+				.image-click-tips {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+					margin-bottom: 20rpx;
+
+					image {
+						width: 336rpx;
+						height: 64rpx;
 					}
-					
-					.color-change {
-						background-color: #655843;
+				}
+
+				.image-click-mask {
+					width: 100%;
+					height: 100%;
+					position: absolute;
+					top: 0;
+					left: 0;
+					z-index: 999;
+
+					.click-item {
+						position: absolute;
+						left: 0;
+						top: 0;
+						z-index: 1000;
+						border-radius: 50px;
+						background-color: #409eff;
+						width: 50rpx;
+						height: 50rpx;
+						text-align: center;
+						line-height: 50rpx;
+						color: #fff;
+						border: 4rpx solid #fff;
+						box-sizing: content-box;
 					}
-					
-					.block-button {
-						background-color: #9a7a40;
-						.arrow {
-							color: rgba(255, 255, 255, 0.5)
+				}
+
+				.verify-body {
+					width: 100%;
+					height: 360rpx;
+					border-radius: 6px;
+					position: relative;
+					overflow: hidden;
+
+					.verify-bg {
+						width: 100%;
+						height: 100%;
+						position: absolute;
+
+						image {
+							width: 100%;
+							height: 100%;
+							margin-right: 20rpx;
 						}
 					}
+
+					.verify-slider {
+						height: 100%;
+						position: absolute;
+						left: 0;
+						top: 0;
+
+						image {
+							overflow: hidden;
+							width: 55px;
+							height: 100%;
+							position: relative;
+						}
+					}
+				}
+
+				.move-area {
+					overflow: hidden;
+					width: 100%;
+					height: 80rpx;
+					margin-top: 20rpx;
+				}
+
+				.move-block {
+					width: 100%;
+					height: 100%;
+					background-color: #f0f0f0;
+					border-radius: 100rpx;
+					position: relative;
+					overflow: hidden;
+
+					.move-shadow {
+						height: 100%;
+						width: 4px;
+						background-color: rgba(255, 255, 255, 0.5);
+						position: absolute;
+						top: 0;
+						left: 0;
+						box-shadow: 1px 1px 1px #fff;
+						border-radius: 50%;
+						animation: moveAnimate 2s linear infinite;
+					}
+
+					@keyframes moveAnimate {
+						0% {
+							left: 0;
+							opacity: 0.5;
+						}
+
+						50% {
+							left: 50%;
+							opacity: 1;
+						}
+
+						100% {
+							left: 100%;
+							opacity: 0.5;
+						}
+					}
+
+					.color-change {
+						height: 80rpx;
+						border-radius: 100rpx;
+						background-color: #c6a876;
+						z-index: 2;
+					}
+
+					.block-button {
+						border-radius: 100rpx;
+						background-color: #b48d4d;
+						height: 80rpx;
+						width: 80rpx;
+						margin-top: -10rpx;
+						touch-action: none;
+						display: flex;
+						flex-direction: row;
+						align-items: center;
+						justify-content: center;
+						position: relative;
+						z-index: 10;
+
+						.arrow {
+							font-size: 32rpx;
+							color: rgba(255, 255, 255, 0.9)
+						}
+					}
+
 					&::before {
-						background-color: #9a7a40;
+						content: '';
+						position: absolute;
+						top: -10rpx;
+						left: -10rpx;
+						right: -10rpx;
+						bottom: -10rpx;
+						background-color: #b48d4d;
+						border-radius: 100rpx;
+						z-index: -1;
 					}
 				}
+
 				.move-block::after {
-					color: rgba(255, 255, 255, 0.35);
+					content: "向右滑动完成验证";
+					position: absolute;
+					top: 50%;
+					left: 50%;
+					transform: translate(-50%, -50%);
+					color: rgba(0, 0, 0, 0.35);
+					font-size: 14px;
 				}
-				.image-click-mask {
-					.click-item {
-						background-color: #2a6fc7;
-						color: var(--sar-secondary-color);
-						border: 4rpx solid var(--sar-secondary-color);
-					}
-				}
+
 				.check-status {
+					position: absolute;
+					left: 0;
+					right: 0;
+					bottom: -1px;
+					height: 50rpx;
+					line-height: 50rpx;
+					width: 100%;
+					text-align: center;
+					font-size: 24rpx;
+
 					.check-msg {
-						color: rgba(255, 255, 255, 0.5)
+						color: rgba(255, 255, 255, 1)
 					}
+
 					&.check-success {
-						background: #306317;
+						background: #5ac725;
 					}
+
 					&.check-error {
-						background: #7e2e2f;
+						background: #f56c6c;
+					}
+				}
+			}
+
+			.verify-opts {
+				display: flex;
+				justify-content: flex-end;
+				align-items: center;
+				margin: 0 20rpx;
+				position: absolute;
+				bottom: 20rpx;
+				right: 10rpx;
+
+				.opts-icon {
+					width: 40rpx;
+					height: 40rpx;
+
+					&:nth-last-child(1) {
+						width: 50rpx;
+						height: 50rpx;
+					}
+				}
+
+				.divide {
+					height: 20px;
+					width: 40rpx;
+				}
+			}
+		}
+	}
+
+	/** 暗色模式颜色适配 */
+	@media(prefers-color-scheme: dark) {
+		.verify-wrap {
+			.verify-code {
+				background-color: var(--sar-emphasis-bg);
+				box-shadow: var(--sar-shadow-sm);
+
+				.captcha-loading {
+					background-color: var(--sar-active-bg);
+				}
+
+				.captcha-loading::after {
+					background: linear-gradient(90deg, rgba(180, 130, 40, 0) 0%, rgba(180, 130, 40, 0.7) 50%, rgba(180, 130, 40, 0) 100%);
+				}
+
+				.verify-tip {
+					color: var(--sar-secondary-color);
+				}
+
+				.loading-error {
+					color: #7e2e2f;
+				}
+
+				.verify-content {
+					background-color: var(--sar-emphasis-bg);
+
+					.move-block {
+						background-color: var(--sar-active-bg);
+
+						.move-shadow {
+							background-color: rgba(0, 0, 0, 0.05);
+							box-shadow: var(--sar-shadow-sm);
+						}
+
+						.color-change {
+							background-color: #655843;
+						}
+
+						.block-button {
+							background-color: #9a7a40;
+
+							.arrow {
+								color: rgba(255, 255, 255, 0.5)
+							}
+						}
+
+						&::before {
+							background-color: #9a7a40;
+						}
+					}
+
+					.move-block::after {
+						color: rgba(255, 255, 255, 0.35);
+					}
+
+					.image-click-mask {
+						.click-item {
+							background-color: #2a6fc7;
+							color: var(--sar-secondary-color);
+							border: 4rpx solid var(--sar-secondary-color);
+						}
+					}
+
+					.check-status {
+						.check-msg {
+							color: rgba(255, 255, 255, 0.5)
+						}
+
+						&.check-success {
+							background: #306317;
+						}
+
+						&.check-error {
+							background: #7e2e2f;
+						}
 					}
 				}
 			}
 		}
 	}
-}
 </style>

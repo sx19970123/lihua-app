@@ -1,5 +1,5 @@
-import request from "@/utils/Request.ts";
-import type {SysAttachment} from "@/api/system/attachment/type/SysAttachment.ts";
+import request from "@/utils/Request";
+import type {SysAttachment} from "@/api/system/attachment/type/SysAttachment";
 
 
 // 根据md5查询附件是否存在

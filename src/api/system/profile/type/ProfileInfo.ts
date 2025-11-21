@@ -1,4 +1,4 @@
-import { AvatarType } from "@/api/system/profile/type/AvatarType";
+import type { AvatarType } from "@/api/system/profile/type/AvatarType";
 
 /**
  * 个人设置用户信息
