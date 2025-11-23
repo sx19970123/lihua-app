@@ -11,8 +11,8 @@ const publicRoutesList = [
 	"/pages/splash/index",
 	"/pages/login/Login",
 	"/pages/login/Register",
-	"/subpackages/protocol/PrivacyPolicy",
-	"/subpackages/protocol/UserAgreement"
+	"/subpackages/system/protocol/PrivacyPolicy",
+	"/subpackages/system/protocol/UserAgreement"
 	]
 
 /**

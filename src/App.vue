@@ -19,12 +19,18 @@ onHide(() => {
 @import 'sard-uniapp/index.scss';
 /* sard-uniapp组件库暗色模式 */
 @import 'sard-uniapp/dark.scss';
-@import '@/assets/icons/icons.css';
+/* 自定义图标 */
+@import '@/static/icon/icons.css';
+@import '@/static/icon/other.css';
 
 page {
 	background-color: var(--sar-body-bg);
 }
 text {
 	color: var(--sar-secondary-color);
+}
+
+.content {
+	padding: 16px;
 }
 </style>

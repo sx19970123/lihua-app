@@ -19,7 +19,7 @@
 					@blur="handleCheckUsername"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="user" />
+						<sar-icon color="var(--sar-tertiary-color)" name="UserOutlined" />
 					</template>
 				</sar-input>
 	
@@ -32,7 +32,7 @@
 					v-model="registerData.password"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="lock" />
+						<sar-icon color="var(--sar-tertiary-color)" name="LockOutlined" />
 					</template>
 				</sar-input>
 	
@@ -45,7 +45,7 @@
 					v-model="registerData.confirmPassword"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="lock" />
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="LockOutlined" />
 					</template>
 				</sar-input>
 				
@@ -275,5 +275,5 @@ onHide(() => {
 </script>
 
 <style lang="scss">
-@import "@/assets/style/auth.scss";
+@import "@/static/style/auth.scss";
 </style>

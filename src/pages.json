@@ -49,16 +49,21 @@
 	],
 	// 分包
 	"subpackages": [{
-		"root": "subpackages/protocol",
+		"root": "subpackages/system/",
 		"pages": [{
-			"path": "PrivacyPolicy",
+			"path": "protocol/PrivacyPolicy",
 			"style": {
 				"navigationBarTitleText": "隐私政策"
 			}
 		},{
-			"path": "UserAgreement",
+			"path": "protocol/UserAgreement",
 			"style": {
 				"navigationBarTitleText": "用户协议"
+			}
+		},{
+			"path": "setting/user/index",
+			"style": {
+				"navigationBarTitleText": "用户设置"
 			}
 		}]
 	}],

@@ -4,15 +4,17 @@
 		<view class="title">
 			<sar-space align="center" size="large">
 				<!-- 头像 -->
-				<user-avatar class="avatar unobstructed"/>
+				<view class="unobstructed" @click="toUserSetting">
+					<user-avatar/>
+				</view>
 				<sar-space direction="vertical" size="small">
 					<!-- 昵称 -->
-					<view class="nickname unobstructed">{{userStore.$state.nickname}}</view>
+					<view class="nickname unobstructed" @click="toUserSetting">{{userStore.$state.nickname}}</view>
 					<!-- 部门 -->
 					<sar-space align="center" class="dept unobstructed">
 						{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
 						<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}">
-							<sar-icon family="icon" name="swap"/>
+							<sar-icon name="SwapOutlined"/>
 						</sar-tag>
 					</sar-space>
 				</sar-space>
@@ -21,11 +23,13 @@
 		<!--操作列表-->
 		<view class="setting-content">
 			<sar-list card>
-				<sar-list-item title="仓库" @click="toGitee" icon-family="icon" icon="gitee-grey-circle" hover arrow/>
-				<sar-list-item title="关于" icon-family="icon" icon="info-circle" hover arrow/>
-				<sar-list-item title="设置" icon-family="icon" icon="setting" hover arrow/>
+				<sar-list-item title="设置" @click="toUserSetting" icon="SettingOutlined" hover arrow/>
+				<sar-list-item title="仓库" @click="toGitee" icon="Gitee" hover arrow/>
+				<sar-list-item title="关于" icon="InfoCircleOutlined" hover arrow/>
 			</sar-list>
+			  <sar-icon name="/static/svg/XiaoMiaoCool.svg" size="64rpx" />
 		</view>
+
 	</view>
 </template>
 <script setup lang="ts">
@@ -35,9 +39,17 @@ import UserAvatar from '@/components/user-avatar/index.vue'
 
 const userStore = useUserStore()
 
+// 前往gitee
 const toGitee = () => {
 	router.navigateTo({
 		url: "/pages/webview/index?url=" + encodeURIComponent('https://gitee.com/yukino_git')
+	})
+}
+
+// 前往设置
+const toUserSetting = () => {
+	router.navigateTo({
+		url: "/subpackages/system/setting/user/index"
 	})
 }
 	

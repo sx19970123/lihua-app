@@ -13,14 +13,14 @@
 				<sar-input placeholder="用户名" v-model="loginData.username" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="user" />
+						<sar-icon color="var(--sar-tertiary-color)" name="UserOutlined" />
 					</template>
 				</sar-input>
 
 				<sar-input placeholder="密码" v-model="loginData.password" type="password" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					show-clear-only-focus>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="lock" />
+						<sar-icon color="var(--sar-tertiary-color)" name="LockOutlined" />
 					</template>
 				</sar-input>
 
@@ -296,14 +296,14 @@ const toRegister = () => {
 // 前往隐私政策
 const toPrivacyPolicy = () => {
 	router.navigateTo({
-		url: "/subpackages/protocol/PrivacyPolicy",
+		url: "/subpackages/system/protocol/PrivacyPolicy",
 	})
 }
 
 // 前往用户协议
 const toUserAgreement = () => {
 	router.navigateTo({
-		url: "/subpackages/protocol/UserAgreement",
+		url: "/subpackages/system/protocol/UserAgreement",
 	})
 }
 
@@ -339,5 +339,5 @@ onHide(() => {
 </script>
 
 <style lang="scss">
-@import "@/assets/style/auth.scss";
+@import "@/static/style/auth.scss";
 </style>
