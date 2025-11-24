@@ -55,13 +55,6 @@ const toUserSetting = () => {
 	
 </script>
 
-<style>
-page {
-  position: fixed;
-  overflow: hidden;
-}
-</style>
-
 <style scoped lang="scss">
 .title {
 	position: relative;

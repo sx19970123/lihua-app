@@ -35,20 +35,14 @@ const handleSaveData = async () => {
 		if (resp.code === 200) {
 			// 刷新store
 			await userStore.initUserInfo()
-			toast("保存成功", 1000)
-			setTimeout(() => {
-				// 返回上一级
-				router.navigateBack({})
-			}, 1000)
+			router.navigateBack({})
 		} else {
 			toast(resp.msg)
 		}
 	} catch(e) {
 		console.error(e)
 	} finally {
-		setTimeout(() => {
-			uni.hideLoading()
-		}, 1000)
+		uni.hideLoading()
 	}
 }
 

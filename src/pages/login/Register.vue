@@ -15,7 +15,6 @@
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
 					clearable
-					clearable
 					show-clear-only-focus
 					v-model="registerData.username"
 					@blur="handleCheckUsername"
@@ -27,11 +26,12 @@
 				
 				<password-input 
 					v-model:value="registerData.password" 
+					class="auth-item"
+					:class="{ 'show-caret': openKeyboard }"
 					placeholder="密码" 
-					:class="{ 'show-caret': openKeyboard }" 
 					showPrepend>
 				</password-input>
-	
+				
 				<sar-input 
 					placeholder="再次输入" 
 					type="password" 

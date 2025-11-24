@@ -44,11 +44,7 @@ const handleSaveData = async () => {
 		saveLoading.value = true
 		const resp = await userStore.updatePassword(password)
 		if (resp.code === 200) {
-			toast("修改成功", 1000)
-			setTimeout(() => {
-				// 返回上一级
-				router.navigateBack({})
-			}, 1000)
+			router.navigateBack({})
 		}
 	} catch(err) {
 		if (err instanceof ResponseError) {

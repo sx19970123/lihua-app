@@ -13,7 +13,7 @@
 		"user-selected-icon": "static/tab-bar/user-active.png"
 	},
 	"dark": {
-		"navBgColor": "#292929",
+		"navBgColor": "#000",
 		"navTxtStyle": "white",
 		"bgColor": "#1f1f1f",
 		"bgTxtStyle": "dark",
