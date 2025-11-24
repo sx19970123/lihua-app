@@ -9,7 +9,7 @@
 				</sar-list-item>
 				<sar-list-item title="昵称" :value="userStore.userInfo.nickname" arrow hover @click="goSaveDataPage('SaveNickname')"></sar-list-item>
 				<sar-list-item title="邮箱" :value="userStore.userInfo.email" arrow hover @click="goSaveDataPage('SaveEmail')"></sar-list-item>
-				<sar-list-item title="性别" :value="userStore.userInfo.gender" arrow hover @click="goSaveDataPage('SaveGender')"></sar-list-item>
+				<sar-list-item title="性别" :value="getDictLabel(user_gender, userStore.userInfo.gender)" arrow hover @click="goSaveDataPage('SaveGender')"></sar-list-item>
 				<sar-list-item title="手机号码" :value="userStore.userInfo.phoneNumber" arrow hover @click="goSaveDataPage('SavePhoneNumber')"></sar-list-item>
 				<sar-list-item title="数据更新" hover @click="reloadUserInfo"></sar-list-item>
 			</sar-list>
@@ -37,6 +37,8 @@ import UserAvatar from '@/components/user-avatar/index.vue'
 import router from '@/router/Router'
 import {toast} from '@/utils/Toast'
 import { reloadData } from '@/api/system/auth/Auth'
+import {getDictLabel, initDict} from '@/utils/Dict'
+const { user_gender } = initDict('user_gender')
 const userStore = useUserStore()
 
 /**

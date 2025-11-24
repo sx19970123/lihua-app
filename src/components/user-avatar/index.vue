@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, defineProps, withDefaults} from "vue"
+import {onMounted, ref, withDefaults} from "vue"
 import type {AvatarType} from "@/api/system/profile/type/AvatarType"
 import {useUserStore} from "@/stores/user"
 
