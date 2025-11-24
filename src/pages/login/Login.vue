@@ -11,14 +11,14 @@
 				</sar-space>
 
 				<sar-input placeholder="用户名" v-model="loginData.username" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
-					show-clear-only-focus>
+					clearable show-clear-only-focus>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" name="UserOutlined" />
 					</template>
 				</sar-input>
 
 				<sar-input placeholder="密码" v-model="loginData.password" type="password" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
-					show-clear-only-focus>
+					clearable show-clear-only-focus>
 					<template #prepend>
 						<sar-icon color="var(--sar-tertiary-color)" name="LockOutlined" />
 					</template>

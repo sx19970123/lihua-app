@@ -1,5 +1,5 @@
-import request from "@/utils/Request.ts";
-import type {SysDept} from "@/api/system/dept/type/SysDept.ts";
+import request from "@/utils/Request";
+import type {SysDept} from "@/api/system/dept/type/SysDept";
 
 /**
  * 保存基础信息

@@ -2,25 +2,25 @@
 	<view class="content">
 		<sar-space direction="vertical" size="large">
 			<sar-list card title="基础设置">
-				<sar-list-item title="头像" arrow hover>
+				<sar-list-item title="头像" arrow hover @click="goSaveDataPage('SaveAvatar')">
 					<template #value>
 						<user-avatar class="avatar unobstructed"/>
 					</template>
 				</sar-list-item>
-				<sar-list-item title="昵称" :value="userStore.userInfo.nickname" arrow hover></sar-list-item>
-				<sar-list-item title="邮箱" :value="userStore.userInfo.email" arrow hover></sar-list-item>
-				<sar-list-item title="性别" :value="userStore.userInfo.gender" arrow hover></sar-list-item>
-				<sar-list-item title="手机号码" :value="userStore.userInfo.phoneNumber" arrow hover></sar-list-item>
-				<sar-list-item title="数据更新" hover></sar-list-item>
+				<sar-list-item title="昵称" :value="userStore.userInfo.nickname" arrow hover @click="goSaveDataPage('SaveNickname')"></sar-list-item>
+				<sar-list-item title="邮箱" :value="userStore.userInfo.email" arrow hover @click="goSaveDataPage('SaveEmail')"></sar-list-item>
+				<sar-list-item title="性别" :value="userStore.userInfo.gender" arrow hover @click="goSaveDataPage('SaveGender')"></sar-list-item>
+				<sar-list-item title="手机号码" :value="userStore.userInfo.phoneNumber" arrow hover @click="goSaveDataPage('SavePhoneNumber')"></sar-list-item>
+				<sar-list-item title="数据更新" hover @click="reloadUserInfo"></sar-list-item>
 			</sar-list>
 			<sar-list card title="权限信息">
-				<sar-list-item title="默认部门" :value="userStore.defaultDeptName" arrow hover></sar-list-item>
+				<sar-list-item title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>
 				<sar-list-item title="所属岗位" :value="userStore.defaultDeptPosts.map(post => post.name).join('、')" hover></sar-list-item>
 				<sar-list-item title="我的角色" :value="userStore.roles.map(role => role.name).join('、')" hover></sar-list-item>
 			</sar-list>
 			<sar-list card title="安全设置">
-				<sar-list-item title="修改密码" arrow hover></sar-list-item>
-				<sar-list-item title="账号注销" arrow hover></sar-list-item>
+				<sar-list-item title="修改密码" arrow hover @click="goSaveDataPage('SavePassword')"></sar-list-item>
+				<sar-list-item title="注销账号" arrow hover @click="goSaveDataPage('AccountDeletion')"></sar-list-item>
 			</sar-list>
 			<view class="logout-btn">
 				<sar-button type="pale" theme="danger" round @click="handleLogout">退出登录</sar-button>
@@ -34,8 +34,37 @@
 import { dialog } from 'sard-uniapp'
 import { useUserStore } from '@/stores/user'
 import UserAvatar from '@/components/user-avatar/index.vue'
-
+import router from '@/router/Router'
+import {toast} from '@/utils/Toast'
+import { reloadData } from '@/api/system/auth/Auth'
 const userStore = useUserStore()
+
+/**
+ * 前往数据保存页面
+ */
+const goSaveDataPage = (pageName: string) => {
+	const baseURL = "/subpackages/system/setting/user/"
+	router.navigateTo({
+		url: baseURL + pageName
+	})
+}
+
+/**
+ * 刷新用户信息
+ */
+const reloadUserInfo = async () => {
+	try {
+		uni.showLoading({title: '加载中', mask: true})
+		await reloadData()
+		await userStore.initUserInfo()
+		toast("更新完成")
+	} catch(err) {
+		toast("更新失败")
+		console.error(err)
+	} finally {
+		uni.hideLoading()
+	}
+}
 
 /**
  * 处理退出登录

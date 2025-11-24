@@ -14,6 +14,7 @@
 					placeholder="用户名" 
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
+					clearable
 					show-clear-only-focus
 					v-model="registerData.username"
 					@blur="handleCheckUsername"
@@ -28,6 +29,7 @@
 					type="password" 
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
+					clearable
 					show-clear-only-focus
 					v-model="registerData.password"
 				>
@@ -41,6 +43,7 @@
 					type="password" 
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
+					clearable
 					show-clear-only-focus
 					v-model="registerData.confirmPassword"
 				>

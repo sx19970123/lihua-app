@@ -65,6 +65,46 @@
 			"style": {
 				"navigationBarTitleText": "用户设置"
 			}
+		},{
+			"path": "setting/user/SavePhoneNumber",
+			"style": {
+				"navigationBarTitleText": "修改手机号"
+			}
+		},{
+			"path": "setting/user/SaveNickname",
+			"style": {
+				"navigationBarTitleText": "修改昵称"
+			}
+		},{
+			"path": "setting/user/SaveGender",
+			"style": {
+				"navigationBarTitleText": "修改性别"
+			}
+		},{
+			"path": "setting/user/SaveEmail",
+			"style": {
+				"navigationBarTitleText": "修改邮箱"
+			}
+		},{
+			"path": "setting/user/SaveAvatar",
+			"style": {
+				"navigationBarTitleText": "修改头像"
+			}
+		},{
+			"path": "setting/user/SaveDefaultDept",
+			"style": {
+				"navigationBarTitleText": "修改默认部门"
+			}
+		},{
+			"path": "setting/user/SavePassword",
+			"style": {
+				"navigationBarTitleText": "修改密码"
+			}
+		},{
+			"path": "setting/user/AccountDeletion",
+			"style": {
+				"navigationBarTitleText": "注销账号"
+			}
 		}]
 	}],
 	"tabBar": {
