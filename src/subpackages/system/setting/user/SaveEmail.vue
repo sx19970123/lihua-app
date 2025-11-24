@@ -52,6 +52,6 @@ const handleSaveData = async () => {
 }
 
 </script>
-<style scoped lang="scss">
+<style lang="scss">
 @import "@/static/style/input.scss";
 </style>

@@ -2,7 +2,7 @@
 	<view class="content">
 		<sar-space direction="vertical" size="large">
 			<sar-input placeholder="请输入旧密码" v-model="password.oldPassword" root-class="rounded-input" type="password" show-eye clearable show-clear-only-focus :maxlength="30"></sar-input>
-			<password-input v-model:value="password.newPassword"></password-input>
+			<password-input placeholder="请输入新密码" v-model:value="password.newPassword"></password-input>
 			<sar-input placeholder="请再次输入密码" v-model="password.confirmPassword" root-class="rounded-input" type="password" show-eye clearable show-clear-only-focus :maxlength="30"></sar-input>
 			<sar-button round :loading="saveLoading" @click="handleSaveData">保 存</sar-button>
 		</sar-space>
@@ -91,6 +91,6 @@ const checkPasswordData =  () => {
 }
 
 </script>
-<style scoped lang="scss">
+<style lang="scss">
 @import "@/static/style/input.scss";
 </style>

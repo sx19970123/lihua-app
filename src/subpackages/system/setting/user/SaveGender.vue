@@ -46,7 +46,9 @@ const handleSaveData = async () => {
 	} catch(e) {
 		console.error(e)
 	} finally {
-		uni.hideLoading()
+		setTimeout(() => {
+			uni.hideLoading()
+		}, 1000)
 	}
 }
 

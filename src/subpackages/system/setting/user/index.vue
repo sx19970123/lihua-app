@@ -59,12 +59,14 @@ const reloadUserInfo = async () => {
 		uni.showLoading({title: '加载中', mask: true})
 		await reloadData()
 		await userStore.initUserInfo()
-		toast("更新完成")
+		toast("更新完成", 1000)
 	} catch(err) {
-		toast("更新失败")
+		toast("更新失败", 1000) 
 		console.error(err)
 	} finally {
-		uni.hideLoading()
+		setTimeout(() => {
+			uni.hideLoading()
+		}, 1000)
 	}
 }
 

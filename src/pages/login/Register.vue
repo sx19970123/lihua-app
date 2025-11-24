@@ -15,6 +15,7 @@
 					root-class="auth-item" 
 					:class="{ 'show-caret': openKeyboard }"
 					clearable
+					clearable
 					show-clear-only-focus
 					v-model="registerData.username"
 					@blur="handleCheckUsername"
@@ -23,20 +24,13 @@
 						<sar-icon color="var(--sar-tertiary-color)" name="UserOutlined" />
 					</template>
 				</sar-input>
-	
-				<sar-input 
+				
+				<password-input 
+					v-model:value="registerData.password" 
 					placeholder="密码" 
-					type="password" 
-					root-class="auth-item" 
-					:class="{ 'show-caret': openKeyboard }"
-					clearable
-					show-clear-only-focus
-					v-model="registerData.password"
-				>
-					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" name="LockOutlined" />
-					</template>
-				</sar-input>
+					:class="{ 'show-caret': openKeyboard }" 
+					showPrepend>
+				</password-input>
 	
 				<sar-input 
 					placeholder="再次输入" 
@@ -45,10 +39,11 @@
 					:class="{ 'show-caret': openKeyboard }"
 					clearable
 					show-clear-only-focus
+					show-eye
 					v-model="registerData.confirmPassword"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="LockOutlined" />
+						<sar-icon color="var(--sar-tertiary-color)" name="LockOutlined" />
 					</template>
 				</sar-input>
 				
@@ -76,6 +71,7 @@ import {toast} from '@/utils/Toast'
 import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
 import {rasEncryptPassword} from "@/utils/Crypto"
 import {cloneDeep} from "lodash-es"
+import PasswordInput from '@/components/password-input/index.vue'
 
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
@@ -279,4 +275,5 @@ onHide(() => {
 
 <style lang="scss">
 @import "@/static/style/auth.scss";
+@import "@/static/style/input.scss";
 </style>
