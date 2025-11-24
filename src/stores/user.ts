@@ -12,6 +12,7 @@ import {publicAttachmentDownload} from "@/api/system/attachment/AttachmentStorag
 import {ResponseError, type ResponseType} from "@/api/global/Type";
 import {toast} from '@/utils/Toast';
 import router from "@/router/Router";
+import { updatePassword } from "@/api/system/profile/Profile";
 
 
 export const useUserStore = defineStore('user', {
@@ -81,6 +82,35 @@ export const useUserStore = defineStore('user', {
 			} finally {
 				this.authenticationFailure()
 			}
+		},
+		 // 修改密码
+		async updatePassword({oldPassword, newPassword, confirmPassword}: {oldPassword: string, newPassword: string, confirmPassword: string}): Promise<ResponseType<string>> {
+			return new Promise(async (resolve, reject) => {
+				try {
+					// 对旧密码进行加密处理
+					const oldPasswordEncrypt = await rasEncryptPassword(oldPassword)
+					// 对新密码进行加密处理
+					const newPasswordEncrypt = await rasEncryptPassword(newPassword)
+					// 对确认密码进行加密处理
+					const confirmPasswordEncrypt = await rasEncryptPassword(confirmPassword)
+
+					// 更新密码
+					const resp = await updatePassword(
+						oldPasswordEncrypt.ciphertext,
+						oldPasswordEncrypt.requestKey,
+						newPasswordEncrypt.ciphertext,
+						newPasswordEncrypt.requestKey,
+						confirmPasswordEncrypt.ciphertext,
+						confirmPasswordEncrypt.requestKey)
+					if (resp.code === 200) {
+						resolve(resp)
+					} else {
+						reject(new ResponseError(resp.code, resp.msg))
+					}
+				} catch (error) {
+					reject(error)
+				}
+			})
 		},
 		/**
 		 * 认证失效

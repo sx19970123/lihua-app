@@ -7,7 +7,7 @@
       :style="style"
       :theme="differenceAdapt(item.tagStyle)"
 	  :color="item.tagStyle"
-      :bordered="bordered"
+      :plain="props.plain"
     >
       <template v-if="fullTreeNode">
         <!-- rootTreeNodePrefix 以分割符开头情况下，去除首位分割符 -->
@@ -29,7 +29,7 @@
       style="width: fit-content"
       :dict-data-value="dictDataValue"
       :dict-data-option="item.children"
-      :bordered="bordered"
+      :plain="props.plain"
       :full-tree-node="fullTreeNode"
       :root-tree-node-prefix="getChildPrefix(item)"
     />
@@ -49,14 +49,14 @@ const props = withDefaults(
   defineProps<{
     dictDataOption: SysDictDataType[],
     dictDataValue: string,
-    bordered?: boolean,
+    plain?: boolean,
     style?: Record<string, any>,
     fullTreeNode?: boolean,
     fullTreeSeparator?: string,
     rootTreeNodePrefix?: string
   }>(),
   {
-    bordered: true,
+    plain: false,
     style: () => ({ "margin-right": 0 }),
     fullTreeNode: false,
     fullTreeSeparator: "/",

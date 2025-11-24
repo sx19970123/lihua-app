@@ -1,0 +1,72 @@
+<template>
+	<sar-space direction="vertical">
+		<!-- 输入框 -->
+		<sar-input root-class="rounded-input" placeholder="请输入密码" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus />
+		<!-- 密码强度指示条 -->
+		<sar-space size="small" class="indicator-bar" v-if="strong !== 0 || medium !== 0 || weak !== 0">
+			<sar-progress-bar root-style="width: 100%" :percent="weak" color="#ff4d4f" :show-text="false" />
+			<sar-progress-bar root-style="width: 100%" :percent="medium" color="#faad14" :show-text="false" />
+			<sar-progress-bar root-style="width: 100%" :percent="strong" color="#52c41a" :show-text="false" />
+		</sar-space>
+	</sar-space>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+// 不同强度正则表达式
+const weakRegex = /^.{6,}$/;
+const mediumRegex = /^(?=.*\p{L})(?=.*\d).{8,}$/u;
+const strongRegex = /^(?=.*\p{L})(?=.*\d)(?=.*[^\p{L}\d]).{10,}$/u;
+
+const props = defineProps<{value?: string}>()
+const emits = defineEmits(['update:value'])
+
+// 强
+const strong = ref<0 | 100>(0)
+// 中
+const medium = ref<0 | 100>(0)
+// 弱
+const weak = ref<0 | 100>(0)
+
+// 密码值
+const pwdValue = ref<string>()
+
+const handleChangePwd = () => {
+	const value = pwdValue.value
+	weak.value = 0
+	medium.value = 0
+	strong.value = 0
+	
+	emits('update:value', value)
+	
+	if (!value) {
+		return
+	}
+	
+	if (strongRegex.test(value)) {
+		weak.value = 100
+		medium.value = 100
+		strong.value = 100
+	} else if (mediumRegex.test(value)) {
+		weak.value = 100
+		medium.value = 100
+	} else if (weakRegex.test(value)) {
+		weak.value = 100
+	}
+	
+}
+
+
+onMounted(() => {
+	pwdValue.value = props.value
+	handleChangePwd()
+})
+</script>
+
+<style scoped lang="scss">
+@import "@/static/style/input.scss";
+.indicator-bar {
+	padding-left: 8rpx; 
+	padding-right: 8rpx;
+}
+</style>

@@ -1,12 +1,21 @@
 <template>
   <view class="home">
     <text class="title">狸花猫后台管理系统APP</text>
+	<br/>
+	<br/>
+	<br/>
+	<br/>
+	<password-input v-model:value="pwd"></password-input>
   </view>
 </template>
 
 <script setup lang="ts">
-
-
+import { ref, watch } from 'vue';
+import PasswordInput from '@/components/password-input/index.vue'
+const pwd = ref<string>()
+watch(() => pwd.value, () => {
+	console.log("pwd", pwd.value);
+})
 </script>
 
 <style lang="scss" scoped>
