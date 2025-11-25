@@ -4,14 +4,14 @@
 		<view class="title">
 			<sar-space align="center" size="large">
 				<!-- 头像 -->
-				<view class="unobstructed" @click="toUserSetting">
+				<view class="unobstructed" @click="goSaveDataPage('SaveAvatar')">
 					<user-avatar/>
 				</view>
 				<sar-space direction="vertical" size="small">
 					<!-- 昵称 -->
-					<view class="nickname unobstructed" @click="toUserSetting">{{userStore.$state.nickname}}</view>
+					<view class="nickname unobstructed" @click="goSaveDataPage('SaveNickname')">{{userStore.$state.nickname}}</view>
 					<!-- 部门 -->
-					<sar-space align="center" class="dept unobstructed">
+					<sar-space align="center" class="dept unobstructed" @click="goSaveDataPage('SaveDefaultDept')">
 						{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
 						<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}">
 							<sar-icon name="SwapOutlined"/>
@@ -50,6 +50,16 @@ const toGitee = () => {
 const toUserSetting = () => {
 	router.navigateTo({
 		url: "/subpackages/system/setting/user/index"
+	})
+}
+
+/**
+ * 前往细分设置
+ */
+const goSaveDataPage = (pageName: string) => {
+	const baseURL = "/subpackages/system/setting/user/"
+	router.navigateTo({
+		url: baseURL + pageName
 	})
 }
 	

@@ -12,8 +12,7 @@ import {publicAttachmentDownload} from "@/api/system/attachment/AttachmentStorag
 import {ResponseError, type ResponseType} from "@/api/global/Type";
 import {toast} from '@/utils/Toast';
 import router from "@/router/Router";
-import { updatePassword } from "@/api/system/profile/Profile";
-
+import { updatePassword, setDefaultDept } from "@/api/system/profile/Profile";
 
 export const useUserStore = defineStore('user', {
 	state: () => {
@@ -163,6 +162,34 @@ export const useUserStore = defineStore('user', {
 				}).catch(err => {
 					reject(err)
 				})
+			})
+		},
+		/**
+		 * 更新默认部门
+		 */
+		async updateDefaultDept(defaultDept: SysDept) {
+			return new Promise(async (resolve, reject) => {
+				if (defaultDept.id) {
+					try {
+						const resp = await setDefaultDept(defaultDept.id)
+						if (resp.code === 200) {
+							const state = this.$state
+							state.defaultDept = defaultDept
+							state.defaultDeptName = defaultDept.name ? defaultDept.name : ''
+							state.defaultDeptCode = defaultDept.code ? defaultDept.code : ''
+							// 更新默认部门后更新部门下岗位
+							state.defaultDeptPosts = state.posts.filter(post => post.deptCode === state.defaultDeptCode)
+							resolve(resp)
+						} else {
+							reject(new ResponseError(resp.code,resp.msg))
+						}
+					} catch(err) {
+						console.error(err)
+						reject(err)
+					}
+				} else {
+					reject()
+				}
 			})
 		},
 		/**
