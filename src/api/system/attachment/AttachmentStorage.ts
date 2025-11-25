@@ -1,4 +1,4 @@
-import request from "@/utils/Request";
+import request, {attachmentUpload} from "@/utils/Request";
 import type {SysAttachment} from "@/api/system/attachment/type/SysAttachment";
 
 
@@ -56,21 +56,18 @@ export const chunksUploadedIndex = (uploadId: string) => {
 }
 
 //  附件上传
-export const upload = (file: File, businessCode: string, businessName: string) => {
-    const formData = new FormData();
-    formData.append('file', file)
-    formData.append('businessCode', businessCode)
-    formData.append('businessName', businessName)
-    formData.append('originalName', file.name)
-    formData.append('uploadMode', "0")
-    formData.append('size', file.size.toString())
-    formData.append('type', file.type)
-    return request<string>({
-        url: "system/attachment/storage/upload",
-        method: "POST",
-        data: formData,
-        header: {'Content-Type': 'multipart/form-data'}
-    })
+export const upload = (filePath: string, businessCode: string, businessName: string) => {
+	return attachmentUpload<string>({
+		url: "system/attachment/storage/upload",
+		filePath: filePath,
+		name: 'file',
+		formData: {
+			businessCode,
+			businessName,
+			uploadMode: "0"
+		},
+		header: {'Content-Type': 'multipart/form-data'}
+	})
 }
 
 // 文件秒传

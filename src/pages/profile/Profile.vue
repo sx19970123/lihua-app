@@ -36,6 +36,8 @@
 import {useUserStore} from '@/stores/user'
 import router from '@/router/Router'
 import UserAvatar from '@/components/user-avatar/index.vue'
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 
 const userStore = useUserStore()
 
@@ -62,7 +64,7 @@ const goSaveDataPage = (pageName: string) => {
 		url: baseURL + pageName
 	})
 }
-	
+
 </script>
 
 <style scoped lang="scss">
@@ -108,7 +110,7 @@ const goSaveDataPage = (pageName: string) => {
 }
 
 .setting-content {
-	padding: 0 16px 16px 16px;
+	padding: 0 16rpx 16rpx 16rpx;
 }
 
 /* 深色模式 */

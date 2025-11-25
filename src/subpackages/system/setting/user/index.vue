@@ -4,7 +4,7 @@
 			<sar-list card title="基础设置">
 				<sar-list-item title="头像" arrow hover @click="goSaveDataPage('SaveAvatar')">
 					<template #value>
-						<user-avatar class="avatar unobstructed"/>
+						<user-avatar/>
 					</template>
 				</sar-list-item>
 				<sar-list-item title="昵称" :value="userStore.userInfo.nickname" arrow hover @click="goSaveDataPage('SaveNickname')"></sar-list-item>

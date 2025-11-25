@@ -1,10 +1,10 @@
 <template>
 	<view v-if="avatarData">
 		<!-- 图片类型 -->
-		<sar-avatar v-if="avatarData.type === 'image'" :src="avatarData.url" :size="size + 'rpx'"/>
+		<sar-avatar v-if="avatarData.type === 'image'" :src="avatarData.url" :size="size + 'rpx'" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''"/>
 		<!-- 文本|图标类型 -->
-		<sar-avatar v-else :background="avatarData.backgroundColor" :size="size + 'rpx'" class="avatar-text">
-			<sar-icon v-if="avatarData.type === 'icon'" :family="iconInfo?.family" :name="iconInfo?.name" color="#fff"/>
+		<sar-avatar v-else :background="avatarData.backgroundColor" :size="size + 'rpx'" class="avatar-text" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''">
+			<sar-icon v-if="avatarData.type === 'icon'" :family="iconInfo?.family" :name="iconInfo?.name" color="#fff" :size="(size / 1.4) + 'rpx'"/>
 			<text v-else :style="{fontSize: fontSize + 'rpx', lineHeight: size + 'rpx'}" style="color: #fff">{{avatarData.value}}</text>
 		</sar-avatar>
 	</view>
@@ -13,24 +13,22 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, withDefaults} from "vue"
+import {onMounted, ref, withDefaults, watch} from "vue"
 import type {AvatarType} from "@/api/system/profile/type/AvatarType"
 import {useUserStore} from "@/stores/user"
+import { onPageShow } from "@dcloudio/uni-app"
 
 // 接收参数
-const {size, type, url, value, backgroundColor} = withDefaults(defineProps<{
+const {size, shape, customAvatar} = withDefaults(defineProps<{
 	// 头像大小（rpx）
 	size?: number,
-	// 头像类型
-	type?: string,
-	// 路径（图片）
-	url?: string,
-	// 图标值（文本｜图标）
-	value?: string,
-	// 背景颜色（文本｜图标）
-	backgroundColor?: string
+	// 图标形状
+	shape?: "square" | "circle",
+	// 头像
+	customAvatar?: AvatarType
 }>(), {
-	size: 128
+	size: 128,
+	shape: "circle"
 })
 
 const avatarData = ref<AvatarType>()
@@ -44,8 +42,8 @@ const svgIconSuffix = ".svg"
  */
 const initAvatar = () => {
 	// 传入type表示自定义显示
-	if (type) {
-		avatarData.value = {type, backgroundColor, value, url}
+	if (customAvatar && customAvatar.type) {
+		avatarData.value = customAvatar
 	} else {
 		// type不存在，加载当前用户头像
 		const userStore = useUserStore()
@@ -108,4 +106,16 @@ onMounted(() => {
 	initAvatar()
 })
 
+watch(() => customAvatar, () => {
+	initAvatar()
+}, {deep: true})
+
+onPageShow(() => {
+	initAvatar()
+})
 </script>
+<style scoped lang="scss">
+.avatar-shape {
+	border-radius: var(--sar-rounded-lg)
+}
+</style>

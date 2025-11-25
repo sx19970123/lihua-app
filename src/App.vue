@@ -31,6 +31,6 @@ text {
 }
 
 .content {
-	padding: 16px;
+	padding: 16rpx;
 }
 </style>

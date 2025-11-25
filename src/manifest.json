@@ -30,7 +30,10 @@
         },
         "runmode" : "liberate",
         /* 模块配置 */
-        "modules" : {},
+        "modules" : {
+            "Barcode" : {},
+            "Camera" : {}
+        },
         /* 应用发布信息 */
         "distribute" : {
             /* android打包配置 */

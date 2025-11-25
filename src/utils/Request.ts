@@ -68,3 +68,20 @@ export default <T> (config: RequestConfig) => {
           });
     });
 };
+
+export const attachmentUpload = <T> (config: RequestConfig) => {
+	return new Promise<ResponseType<T>>((resolve, reject) => {
+		if (!config.url) {
+			reject()
+			return
+		}
+		service
+		.upload<ResponseType<T> & ArrayBuffer>(config.url, config)
+		.then((response: Response<ResponseType<T> & ArrayBuffer>) => {
+		    resolve(response.data)
+		})
+		.catch((err: ResponseErrorType) => {
+		    reject(err);
+		});
+	})
+}
