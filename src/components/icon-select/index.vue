@@ -7,25 +7,25 @@
 			<!-- 线框 -->
 			<sar-space wrap v-if="currentSegmented === 'Outlined'">
 				<view v-for="iconName in outlinedIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
-					<sar-icon family="outlined" :name="iconName" class="icon-item" :size="iconSize"></sar-icon>
+					<sar-icon family="outlined" :name="iconName" :size="iconSize" :color="currentTheme === 'dark' ? '#fff' : '#000'"></sar-icon>
 				</view>
 			</sar-space>
 			<!-- 实底 -->
 			<sar-space wrap v-if="currentSegmented === 'Filled'">
 				<view v-for="iconName in filledIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
-					<sar-icon family="filled" :name="iconName" class="icon-item" :size="iconSize"></sar-icon>
+					<sar-icon family="filled" :name="iconName" :size="iconSize" :color="currentTheme === 'dark' ? '#fff' : '#000'"></sar-icon>
 				</view>
 			</sar-space>
 			<!-- 双色 -->
 			<sar-space wrap v-if="currentSegmented === 'TwoTone'">
 				<view v-for="iconName in twoToneIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
-					<sar-icon :name="svgIconPath + iconName + svgIconSuffix" class="icon-item" :size="iconSize"></sar-icon>
+					<sar-icon :name="svgIconPath + iconName + svgIconSuffix" :size="iconSize"></sar-icon>
 				</view>
 			</sar-space>
 			<!-- 自定义 -->
 			<sar-space wrap v-if="currentSegmented === 'Custom'">
 				<view v-for="iconName in customIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
-					<sar-icon :name="svgIconPath + iconName + svgIconSuffix" class="icon-item" :size="iconSize"></sar-icon>
+					<sar-icon :name="svgIconPath + iconName + svgIconSuffix" :size="iconSize"></sar-icon>
 				</view>
 			</sar-space>
 		</scroll-view>
@@ -33,8 +33,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import icons from '@/static/icons/icons.json'
+import { onMounted, onUnmounted, ref } from 'vue'
+import icons from '@/subpackages/system/static/icons.json'
 
 const svgIconPath = "/static/icons/svg/"
 const svgIconSuffix = ".svg"
@@ -55,6 +55,10 @@ const props = withDefaults(defineProps<{
 
 // 双向绑定
 const emits = defineEmits(['update:value'])
+
+// 获取当前主题
+const { theme } = uni.getSystemInfoSync();
+const currentTheme = ref<string|undefined>(theme)
 
 /**
  * 分段器相关
@@ -91,6 +95,21 @@ icons.forEach(iconName => {
 const handleChickIcon = (iconName: string) => {
 	emits('update:value', iconName)
 }
+
+/**
+ * 监听主题变化
+ */
+const handleChangeTheme = ({theme}: {theme: 'dark' | 'light'}) => {
+	currentTheme.value = theme
+}
+
+onMounted(() => {
+	uni.onThemeChange(handleChangeTheme);
+})
+
+onUnmounted(() => {
+	uni.offThemeChange(handleChangeTheme)
+})
 </script>
 
 <style scoped lang="scss">
@@ -99,9 +118,8 @@ const handleChickIcon = (iconName: string) => {
 	width:  100rpx;
 	border-radius: 24rpx;
 	display: flex;
-	.icon-item {
-		margin: auto;
-	}
+	justify-content: center;
+	align-items: center;
 }
 
 .icon-item-content-active {

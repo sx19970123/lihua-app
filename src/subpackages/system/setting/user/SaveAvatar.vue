@@ -17,7 +17,7 @@
 					<!-- 头像背景颜色 -->
 					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
 					<!-- 头像文本 -->
-					<sar-input :focus="autoFocus" root-class="rounded-input" placeholder="请输入文本" v-model="avatarData.value" @keyboardheightchange="handleKeyboardChange"></sar-input>
+					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input" placeholder="请输入文本" v-model="avatarData.value" @keyboardheightchange="handleKeyboardChange"></sar-input>
 				</sar-space>
 		    </view>
 		</sar-popout>
@@ -237,9 +237,6 @@ const {textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardChan
 
 <style scoped lang="scss">
 	@import "@/static/style/input.scss";
-	:deep(page) {
-		position: fixed;
-	}
 	.avatar-title {
 		font-size: var(--sar-text-lg);
 		font-weight: var(--sar-font-bold);

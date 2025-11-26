@@ -77,8 +77,12 @@ const autoFontSize = () => {
 		// emoji
 		weightLen += 1.5
     } else {
-		// 英文、数字、符号
-		weightLen += 0.5
+		if (text.length === 1) {
+			weightLen += 1
+		} else {
+			// 英文、数字、符号
+			weightLen += 0.5
+		}
     }
   }
 

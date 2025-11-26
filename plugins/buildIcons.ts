@@ -18,7 +18,7 @@ const buildIcons = () => {
 	// svg 目录
 	const svgiconsDir = path.resolve(__dirname, '../src/static/icons/svg')
 	// 生成的文件
-	const outFile = path.resolve(__dirname, '../src/static/icons/icons.json')
+	const outFile = path.resolve(__dirname, '../src/subpackages/system/static/icons.json')
 	// 文件名
 	const iconNames : string[] = []
 	// 读取到目标文件

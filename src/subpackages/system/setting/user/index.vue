@@ -73,9 +73,8 @@ const reloadUserInfo = async () => {
 			toast((err as unknown as ResponseError).msg)
 		} else {
 			console.error(err)
+			uni.hideLoading()
 		}
-	} finally {
-		uni.hideLoading()
 	}
 }
 
