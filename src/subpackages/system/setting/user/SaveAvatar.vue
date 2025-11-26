@@ -23,12 +23,14 @@
 		</sar-popout>
 		<!-- 图标抽屉 -->
 		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false" :before-close="handleSave">
-		    <sar-space direction="vertical" size="large" style="margin-left: 16rpx;">
-		    	<!-- 头像背景颜色 -->
-		    	<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
-		    	<!-- 头像图标 -->
-		    	<IconSelect v-model:value="avatarData.value"></IconSelect>
-		    </sar-space>
+		    <view class="popout-content">
+				<sar-space direction="vertical" size="large">
+					<!-- 头像背景颜色 -->
+					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
+					<!-- 头像图标 -->
+					<IconSelect v-model:value="avatarData.value" width="686rpx"></IconSelect>
+				</sar-space>
+			</view>
 		</sar-popout>
 		<!-- 裁剪组件代理 -->
 		<sar-crop-image-agent />
@@ -235,7 +237,7 @@ const {textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardChan
 
 <style scoped lang="scss">
 	@import "@/static/style/input.scss";
-	.avatar-content {
+	:deep(page) {
 		position: fixed;
 	}
 	.avatar-title {

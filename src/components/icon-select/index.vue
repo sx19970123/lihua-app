@@ -19,7 +19,7 @@
 			<!-- 双色 -->
 			<sar-space wrap v-if="currentSegmented === 'TwoTone'">
 				<view v-for="iconName in twoToneIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
-					<sar-icon family="twotone" :name="iconName" class="icon-item" :size="iconSize"></sar-icon>
+					<sar-icon :name="svgIconPath + iconName + svgIconSuffix" class="icon-item" :size="iconSize"></sar-icon>
 				</view>
 			</sar-space>
 			<!-- 自定义 -->
@@ -45,9 +45,9 @@ const props = withDefaults(defineProps<{
 	// 双向绑定图标name
 	value: string,
 	// 图表区域高度
-	height: string,
+	height?: string,
 	// 组件宽度
-	width: string
+	width?: string
 }>(), {
 	width: '718rpx',
 	height: '25vh'
@@ -95,8 +95,8 @@ const handleChickIcon = (iconName: string) => {
 
 <style scoped lang="scss">
 .icon-item-content {
-	height: 106rpx;
-	width:  106rpx;
+	height: 100rpx;
+	width:  100rpx;
 	border-radius: 24rpx;
 	display: flex;
 	.icon-item {

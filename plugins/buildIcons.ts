@@ -26,10 +26,10 @@ const buildIcons = () => {
 	const svgFiles = fs.readdirSync(svgiconsDir)
 	// 记录css文件
 	for (const file of files) {
-		if (file.endsWith('filled.css') || file.endsWith('outlined.css') || file.endsWith('twotone.css')) {
+		if (file.endsWith('filled.css') || file.endsWith('outlined.css')) {
 			const content = fs.readFileSync(path.join(iconsDir, file), 'utf-8')
-			// 匹配 .filled|outlined|twotone-xxx 形式
-			const matches = content.match(/\.(filled|outlined|twotone)-[a-zA-Z0-9-_]+/g)
+			// 匹配 .filled-xxx|outlined-xxx 形式
+			const matches = content.match(/\.(filled|outlined)-[a-zA-Z0-9-_]+/g)
 			if (matches) {
 				matches.forEach(m => {
 					// 去除多余元素

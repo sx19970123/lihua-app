@@ -21,7 +21,6 @@ onHide(() => {
 @import 'sard-uniapp/dark.scss';
 /* 自定义图标 */
 @import '@/static/icons/filled.css';
-@import '@/static/icons/twotone.css';
 @import '@/static/icons/custom.css';
 @import '@/static/icons/outlined.css';
 

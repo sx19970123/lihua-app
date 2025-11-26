@@ -96,10 +96,8 @@ const handleIcon = () => {
 		iconInfo.value = {family: 'outlined', name: icon}
 	} else if (icon.endsWith("Filled")) {
 		iconInfo.value = {family: 'filled', name: icon}
-	} else if (icon.endsWith("TwoTone")) {
-		iconInfo.value = {family: 'twotone', name: icon}
 	} else {
-		// 自定义svg图标
+		// 自定义svg及双色图标
 		iconInfo.value = {family: '', name: svgIconPath + icon + svgIconSuffix}
 	}
 }
