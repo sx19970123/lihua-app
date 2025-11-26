@@ -60,15 +60,19 @@ export const useUserStore = defineStore('user', {
 		 * 账号密码登录
 		 */
 		async login(username: string, password: string, captchaVerification?: string) {
-			// 对密码进行加密处理，获取密文和requestKey
-			const {ciphertext, requestKey} = await rasEncryptPassword(password)
-			// 调用登录接口
-			const resp = await login({username, password: ciphertext, captchaVerification, requestKey})
-			// 登录成功，设置Token
-			if (resp.code === 200) {
-				setToken(resp.data)
+			try {
+				// 对密码进行加密处理，获取密文和requestKey
+				const {ciphertext, requestKey} = await rasEncryptPassword(password)
+				// 调用登录接口
+				const resp = await login({username, password: ciphertext, captchaVerification, requestKey})
+				// 登录成功，设置Token
+				if (resp.code === 200) {
+					setToken(resp.data)
+				}
+				return resp
+			} catch(err) {
+				throw err
 			}
-			return resp
 		},
 		/**
 		 * 退出登录

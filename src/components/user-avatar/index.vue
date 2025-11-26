@@ -4,7 +4,7 @@
 		<sar-avatar v-if="avatarData.type === 'image'" :src="avatarData.url" :size="size + 'rpx'" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''"/>
 		<!-- 文本|图标类型 -->
 		<sar-avatar v-else :background="avatarData.backgroundColor" :size="size + 'rpx'" class="avatar-text" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''">
-			<sar-icon v-if="avatarData.type === 'icon'" :family="iconInfo?.family" :name="iconInfo?.name" color="#fff" :size="(size / 1.4) + 'rpx'"/>
+			<sar-icon v-if="avatarData.type === 'icon'" style="margin-top: 3rpx;" :family="iconInfo?.family" :name="iconInfo?.name" color="#fff" :size="(size / 1.4) + 'rpx'"/>
 			<text v-else :style="{fontSize: fontSize + 'rpx', lineHeight: size + 'rpx'}" style="color: #fff">{{avatarData.value}}</text>
 		</sar-avatar>
 	</view>

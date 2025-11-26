@@ -1,9 +1,9 @@
 <template>
-	<view :style="{maxWidth: iconSelectSize}">
+	<view :style="{maxWidth: props.width}">
 		<!-- 分段 -->
 		<sar-segmented v-model="currentSegmented" :options="options"/>
 		<!-- 图标 -->
-		<scroll-view scroll-y :style="{maxHeight: '359rpx'}" style="margin-top: 16rpx;">
+		<scroll-view scroll-y :style="{maxHeight: props.height}" style="margin-top: 16rpx;">
 			<!-- 线框 -->
 			<sar-space wrap v-if="currentSegmented === 'Outlined'">
 				<view v-for="iconName in outlinedIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
@@ -40,12 +40,20 @@ const svgIconPath = "/static/icons/svg/"
 const svgIconSuffix = ".svg"
 
 const iconSize = '70rpx'
-const iconSelectSize = '718rpx'
 
-const props = defineProps<{
-	value: string
-}>()
+const props = withDefaults(defineProps<{
+	// 双向绑定图标name
+	value: string,
+	// 图表区域高度
+	height: string,
+	// 组件宽度
+	width: string
+}>(), {
+	width: '718rpx',
+	height: '25vh'
+})
 
+// 双向绑定
 const emits = defineEmits(['update:value'])
 
 /**
@@ -54,11 +62,17 @@ const emits = defineEmits(['update:value'])
 const currentSegmented = ref<'Outlined' | 'Filled' | 'TwoTone' | 'Custom'>('Outlined')
 const options = [{label: '线框', value: 'Outlined'}, {label: '实底', value: 'Filled'}, {label: '双色', value: 'TwoTone'}, {label: '自定义', value: 'Custom'}]
 
+/**
+ * 不同样式图标
+ */
 const filledIcons:string[] = []
 const outlinedIcons:string[] = []
 const twoToneIcons:string[] = []
 const customIcons:string[] = []
 
+/**
+ * 初始化图标列表
+ */
 icons.forEach(iconName => {
 	if (iconName.endsWith('Filled')) {
 		filledIcons.push(iconName)
@@ -71,6 +85,9 @@ icons.forEach(iconName => {
 	}
 })
 
+/**
+ * 点击图标
+ */
 const handleChickIcon = (iconName: string) => {
 	emits('update:value', iconName)
 }
