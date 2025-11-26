@@ -72,6 +72,7 @@ import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
 import {rasEncryptPassword} from "@/utils/Crypto"
 import {cloneDeep} from "lodash-es"
 import PasswordInput from '@/components/password-input/index.vue'
+import { ResponseError } from '@/api/global/Type'
 
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
@@ -194,7 +195,11 @@ const initRegister = () => {
 				toast(resp.msg)
 			}
 		} catch(err) {
-			console.error(err)
+			if (err instanceof ResponseError) {
+				toast((err as unknown as ResponseError).msg)
+			} else {
+				console.error(err)
+			}
 		} finally {
 			registerLoading.value = false
 		}

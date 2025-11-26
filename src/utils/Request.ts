@@ -6,7 +6,7 @@ import {useUserStore} from '@/stores/user'
 
 const service = new Request({
 	baseURL: import.meta.env.VITE_APP_BASE_API,
-	timeout: 50000
+	timeout: 5000
 })
 
 // 请求拦截器
@@ -30,6 +30,10 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
 	(response: Response) => {
+		// statusCode 不为200 表示服务器为止异常
+		if (response.statusCode !== 200) {
+			throw new ResponseError(500, "业务异常")
+		}
 		const data = response.data as ResponseType<any>
 		console.info("接收响应===>", data);
 		// 登录信息失效，调用store中的登录失效逻辑
@@ -43,14 +47,13 @@ service.interceptors.response.use(
 		}
 		// 服务器处理文件异常，提示异常信息
 		if (data.code === 501) {
-			new ResponseError(data.code, data.msg)
+			throw new ResponseError(data.code, data.msg)
 		}
-		
 		return response
 	},
 	(error) => {
 		// 请求出现异常
-		return Promise.reject(new ResponseError(500, error.errMsg));
+		throw new ResponseError(503, error.errMsg);
 	}
 )
 

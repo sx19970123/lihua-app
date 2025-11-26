@@ -13,6 +13,7 @@ import { useUserStore } from '@/stores/user';
 import router from '@/router/Router';
 import {saveBasics} from '@/api/system/profile/Profile';
 import {toast} from '@/utils/Toast';
+import { ResponseError } from '@/api/global/Type';
 
 const userStore = useUserStore()
 const phoneNumber = ref<string | undefined>(userStore.userInfo.phoneNumber)
@@ -40,8 +41,12 @@ const handleSaveData = async () => {
 		} else {
 			toast(resp.msg)
 		}
-	} catch(e) {
-		console.error(e)
+	} catch(err) {
+		if (err instanceof ResponseError) {
+			toast((err as unknown as ResponseError).msg)
+		} else {
+			console.error(err)
+		}
 	} finally {
 		saveLoading.value = false
 	}

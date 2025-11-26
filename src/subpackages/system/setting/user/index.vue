@@ -38,6 +38,7 @@ import router from '@/router/Router'
 import {toast} from '@/utils/Toast'
 import { reloadData } from '@/api/system/auth/Auth'
 import {getDictLabel, initDict} from '@/utils/Dict'
+import { ResponseError } from '@/api/global/Type'
 const { user_gender } = initDict('user_gender')
 const userStore = useUserStore()
 
@@ -61,8 +62,13 @@ const reloadUserInfo = async () => {
 		await userStore.initUserInfo()
 		toast("更新完成")
 	} catch(err) {
-		toast("更新失败") 
-		console.error(err)
+		if (err instanceof ResponseError) {
+			toast((err as unknown as ResponseError).msg)
+		} else {
+			console.error(err)
+		}
+	} finally {
+		uni.hideLoading()
 	}
 }
 

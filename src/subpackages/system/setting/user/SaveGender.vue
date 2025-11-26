@@ -23,6 +23,7 @@ import router from '@/router/Router';
 import {saveBasics} from '@/api/system/profile/Profile';
 import {toast} from '@/utils/Toast';
 import {initDict} from '@/utils/Dict'
+import { ResponseError } from '@/api/global/Type';
 const { user_gender } = initDict('user_gender')
 const userStore = useUserStore()
 const gender = ref<string | undefined>(userStore.userInfo.gender)
@@ -39,8 +40,12 @@ const handleSaveData = async () => {
 		} else {
 			toast(resp.msg)
 		}
-	} catch(e) {
-		console.error(e)
+	} catch(err) {
+		if (err instanceof ResponseError) {
+			toast((err as unknown as ResponseError).msg)
+		} else {
+			console.error(err)
+		}
 	} finally {
 		uni.hideLoading()
 	}

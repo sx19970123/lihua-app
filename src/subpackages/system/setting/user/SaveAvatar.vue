@@ -11,7 +11,7 @@
 			</sar-list>
 		</sar-space>
 		<!-- 文本抽屉 -->
-		 <sar-popout v-model:visible="textPopout" :overlay-closable="!keyboardOpen" :show-close="false" @leave="handleCancel" :before-close="handleSave">
+		 <sar-popout v-model:visible="textPopout" :overlay-closable="!keyboardOpen" :show-close="false" @leave="autoFocus = false" :before-close="handleSave">
 		    <view class="popout-content">
 				<sar-space direction="vertical" size="large">
 					<!-- 头像背景颜色 -->
@@ -22,7 +22,7 @@
 		    </view>
 		</sar-popout>
 		<!-- 图标抽屉 -->
-		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="handleCancel" :before-close="handleSave">
+		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false" :before-close="handleSave">
 		    <view class="popout-content">
 				<!-- 头像背景颜色 -->
 				<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
@@ -50,6 +50,7 @@ import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
 import {toast} from '@/utils/Toast'
 import {cloneDeep} from 'lodash-es'
+import { ResponseError } from '@/api/global/Type'
 
 const userStore = useUserStore()
 
@@ -101,10 +102,7 @@ const colorSource = [
 const avatarBtnColor = 'rgba(var(--sar-secondary-rgb), 0.4)'
 // 头像数据
 const avatarData = ref<AvatarType>(cloneDeep(userStore.avatar))
-// 取消修改
-const handleCancel = () => {
-	autoFocus.value = false
-}
+
 // 执行保存
 const handleSave = async (type?: 'confirm' | 'cancel' | 'close') =>   {
 	if (type === 'confirm') {
@@ -119,8 +117,12 @@ const handleSave = async (type?: 'confirm' | 'cancel' | 'close') =>   {
 			} else {
 				toast(resp.msg)
 			}
-		} catch(e) {
-			console.error(e)
+		} catch(err) {
+			if (err instanceof ResponseError) {
+				toast((err as unknown as ResponseError).msg)
+			} else {
+				console.error(err)
+			}
 		}
 	}
 }
@@ -132,22 +134,30 @@ const initImageAvatar = () => {
 	const imageUrl = ref('')
 	// 选择头像
 	const chooseImage = () => {
+		// 选择照片｜拍照
 		uni.chooseImage({
 			count: 1,
 			sizeType: ['original', 'compressed'],
 			sourceType: ['album', 'camera'],
 			success(res) {
+				// 拿到照片调用裁剪
 				cropImage({
 					src: res.tempFilePaths[0],
+					// 裁剪成功执行上传逻辑
 					success(filePath) {
-						upload(filePath, "UserAvatar", "用户头像").then(resp => {
+						uni.showLoading({ title: "正在上传", mask: true })
+						upload(filePath, "UserAvatar", "用户头像")
+						.then(resp => {
 							avatarData.value.type = "image"
 							avatarData.value.value = resp.data
 							handleSave("confirm")
 						}).catch(err => {
-							console.log(err);
+							console.error(err);
+							toast("上传失败")
+						}).finally(() => {
+							uni.hideLoading()
 						})
-					},
+					}
 				})
 			},
 		})

@@ -57,6 +57,7 @@ import Captcha from '@/components/captcha/index'
 import {toast} from '@/utils/Toast'
 import {onShow, onHide} from '@dcloudio/uni-app'
 import {rememberMe, getRememberedInfo} from '@/utils/Token'
+import { ResponseError } from '@/api/global/Type'
 
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
@@ -116,7 +117,11 @@ const initLogin = () => {
 				toast(resp.msg)
 			}
 		} catch(err) {
-			console.error(err)
+			if (err instanceof ResponseError) {
+				toast((err as unknown as ResponseError).msg)
+			} else {
+				console.error(err)
+			}
 		} finally {
 			loginLoading.value = false
 		}
@@ -141,11 +146,19 @@ const initCaptcha = () => {
 	
 	// 是否启用验证码
 	const captcha = async () => {
-		const resp = await enable()
-		if (resp.code === 200) {
-			enableCaptcha.value = resp.data
-		} else {
-			toast(resp.msg)
+		try {
+			const resp = await enable()
+			if (resp.code === 200) {
+				enableCaptcha.value = resp.data
+			} else {
+				toast(resp.msg)
+			}
+		} catch(err) {
+			if (err instanceof ResponseError) {
+				toast((err as unknown as ResponseError).msg)
+			} else {
+				console.error(err)
+			}
 		}
 	}
 	
@@ -246,9 +259,17 @@ const initRegister = () => {
 	
 	// 获取用户注册状态
 	const getRegisterStatus = async () => {
-		const resp = await enableRegister()
-		if (resp.code === 200) {
-			isRegistrationEnable.value = resp.data
+		try {
+			const resp = await enableRegister()
+			if (resp.code === 200) {
+				isRegistrationEnable.value = resp.data
+			}
+		} catch(err) {
+			if (err instanceof ResponseError) {
+				toast((err as unknown as ResponseError).msg)
+			} else {
+				console.error(err)
+			}
 		}
 	}
 	
