@@ -1,12 +1,12 @@
 <template>
-	<view class="content">
+	<view class="content avatar-content">
 		<sar-space direction="vertical" size="large">
 			<!-- 预览头像 -->
 			<user-avatar :size="750 - 32" shape="square" :type="avatarData.type" :customAvatar="avatarData"/>
 			<!-- 操作菜单 -->
 			<sar-list card>
 				<sar-list-item title="选择照片" arrow hover @click="chooseImage"></sar-list-item>
-				<sar-list-item title="选择图标" arrow hover @click="iconPopout = true"></sar-list-item>
+				<sar-list-item title="选择图标" arrow hover @click="handleIconAvatar"></sar-list-item>
 				<sar-list-item title="编辑文本" arrow hover @click="handleTextAvatar"></sar-list-item>
 			</sar-list>
 		</sar-space>
@@ -23,14 +23,12 @@
 		</sar-popout>
 		<!-- 图标抽屉 -->
 		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false" :before-close="handleSave">
-		    <view class="popout-content">
-				<!-- 头像背景颜色 -->
-				<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
-				<!-- 头像图标 -->
-				<view>iconPopout</view>
-				<view>iconPopout</view>
-				<view>iconPopout</view>
-		    </view>
+		    <sar-space direction="vertical" size="large" style="margin-left: 16rpx;">
+		    	<!-- 头像背景颜色 -->
+		    	<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
+		    	<!-- 头像图标 -->
+		    	<IconSelect v-model:value="avatarData.value"></IconSelect>
+		    </sar-space>
 		</sar-popout>
 		<!-- 裁剪组件代理 -->
 		<sar-crop-image-agent />
@@ -51,6 +49,7 @@ import router from '@/router/Router'
 import {toast} from '@/utils/Toast'
 import {cloneDeep} from 'lodash-es'
 import { ResponseError } from '@/api/global/Type'
+import IconSelect from '@/components/icon-select/index.vue'
 
 const userStore = useUserStore()
 
@@ -177,12 +176,20 @@ const {imageUrl, chooseImage} = initImageAvatar()
 const initIconAvatar = () => {
 	// 图标抽屉开关
 	const iconPopout = ref<boolean>(false)
-	
+	// 处理图标头像
+	const handleIconAvatar = () => {
+		if (avatarData.value.type !== 'icon') {
+			avatarData.value.type = 'icon'
+			avatarData.value.value = ''
+		}
+		iconPopout.value = true
+	}
 	return {
-		iconPopout
+		iconPopout,
+		handleIconAvatar
 	}
 }
-const {iconPopout} = initIconAvatar()
+const {iconPopout, handleIconAvatar} = initIconAvatar()
 
 /**
  * 初始化文本头像
@@ -228,6 +235,9 @@ const {textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardChan
 
 <style scoped lang="scss">
 	@import "@/static/style/input.scss";
+	.avatar-content {
+		position: fixed;
+	}
 	.avatar-title {
 		font-size: var(--sar-text-lg);
 		font-weight: var(--sar-font-bold);

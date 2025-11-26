@@ -1,8 +1,10 @@
 <template>
-  <view class="home">
+  <view class="home" style="margin-top: 200rpx;">
     <text class="title">狸花猫后台管理系统APP</text>
   </view>
 </template>
+<script setup lang="ts">
+</script>
 <style lang="scss" scoped>
 .home {
   position: relative;

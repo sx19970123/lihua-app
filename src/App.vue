@@ -20,10 +20,10 @@ onHide(() => {
 /* sard-uniapp组件库暗色模式 */
 @import 'sard-uniapp/dark.scss';
 /* 自定义图标 */
-@import '@/static/icon/filled.css';
-@import '@/static/icon/twotone.css';
-@import '@/static/icon/custom.css';
-@import '@/static/icon/outlined.css';
+@import '@/static/icons/filled.css';
+@import '@/static/icons/twotone.css';
+@import '@/static/icons/custom.css';
+@import '@/static/icons/outlined.css';
 
 page {
 	background-color: var(--sar-body-bg);

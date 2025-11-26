@@ -1,0 +1,93 @@
+<template>
+	<view :style="{maxWidth: iconSelectSize}">
+		<!-- 分段 -->
+		<sar-segmented v-model="currentSegmented" :options="options"/>
+		<!-- 图标 -->
+		<scroll-view scroll-y :style="{maxHeight: '359rpx'}" style="margin-top: 16rpx;">
+			<!-- 线框 -->
+			<sar-space wrap v-if="currentSegmented === 'Outlined'">
+				<view v-for="iconName in outlinedIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
+					<sar-icon family="outlined" :name="iconName" class="icon-item" :size="iconSize"></sar-icon>
+				</view>
+			</sar-space>
+			<!-- 实底 -->
+			<sar-space wrap v-if="currentSegmented === 'Filled'">
+				<view v-for="iconName in filledIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
+					<sar-icon family="filled" :name="iconName" class="icon-item" :size="iconSize"></sar-icon>
+				</view>
+			</sar-space>
+			<!-- 双色 -->
+			<sar-space wrap v-if="currentSegmented === 'TwoTone'">
+				<view v-for="iconName in twoToneIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
+					<sar-icon family="twotone" :name="iconName" class="icon-item" :size="iconSize"></sar-icon>
+				</view>
+			</sar-space>
+			<!-- 自定义 -->
+			<sar-space wrap v-if="currentSegmented === 'Custom'">
+				<view v-for="iconName in customIcons" :key="iconName" class="icon-item-content" :class="{'icon-item-content-active': props.value === iconName}" @click="handleChickIcon(iconName)">
+					<sar-icon :name="svgIconPath + iconName + svgIconSuffix" class="icon-item" :size="iconSize"></sar-icon>
+				</view>
+			</sar-space>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import icons from '@/static/icons/icons.json'
+
+const svgIconPath = "/static/icons/svg/"
+const svgIconSuffix = ".svg"
+
+const iconSize = '70rpx'
+const iconSelectSize = '718rpx'
+
+const props = defineProps<{
+	value: string
+}>()
+
+const emits = defineEmits(['update:value'])
+
+/**
+ * 分段器相关
+ */
+const currentSegmented = ref<'Outlined' | 'Filled' | 'TwoTone' | 'Custom'>('Outlined')
+const options = [{label: '线框', value: 'Outlined'}, {label: '实底', value: 'Filled'}, {label: '双色', value: 'TwoTone'}, {label: '自定义', value: 'Custom'}]
+
+const filledIcons:string[] = []
+const outlinedIcons:string[] = []
+const twoToneIcons:string[] = []
+const customIcons:string[] = []
+
+icons.forEach(iconName => {
+	if (iconName.endsWith('Filled')) {
+		filledIcons.push(iconName)
+	} else if (iconName.endsWith('Outlined')) {
+		outlinedIcons.push(iconName)
+	} else if (iconName.endsWith('TwoTone')) {
+		twoToneIcons.push(iconName)
+	} else {
+		customIcons.push(iconName)
+	}
+})
+
+const handleChickIcon = (iconName: string) => {
+	emits('update:value', iconName)
+}
+</script>
+
+<style scoped lang="scss">
+.icon-item-content {
+	height: 106rpx;
+	width:  106rpx;
+	border-radius: 24rpx;
+	display: flex;
+	.icon-item {
+		margin: auto;
+	}
+}
+
+.icon-item-content-active {
+	background-color: var(--sar-primary);
+}
+</style>

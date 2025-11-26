@@ -34,7 +34,7 @@ const {size, shape, customAvatar} = withDefaults(defineProps<{
 const avatarData = ref<AvatarType>()
 const fontSize = ref<number>(0)
 const iconInfo = ref<{family: string, name: string}>()
-const svgIconPath = "/static/icon/svg/"
+const svgIconPath = "/static/icons/svg/"
 const svgIconSuffix = ".svg"
 
 /**
