@@ -4,7 +4,7 @@
 			<sar-list card title="基础设置">
 				<sar-list-item title="头像" arrow hover @click="goSaveDataPage('SaveAvatar')">
 					<template #value>
-						<user-avatar/>
+						<user-avatar ref="userAvatarRef"/>
 					</template>
 				</sar-list-item>
 				<sar-list-item title="昵称" :value="userStore.userInfo.nickname" arrow hover @click="goSaveDataPage('SaveNickname')"></sar-list-item>
@@ -31,6 +31,7 @@
 </template>
 
 <script lang="ts" setup>
+import { ref } from 'vue'
 import { dialog } from 'sard-uniapp'
 import { useUserStore } from '@/stores/user'
 import UserAvatar from '@/components/user-avatar/index.vue'
@@ -39,9 +40,11 @@ import {toast} from '@/utils/Toast'
 import { reloadData } from '@/api/system/auth/Auth'
 import {getDictLabel, initDict} from '@/utils/Dict'
 import { ResponseError } from '@/api/global/Type'
+
 const { user_gender } = initDict('user_gender')
 const userStore = useUserStore()
 
+const userAvatarRef = ref<InstanceType<typeof UserAvatar>>()
 /**
  * 前往数据保存页面
  */
@@ -60,6 +63,10 @@ const reloadUserInfo = async () => {
 		uni.showLoading({title: '加载中', mask: true})
 		await reloadData()
 		await userStore.initUserInfo()
+		// 刷新头像
+		if (userAvatarRef.value) {
+			userAvatarRef.value.initAvatar()
+		}
 		toast("更新完成")
 	} catch(err) {
 		if (err instanceof ResponseError) {

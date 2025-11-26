@@ -14,7 +14,7 @@
 					<sar-space align="center" class="dept unobstructed" @click="goSaveDataPage('SaveDefaultDept')">
 						{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
 						<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}">
-							<sar-icon name="SwapOutlined"/>
+							<sar-icon family="outlined" name="SwapOutlined"/>
 						</sar-tag>
 					</sar-space>
 				</sar-space>
@@ -23,9 +23,9 @@
 		<!--操作列表-->
 		<view class="setting-content">
 			<sar-list card>
-				<sar-list-item title="设置" @click="toUserSetting" icon="SettingOutlined" hover arrow/>
-				<sar-list-item title="仓库" @click="toGitee" icon="Gitee" hover arrow/>
-				<sar-list-item title="关于" icon="InfoCircleOutlined" hover arrow/>
+				<sar-list-item title="设置" @click="toUserSetting" icon-family="outlined" icon="SettingOutlined" hover arrow/>
+				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
+				<sar-list-item title="关于" icon-family="outlined" icon="InfoCircleOutlined" hover arrow/>
 			</sar-list>
 			  <sar-icon name="/static/svg/XiaoMiaoCool.svg" size="64rpx" />
 		</view>

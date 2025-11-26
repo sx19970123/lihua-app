@@ -89,13 +89,15 @@ const autoFontSize = () => {
 // 处理图标
 const handleIcon = () => {
 	if (avatarData.value?.type !== 'icon') return
-	
 	const icon = avatarData.value?.value
 	if (!icon) return
-	
 	// ant design 图标
-	if (icon.endsWith("Outlined") || icon.endsWith("Filled") || icon.endsWith("TwoTone")) {
-		iconInfo.value = {family: 'sari', name: icon}
+	if (icon.endsWith("Outlined")) {
+		iconInfo.value = {family: 'outlined', name: icon}
+	} else if (icon.endsWith("Filled")) {
+		iconInfo.value = {family: 'filled', name: icon}
+	} else if (icon.endsWith("TwoTone")) {
+		iconInfo.value = {family: 'twotone', name: icon}
 	} else {
 		// 自定义svg图标
 		iconInfo.value = {family: '', name: svgIconPath + icon + svgIconSuffix}
@@ -112,6 +114,10 @@ watch(() => customAvatar, () => {
 
 onPageShow(() => {
 	initAvatar()
+})
+
+defineExpose({
+	initAvatar
 })
 </script>
 <style scoped lang="scss">

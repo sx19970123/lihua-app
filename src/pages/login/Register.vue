@@ -20,7 +20,7 @@
 					@blur="handleCheckUsername"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" name="UserOutlined" />
+						<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="UserOutlined" />
 					</template>
 				</sar-input>
 				
@@ -43,7 +43,7 @@
 					v-model="registerData.confirmPassword"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" name="LockOutlined" />
+						<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="LockOutlined" />
 					</template>
 				</sar-input>
 				
