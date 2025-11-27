@@ -134,35 +134,67 @@ const initImageAvatar = () => {
 	// 头像地址
 	const imageUrl = ref('')
 	// 选择头像
-	const chooseImage = () => {
-		// 选择照片｜拍照
-		uni.chooseImage({
-			count: 1,
-			sizeType: ['original', 'compressed'],
-			sourceType: ['album', 'camera'],
-			success(res) {
-				// 拿到照片调用裁剪
-				cropImage({
-					src: res.tempFilePaths[0],
-					// 裁剪成功执行上传逻辑
-					success(filePath) {
-						uni.showLoading({ title: "正在上传", mask: true })
-						upload(filePath, "UserAvatar", "用户头像")
-						.then(resp => {
-							avatarData.value.type = "image"
-							avatarData.value.value = resp.data
-							handleSave("confirm")
-						}).catch(err => {
-							console.error(err);
-							toast("上传失败")
-						}).finally(() => {
-							uni.hideLoading()
-						})
-					}
-				})
-			},
-		})
-	}
+	const chooseImage = async () => {
+	  try {
+	    // 选择照片｜拍照
+	    const { tempFilePaths } = await new Promise<{ tempFilePaths: string[] }>((resolve, reject) => {
+	      uni.chooseImage({
+	        count: 1,
+	        sizeType: ['original', 'compressed'],
+	        sourceType: ['album', 'camera'],
+	        success: () => resolve,
+	        fail: () => reject,
+	      });
+	    });
+	
+	    const filePath = tempFilePaths[0];
+	
+	    // 裁剪图片
+	    const croppedFilePath = await new Promise<string>((resolve, reject) => {
+	      cropImage({
+	        src: filePath,
+	        success: resolve,
+	        fail: reject,
+	      });
+	    });
+	
+	    // 获取图片信息
+	    const { size } = await new Promise<{ size: number }>((resolve, reject) => {
+	      uni.getFileInfo({
+	        filePath: croppedFilePath,
+	        success: resolve,
+	        fail: reject,
+	      });
+	    });
+	
+	    // 限制 2MB
+	    if (size / 1024 / 1024 >= 2) {
+	      toast("上传失败，最大限制为2MB");
+	      return;
+	    }
+	
+	    // 上传图片
+	    uni.showLoading({ title: "正在上传", mask: true });
+	    try {
+	      const resp = await upload(croppedFilePath, "UserAvatar", "用户头像");
+	      if (resp.code === 200) {
+	        avatarData.value.type = "image";
+	        avatarData.value.value = resp.data;
+	        handleSave("confirm");
+	      } else {
+	        toast(resp.msg);
+	      }
+	    } catch (err) {
+	      console.error(err);
+	      toast("上传失败");
+	    } finally {
+	      uni.hideLoading();
+	    }
+	  } catch (err) {
+	    console.error("操作失败:", err);
+	  }
+	};
+
 	
 	return {
 		imageUrl,
