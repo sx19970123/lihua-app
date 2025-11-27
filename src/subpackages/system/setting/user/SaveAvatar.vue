@@ -2,7 +2,7 @@
 	<view class="content avatar-content">
 		<sar-space direction="vertical" size="large">
 			<!-- 预览头像 -->
-			<user-avatar :size="750 - 32" shape="square" :type="avatarData.type" :customAvatar="avatarData"/>
+			<user-avatar :size="750 - 32" shape="square" :type="avatarData.type" :customAvatar="avatarData" />
 			<!-- 操作菜单 -->
 			<sar-list card>
 				<sar-list-item title="选择照片" arrow hover @click="chooseImage"></sar-list-item>
@@ -11,19 +11,23 @@
 			</sar-list>
 		</sar-space>
 		<!-- 文本抽屉 -->
-		 <sar-popout v-model:visible="textPopout" :overlay-closable="!keyboardOpen" :show-close="false" @leave="autoFocus = false" :before-close="handleSave">
-		    <view class="popout-content">
+		<sar-popout v-model:visible="textPopout" :overlay-closable="!keyboardOpen" :show-close="false"
+			@leave="autoFocus = false" :before-close="handleSave">
+			<view class="popout-content">
 				<sar-space direction="vertical" size="large">
 					<!-- 头像背景颜色 -->
 					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
 					<!-- 头像文本 -->
-					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input" placeholder="请输入文本" v-model="avatarData.value" @keyboardheightchange="handleKeyboardChange"></sar-input>
+					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input"
+						placeholder="请输入文本" v-model="avatarData.value"
+						@keyboardheightchange="handleKeyboardChange"></sar-input>
 				</sar-space>
-		    </view>
+			</view>
 		</sar-popout>
 		<!-- 图标抽屉 -->
-		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false" :before-close="handleSave">
-		    <view class="popout-content">
+		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false"
+			:before-close="handleSave">
+			<view class="popout-content">
 				<sar-space direction="vertical" size="large">
 					<!-- 头像背景颜色 -->
 					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
@@ -48,8 +52,8 @@ import { saveBasics } from '@/api/system/profile/Profile'
 import { upload } from '@/api/system/attachment/AttachmentStorage'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
-import {toast} from '@/utils/Toast'
-import {cloneDeep} from 'lodash-es'
+import { toast } from '@/utils/Toast'
+import { cloneDeep } from 'lodash-es'
 import { ResponseError } from '@/api/global/Type'
 import IconSelect from '@/components/icon-select/index.vue'
 
@@ -57,46 +61,46 @@ const userStore = useUserStore()
 
 // 头像背景颜色
 const colorSource = [
-  {
-    name: '拂晓蓝',
-    color: 'rgb(22, 119, 255)',
-    key: '1'
-  },
-  {
-    name: '薄暮',
-    color: 'rgb(245, 34, 45)',
-    key: '2'
-  },
-  {
-    name: '火山',
-    color: 'rgb(250, 84, 28)',
-    key: '3'
-  },
-  {
-    name: '日暮',
-    color: 'rgb(250, 173, 20)',
-    key: '4'
-  },
-  {
-    name: '明青',
-    color: 'rgb(19, 194, 194)',
-    key: '5'
-  },
-  {
-    name: '极光绿',
-    color: 'rgb(82, 196, 26)',
-    key: '6'
-  },
-  {
-    name: '极客蓝',
-    color: 'rgb(47, 84, 235)',
-    key: '7'
-  },
-  {
-    name: '酱紫',
-    color: 'rgb(114, 46, 209)',
-    key: '8'
-  }
+	{
+		name: '拂晓蓝',
+		color: 'rgb(22, 119, 255)',
+		key: '1'
+	},
+	{
+		name: '薄暮',
+		color: 'rgb(245, 34, 45)',
+		key: '2'
+	},
+	{
+		name: '火山',
+		color: 'rgb(250, 84, 28)',
+		key: '3'
+	},
+	{
+		name: '日暮',
+		color: 'rgb(250, 173, 20)',
+		key: '4'
+	},
+	{
+		name: '明青',
+		color: 'rgb(19, 194, 194)',
+		key: '5'
+	},
+	{
+		name: '极光绿',
+		color: 'rgb(82, 196, 26)',
+		key: '6'
+	},
+	{
+		name: '极客蓝',
+		color: 'rgb(47, 84, 235)',
+		key: '7'
+	},
+	{
+		name: '酱紫',
+		color: 'rgb(114, 46, 209)',
+		key: '8'
+	}
 ]
 
 // 首个按钮背景颜色
@@ -105,12 +109,12 @@ const avatarBtnColor = 'rgba(var(--sar-secondary-rgb), 0.4)'
 const avatarData = ref<AvatarType>(cloneDeep(userStore.avatar))
 
 // 执行保存
-const handleSave = async (type?: 'confirm' | 'cancel' | 'close') =>   {
+const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 	if (type === 'confirm') {
 		try {
 			// url 字段无需保存
 			avatarData.value.url = undefined
-			const resp = await saveBasics({avatar: JSON.stringify(avatarData.value)})
+			const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
 			if (resp.code === 200) {
 				// 刷新store
 				await userStore.initUserInfo()
@@ -118,7 +122,7 @@ const handleSave = async (type?: 'confirm' | 'cancel' | 'close') =>   {
 			} else {
 				toast(resp.msg)
 			}
-		} catch(err) {
+		} catch (err) {
 			if (err instanceof ResponseError) {
 				toast((err as unknown as ResponseError).msg)
 			} else {
@@ -135,74 +139,74 @@ const initImageAvatar = () => {
 	const imageUrl = ref('')
 	// 选择头像
 	const chooseImage = async () => {
-	  try {
-	    // 选择照片｜拍照
-	    const { tempFilePaths } = await new Promise<{ tempFilePaths: string[] }>((resolve, reject) => {
-	      uni.chooseImage({
-	        count: 1,
-	        sizeType: ['original', 'compressed'],
-	        sourceType: ['album', 'camera'],
-	        success: () => resolve,
-	        fail: () => reject,
-	      });
-	    });
-	
-	    const filePath = tempFilePaths[0];
-	
-	    // 裁剪图片
-	    const croppedFilePath = await new Promise<string>((resolve, reject) => {
-	      cropImage({
-	        src: filePath,
-	        success: resolve,
-	        fail: reject,
-	      });
-	    });
-	
-	    // 获取图片信息
-	    const { size } = await new Promise<{ size: number }>((resolve, reject) => {
-	      uni.getFileInfo({
-	        filePath: croppedFilePath,
-	        success: resolve,
-	        fail: reject,
-	      });
-	    });
-	
-	    // 限制 2MB
-	    if (size / 1024 / 1024 >= 2) {
-	      toast("上传失败，最大限制为2MB");
-	      return;
-	    }
-	
-	    // 上传图片
-	    uni.showLoading({ title: "正在上传", mask: true });
-	    try {
-	      const resp = await upload(croppedFilePath, "UserAvatar", "用户头像");
-	      if (resp.code === 200) {
-	        avatarData.value.type = "image";
-	        avatarData.value.value = resp.data;
-	        handleSave("confirm");
-	      } else {
-	        toast(resp.msg);
-	      }
-	    } catch (err) {
-	      console.error(err);
-	      toast("上传失败");
-	    } finally {
-	      uni.hideLoading();
-	    }
-	  } catch (err) {
-	    console.error("操作失败:", err);
-	  }
-	};
+		try {
+			// 选择照片｜拍照
+			const filePath = await new Promise<string>((resolve, reject) => {
+				uni.chooseImage({
+					count: 1,
+					sizeType: ['original', 'compressed'],
+					sourceType: ['album', 'camera'],
+					success: (resp) => resolve(resp.tempFilePaths[0]),
+					fail: reject,
+				});
+			});
 
-	
+			// 裁剪图片
+			const croppedFilePath = await new Promise<string>((resolve, reject) => {
+				cropImage({
+					// 图片压缩到一半的清晰度
+					beforeCrop: () => 0.5,
+					src: filePath,
+					success: resolve,
+					fail: reject,
+				});
+			});
+
+			// 获取图片信息
+			const { size } = await new Promise<{ size : number }>((resolve, reject) => {
+				uni.getFileInfo({
+					filePath: croppedFilePath,
+					success: resolve,
+					fail: reject,
+				});
+			});
+
+			// 限制 2MB
+			if (size / 1024 / 1024 >= 2) {
+				toast("上传失败，头像不能超过 2MB");
+				return;
+			}
+
+			// 上传图片
+			uni.showLoading({ title: "正在上传", mask: true });
+			try {
+				const resp = await upload(croppedFilePath, "UserAvatar", "用户头像");
+				if (resp.code === 200) {
+					avatarData.value.type = "image";
+					avatarData.value.value = resp.data;
+					handleSave("confirm");
+				} else {
+					toast(resp.msg);
+				}
+			} catch (err) {
+				console.error(err);
+				toast("上传失败");
+			} finally {
+				uni.hideLoading();
+			}
+		} catch (err) {
+			console.error("操作失败:", err);
+		}
+	}
+
+
 	return {
 		imageUrl,
 		chooseImage
 	}
 }
 
-const {imageUrl, chooseImage} = initImageAvatar()
+const { imageUrl, chooseImage } = initImageAvatar()
 
 /**
  * 初始化图标头像
@@ -223,7 +227,7 @@ const initIconAvatar = () => {
 		handleIconAvatar
 	}
 }
-const {iconPopout, handleIconAvatar} = initIconAvatar()
+const { iconPopout, handleIconAvatar } = initIconAvatar()
 
 /**
  * 初始化文本头像
@@ -236,7 +240,7 @@ const initTextAvatar = () => {
 	// 键盘是否弹起
 	const keyboardOpen = ref<boolean>(false)
 	// 处理键盘事件
-	const handleKeyboardChange = ({detail}:{detail: {height: number}}) => {
+	const handleKeyboardChange = ({ detail } : { detail : { height : number } }) => {
 		if (detail.height === 0) {
 			setTimeout(() => {
 				keyboardOpen.value = false
@@ -263,21 +267,23 @@ const initTextAvatar = () => {
 		handleKeyboardChange
 	}
 }
-const {textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardChange} = initTextAvatar()
-
+const { textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardChange } = initTextAvatar()
 </script>
 
 <style scoped lang="scss">
-	@import "@/static/style/input.scss";
-	.avatar-title {
-		font-size: var(--sar-text-lg);
-		font-weight: var(--sar-font-bold);
-	}
-	.popout-content {
-		padding-left: 32rpx; 
-		padding-right: 32rpx
-	}
-	:deep(.sar-popout__header) {
-		height: 32rpx !important;
-	}
+@import "@/static/style/input.scss";
+
+.avatar-title {
+	font-size: var(--sar-text-lg);
+	font-weight: var(--sar-font-bold);
+}
+
+.popout-content {
+	padding-left: 32rpx;
+	padding-right: 32rpx
+}
+
+:deep(.sar-popout__header) {
+	height: 32rpx !important;
+}
 </style>
