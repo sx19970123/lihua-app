@@ -20,7 +20,7 @@
 			</sar-list>
 			<sar-list card title="安全设置">
 				<sar-list-item title="修改密码" arrow hover @click="goSaveDataPage('SavePassword')"></sar-list-item>
-				<sar-list-item title="注销账号" arrow hover @click="goSaveDataPage('AccountDeletion')"></sar-list-item>
+				<sar-list-item title="注销账号" arrow hover @click="goSaveDataPage('AccountDeactivate')"></sar-list-item>
 			</sar-list>
 			<view class="logout-btn">
 				<sar-button type="pale" theme="danger" round @click="handleLogout">退出登录</sar-button>

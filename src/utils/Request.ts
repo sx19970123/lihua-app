@@ -30,9 +30,10 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
 	(response: Response) => {
-		// statusCode 不为200 表示服务器为止异常
+		console.warn("服务器返回的完整数据", response);
+		// statusCode 不为200 直接提示异常码
 		if (response.statusCode !== 200) {
-			throw new ResponseError(500, "业务异常")
+			throw new ResponseError(500, response.statusCode + '异常')
 		}
 		const data = response.data as ResponseType<any>
 		console.info("接收响应===>", data);

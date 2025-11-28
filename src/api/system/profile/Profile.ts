@@ -6,7 +6,7 @@ import type {SysDept} from "@/api/system/dept/type/SysDept";
  */
 export const saveBasics = (userInfo: {avatar?: string,nickname?: string,gender?:string,email?:string,phoneNumber?:string}) => {
     return request({
-        url: '/system/profile/basics',
+        url: 'app/system/profile/basics',
         data: userInfo,
         method: 'POST'
     })
@@ -23,7 +23,7 @@ export const updatePassword = (oldPassword: string,
                                confirmPasswordRequestKey: string
                                ) => {
     return request<string>({
-        url: '/system/profile/password',
+        url: 'app/system/profile/password',
         data: {
             oldPassword,
             oldPasswordRequestKey,
@@ -41,7 +41,31 @@ export const updatePassword = (oldPassword: string,
  */
 export const setDefaultDept = (deptId: string) => {
     return request<SysDept>({
-        url: 'system/profile/default/' + deptId,
+        url: 'app/system/profile/default/' + deptId,
         method: 'POST',
     })
+}
+
+/**
+ * 用户注销
+ */
+export const accountDeactivate = () => {
+	return request<string>({
+		url: 'app/system/profile/deactivate',
+		method: "DELETE"
+	})
+}
+
+/**
+ * 检查密码
+ */
+export const checkPassword = (password: string, passwordRequestKey: string) => {
+	return request<boolean>({
+		url: 'app/system/profile/checkPassword',
+		method: "POST",
+		data: {
+			password,
+			passwordRequestKey
+		}
+	})
 }

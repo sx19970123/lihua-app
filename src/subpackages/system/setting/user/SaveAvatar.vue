@@ -172,7 +172,7 @@ const initImageAvatar = () => {
 			});
 
 			// 限制 2MB
-			if (size / 1024 / 1024 >= 2) {
+			if (size / 1024 / 1024 > 2) {
 				toast("上传失败，头像不能超过 2MB");
 				return;
 			}

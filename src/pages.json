@@ -101,7 +101,7 @@
 				"navigationBarTitleText": "修改密码"
 			}
 		},{
-			"path": "setting/user/AccountDeletion",
+			"path": "setting/user/AccountDeactivate",
 			"style": {
 				"navigationBarTitleText": "注销账号"
 			}
