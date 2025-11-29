@@ -4,7 +4,9 @@
 		<sar-avatar v-if="avatarData.type === 'image'" :src="avatarData.url" :size="size + 'rpx'" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''"/>
 		<!-- 文本|图标类型 -->
 		<sar-avatar v-else :background="avatarData.backgroundColor" :size="size + 'rpx'" class="avatar-text" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''">
-			<sar-icon v-if="avatarData.type === 'icon'" style="margin-top: 3rpx;" :family="iconInfo?.family" :name="iconInfo?.name" color="#fff" :size="(size / 1.4) + 'rpx'"/>
+			<view style="margin-top: 3rpx;" v-if="avatarData.type === 'icon'">
+				<sar-icon :family="iconInfo?.family" :name="iconInfo?.name" color="#fff" :size="(size / 1.4) + 'rpx'"/>
+			</view>
 			<text v-else :style="{fontSize: fontSize + 'rpx', lineHeight: size + 'rpx'}" style="color: #fff">{{avatarData.value}}</text>
 		</sar-avatar>
 	</view>
@@ -49,7 +51,7 @@ const initAvatar = () => {
 		const userStore = useUserStore()
 		avatarData.value = userStore.avatar
 		if (avatarData.value.backgroundColor?.includes('conic-gradient')) {
-			avatarData.value.backgroundColor = 'var(--sar-primary)'
+			avatarData.value.backgroundColor = 'rgb(22, 119, 255)'
 		}
 	}
 	// 自适应文本尺寸

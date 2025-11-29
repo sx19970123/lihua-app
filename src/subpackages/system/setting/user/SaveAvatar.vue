@@ -103,8 +103,6 @@ const colorSource = [
 	}
 ]
 
-// 首个按钮背景颜色
-const avatarBtnColor = 'rgba(var(--sar-secondary-rgb), 0.4)'
 // 头像数据
 const avatarData = ref<AvatarType>(cloneDeep(userStore.avatar))
 
