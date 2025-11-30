@@ -6,7 +6,7 @@
 	 -->
 <!-- 	<AttachmentCardList :list="fileList" fileType="file"/> -->
 
-	<attachment-upload v-model="fileValue" model="button" uploadType="all" :max-count="3" businessCode="app-test" businessName="app-开发测试"></attachment-upload>
+	<attachment-upload v-model="fileValue" uploadType="video" :max-count="3" businessCode="app-test" businessName="app-开发测试"></attachment-upload>
   </view>
 </template>
 <script setup lang="ts">
@@ -17,7 +17,7 @@ import AttachmentCardList from '@/components/attachment-upload/AttachmentCardLis
 const fileValue = ref<string>()
 
 setTimeout(() => {
-	fileValue.value = '1995075556339245057,1995075687574822913,1995085859131191297'
+	fileValue.value = '1995075556339245057,1995075687574822913,1995107446073028609'
 }, 200)
 
 const choose = () => {

@@ -9,10 +9,12 @@
 						<image v-if="props.fileType === 'image' || item.type === 'image'" mode="aspectFill" :src="item.url" class="file-item" @click="handleClickImage(index, item)"/>
 						<!-- 视频封面 -->
 						<video v-if="props.fileType === 'video' || item.type === 'video'" :src="item.url" class="file-item" controls @click="handleClickVideo(index, item)"/>
-						<!-- 文件名称 -->
-						<text v-if="props.fileType === 'file' && item.type === 'file'" class="file-name" style="max-width: 63vw; color: var(--sar-blue)" @click="handleClickFile(index, item)"> {{item.name}} </text>
-						<!-- 附件名称（file类型不显示） -->
-						<text v-if="props.fileType !== 'file' || item.type !== 'file'" class="file-name" style="max-width: 40vw;" @click="handleClickFileName(index, item)">{{item.name}}</text>
+						<!-- 附件名称 -->
+						<text 
+							class="file-name" 
+							:style="{'max-width': item.type === 'image' || item.type === 'video' || props.fileType === 'video' || props.fileType === 'image' ? '40vw' : '60vw'}">
+							{{item.name}}
+						</text>
 					</sar-space>
 				</template>
 				<!-- 右侧按钮 -->
@@ -22,7 +24,7 @@
 						    <sar-popover-reference>
 								<!-- 上传失败提示-->
 								<sar-button type="text" v-if="item.status === 'failed'">
-									<sar-icon name="InfoCircleOutlined" family="outlined" color="red"></sar-icon>
+									<sar-icon name="InfoCircleOutlined" family="outlined" color="var(--sar-danger)"></sar-icon>
 								</sar-button>
 						    </sar-popover-reference>
 								<template #content>
@@ -31,9 +33,13 @@
 									</view>
 								</template>
 						</sar-popover>
+						<!-- 上传成功提示 -->
+						<sar-button type="pale-text" v-if="item.status === 'done'">
+							<sar-icon name="CheckCircleOutlined" family="outlined" color="var(--sar-success)"></sar-icon>
+						</sar-button>
 						<!-- 删除按钮 -->
 						<sar-button type="text" :loading="item.status === 'uploading'" @click="handleDelete(index, item)" :disabled="props.disabled" v-if="props.removable" v-show="!readonly">
-							<sar-icon name="DeleteOutlined" family="outlined" color="red" v-if="item.status !== 'uploading'"></sar-icon>
+							<sar-icon name="DeleteOutlined" family="outlined" color="var(--sar-danger)" v-if="item.status !== 'uploading'"></sar-icon>
 						</sar-button>
 					</sar-space>
 				</template>
@@ -60,7 +66,7 @@ const props = defineProps<{
 }>()
 
 // 抛出方法
-const emits = defineEmits(['clickImage', 'clickVideo', 'clickFile', 'delete', 'clickFileName'])
+const emits = defineEmits(['clickImage', 'clickVideo', 'delete'])
 
 // 点击图片
 const handleClickImage = (index: number, file: UploadFileItem) => {
@@ -72,19 +78,9 @@ const handleClickVideo = (index: number, file: UploadFileItem) => {
 	emits('clickVideo', index, file)
 }
 
-// 点击文件
-const handleClickFile = (index: number, file: UploadFileItem) => {
-	emits('clickFile', index, file)
-}
-
 // 点击删除
 const handleDelete = (index: number, file: UploadFileItem) => {
 	emits('delete', index, file)
-}
-
-// 点击附件名称
-const handleClickFileName = (index: number, file: UploadFileItem) => {
-	emits('clickFileName', index, file)
 }
 </script>
 

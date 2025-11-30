@@ -14,7 +14,17 @@
 		v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.model === 'button'">
 		<template #default="{list, onSelect, onRemove, onImageClick}">
 			<sar-space direction="vertical">
-				<sar-button @click="onSelect" v-if="!props.readonly && !props.disabled">点击上传</sar-button>
+				<sar-button 
+					@click="onSelect" 
+					v-if="!props.readonly && !props.disabled && fileList.length < props.maxCount"
+					:buttonType="props.buttonType"
+					:buttonTheme="props.buttonTheme"
+					:buttonIsSquare="props.buttonIsSquare"
+					:buttonIsRound="props.buttonIsRound"
+					:buttonSize="props.buttonSize"
+					:buttonIcon="props.buttonIcon"
+					:buttonIconFamily="props.buttonIconFamily" 
+				>{{props.buttonText}}</sar-button>
 				<attachment-card-list 
 					:fileType="props.uploadType" 
 					:list="list" 
@@ -43,7 +53,17 @@
 	
 	<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（仅微信小程序支持） -->
 	<sar-space direction="vertical" v-if="props.uploadType === 'file' || props.uploadType === 'all'">
-		<sar-button v-if="!props.readonly && !props.disabled && fileList.length < props.maxCount" @click="handleMessageChoose">点击上传</sar-button>
+		<sar-button 
+			v-if="!props.readonly && !props.disabled && fileList.length < props.maxCount" 
+			@click="handleMessageChoose"
+			:buttonType="props.buttonType"
+			:buttonTheme="props.buttonTheme"
+			:buttonIsSquare="props.buttonIsSquare"
+			:buttonIsRound="props.buttonIsRound"
+			:buttonSize="props.buttonSize"
+			:buttonIcon="props.buttonIcon"
+			:buttonIconFamily="props.buttonIconFamily" 
+			>{{props.buttonText}}</sar-button>
 		<attachment-card-list
 			fileType="file" 
 			:list="fileList"
@@ -90,7 +110,22 @@ const props = withDefaults(defineProps<{
 	// 业务编码（自定义，用于后台附件管理区分附件对应的业务）
 	businessCode: string,
 	// 业务名称（自定义，用于后台附件管理区分附件对应的业务）
-	businessName: string
+	businessName: string,
+	buttonText: string,
+	// 按钮类型
+	buttonType: 'default' | 'pale' | 'mild' | 'outline' | 'text' | 'pale-text',
+	// 按钮主题
+	buttonTheme: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'danger',
+	// 是否为圆形按钮
+	buttonIsRound: boolean,
+	// 是否为方形按钮
+	buttonIsSquare: boolean,
+	// 按钮尺寸
+	buttonSize: 'mini' | 'small' | 'medium' | 'large',
+	// 按钮图标
+	buttonIcon?: string,
+	// 按钮图标字体
+	buttonIconFamily?: string,
 }>(), {
 	model: 'picture',
 	uploadType: 'image',
@@ -98,11 +133,17 @@ const props = withDefaults(defineProps<{
 	maxSize: 1 * 1024 * 1024,
 	disabled: false,
 	readonly: false,
-	removable: true
+	removable: true,
+	buttonText: '点击上传',
+	buttonType: 'default',
+	buttonTheme: 'primary',
+	buttonIsRound: false,
+	buttonIsSquare: false,
+	buttonSize: 'medium'
 })
 
 // 抛出方法
-const emits = defineEmits(['update:model-value', 'remove'])
+const emits = defineEmits(['update:model-value', 'remove', 'uploadSuccess', 'uploadError', 'exceedMaxCount'])
 
 // 初始化双向绑定
 const initModelValue = async () => {
@@ -174,9 +215,11 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 				fileItem.id = uploadResp.data
 				// 修改状态
 				fileItem.status = 'done'
+				emits('uploadSuccess', fileItem, fileList.value)
 			} else {
 				fileItem.status = 'failed'
 				fileItem.message = uploadResp.msg
+				emits('uploadError', fileItem, uploadResp.msg)
 			}
 		} else {
 			fileItem.status = 'failed'
@@ -208,8 +251,9 @@ const handleFileUpload = async (filePath: string, md5: string) => {
 }
 
 // 处理超出指定大小
-const handleOverSize = (fileItem: UploadFileItem[]) => {
-	toast(fileItem.length + "个附件上传失败，单个附件不能超过" + (props.maxSize / 1024 / 1024) + "MB")
+const handleOverSize = (fileItemList: UploadFileItem[]) => {
+	emits('exceedMaxCount', fileItemList)
+	toast(fileItemList.length + "个附件上传失败，单个附件不能超过" + (props.maxSize / 1024 / 1024) + "MB")
 }
 
 // 处理附件删除
