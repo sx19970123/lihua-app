@@ -11,9 +11,11 @@
 					<!-- 昵称 -->
 					<view class="nickname unobstructed" @click="goSaveDataPage('SaveNickname')">{{userStore.$state.nickname}}</view>
 					<!-- 部门 -->
-					<sar-space align="center" class="dept unobstructed" @click="goSaveDataPage('SaveDefaultDept')">
-						{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
-						<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}">
+					<sar-space align="center" class="dept unobstructed">
+						<view @click="goSaveDataPage('SaveDefaultDept')">
+							{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
+						</view>
+						<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}" @click="goSaveDataPage('SaveDefaultDept')">
 							<sar-icon family="outlined" name="SwapOutlined"/>
 						</sar-tag>
 					</sar-space>
@@ -27,9 +29,7 @@
 				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
 				<sar-list-item title="关于" icon-family="outlined" icon="InfoCircleOutlined" hover arrow/>
 			</sar-list>
-			  <sar-icon name="/static/svg/XiaoMiaoCool.svg" size="64rpx" />
 		</view>
-
 	</view>
 </template>
 <script setup lang="ts">
