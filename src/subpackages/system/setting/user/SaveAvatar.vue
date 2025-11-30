@@ -56,6 +56,7 @@ import { toast } from '@/utils/Toast'
 import { cloneDeep } from 'lodash-es'
 import { ResponseError } from '@/api/global/Type'
 import IconSelect from '@/components/icon-select/index.vue'
+import {getFileInfo} from '@/utils/attachment/AttachmentUtils'
 
 const userStore = useUserStore()
 
@@ -161,13 +162,7 @@ const initImageAvatar = () => {
 			});
 
 			// 获取图片信息
-			const { size } = await new Promise<{ size : number }>((resolve, reject) => {
-				uni.getFileInfo({
-					filePath: croppedFilePath,
-					success: resolve,
-					fail: reject,
-				});
-			});
+			const {size, md5} = await getFileInfo(croppedFilePath)
 
 			// 限制 2MB
 			if (size / 1024 / 1024 > 2) {
@@ -178,7 +173,7 @@ const initImageAvatar = () => {
 			// 上传图片
 			uni.showLoading({ title: "正在上传", mask: true });
 			try {
-				const resp = await upload(croppedFilePath, "UserAvatar", "用户头像");
+				const resp = await upload(croppedFilePath, "UserAvatar", "用户头像", md5);
 				if (resp.code === 200) {
 					avatarData.value.type = "image";
 					avatarData.value.value = resp.data;

@@ -1,13 +1,16 @@
 <template>
 	<!-- 上传附件类型为 image 或 video 并设置为按钮模式 -->
 	<sar-upload v-model="fileList"
-		:after-read="afterRead" 
+		:after-read="handleUpload" 
 		:accept="props.uploadType" 
 		:max-count="props.maxCount" 
-		:max-size="maxSize" 
+		:max-size="props.maxSize" 
 		:disabled="props.disabled"
 		:readonly="props.readonly"
 		:removable="props.removable"
+		:multiple="props.maxCount > 1"
+		:over-size="handleOverSize"
+		:before-remove="handleDelete"
 		v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.model === 'button'">
 		<template #default="{list, onSelect, onRemove, onImageClick}">
 			<sar-space direction="vertical">
@@ -26,18 +29,21 @@
 	
 	<!-- 上传附件类型为 image 或 video 并设置为图片模式 -->
 	<sar-upload v-model="fileList" 
-		:after-read="afterRead" 
+		:after-read="handleUpload" 
 		:accept="props.uploadType" 
 		:max-count="props.maxCount" 
-		:max-size="maxSize" 
+		:max-size="props.maxSize" 
 		:disabled="props.disabled"
 		:readonly="props.readonly"
 		:removable="props.removable"
+		:multiple="props.maxCount > 1"
+		:over-size="handleOverSize"
+		:before-remove="handleDelete"
 		v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.model === 'picture'"/>
 	
-	<!-- 上传附件类型不为image和video，需自行实现，只能以按钮形式上传（仅微信小程序支持） -->
+	<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（仅微信小程序支持） -->
 	<sar-space direction="vertical" v-if="props.uploadType === 'file' || props.uploadType === 'all'">
-		<sar-button v-if="!props.readonly && !props.disabled" @click="handleMessageChoose">点击上传</sar-button>
+		<sar-button v-if="!props.readonly && !props.disabled && fileList.length < props.maxCount" @click="handleMessageChoose">点击上传</sar-button>
 		<attachment-card-list
 			fileType="file" 
 			:list="fileList"
@@ -45,20 +51,26 @@
 			:readonly="props.readonly"
 			:removable="props.removable"
 			@clickImage="handleWechatImgPreview"
+			@delete="handleDelete" 
 		/>
 	</sar-space>
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults } from 'vue'
+import { ref, withDefaults, watch } from 'vue'
 import type { UploadFileItem } from 'sard-uniapp'
-import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue';
-import {toast} from '@/utils/Toast';
+import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue'
+import {toast} from '@/utils/Toast'
+import {getFileInfo} from '@/utils/attachment/AttachmentUtils'
+import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, deleteFromBusiness} from '@/api/system/attachment/AttachmentStorage'
+import { ResponseError } from '@/api/global/Type'
+// 记录双向绑定回显是否已经完成
+let modelValueInitComplete = false
 
 // 传入参数
 const props = withDefaults(defineProps<{
 	// 双向绑定
-	value?: string,
+	modelValue?: string,
 	// 类型
 	model: 'button' | 'picture',
 	// 可上传的附件类型（设置为file会从微信聊天中选取文件，仅微信小程序支持）
@@ -74,60 +86,207 @@ const props = withDefaults(defineProps<{
 	// 只读状态
 	readonly: boolean,
 	// 可否删除
-	removable: boolean
+	removable: boolean,
+	// 业务编码（自定义，用于后台附件管理区分附件对应的业务）
+	businessCode: string,
+	// 业务名称（自定义，用于后台附件管理区分附件对应的业务）
+	businessName: string
 }>(), {
 	model: 'picture',
 	uploadType: 'image',
 	maxCount: 10,
-	maxSize: 2 * 1024 * 1024,
+	maxSize: 1 * 1024 * 1024,
 	disabled: false,
 	readonly: false,
 	removable: true
 })
 
+// 抛出方法
+const emits = defineEmits(['update:model-value', 'remove'])
+
+// 初始化双向绑定
+const initModelValue = async () => {
+	const modelValue = props.modelValue
+	if (modelValue && !modelValueInitComplete) {
+		try {
+			const resp = await queryAttachmentInfoByIds(modelValue.split(","))
+			if (resp.code === 200) {
+				// 组合数据
+				fileList.value = resp.data.map(item => {
+					return {
+						url: import.meta.env.VITE_APP_BASE_API + '/app' + item.path,
+						name: item.originalName,
+						status: item.status === 'error' ? "failed" : "done",
+						message: item.errorMsg,
+						id: item.id,
+						type: item.type?.includes("image") ? 'image' : item.type?.includes("video") ? 'video' : 'file'
+					}
+				})
+			} else {
+				toast(resp.msg)
+			}
+		} catch(err) {
+			fileItem.status = 'failed'
+			if (err instanceof ResponseError) {
+				toast(err.msg)
+			} else {
+				toast("附件加载失败")
+			}
+		} finally {
+			modelValueInitComplete = true
+		}
+	}
+}
+
+// 处理双向绑定
+const handleModelValue = () => {
+	// 取出附件列表中的id属性，进行双向绑定
+	const ids = fileList.value.filter(item => item.id).map(item => item.id).join(",")
+	emits('update:model-value', ids)
+}
+
 // 附件列表
 const fileList = ref<UploadFileItem[]>([])
 
-// 前置上传
-const afterRead = (fileItem : UploadFileItem) => {
+// 处理上传
+const handleUpload = async (fileItem : UploadFileItem) => {
+	// 上传前状态赋值
 	fileItem.status = 'uploading'
 	fileItem.message = '正在上传'
 	fileItem.url = fileItem?.file?.path || fileItem.url
-	fileList.value.push(fileItem)
-
-	setTimeout(() => {
-		fileItem.status = 'done'
+	
+	// 获取附件md5
+	try {
+		const { md5, fileName, filePath, size } = await getFileInfo(fileItem.url)
+		const resp = await existsAttachmentByMd5(md5)
+		if (resp.code === 200) {
+			let uploadResp
+			// 附件存在，进行文件秒传
+			if (resp.data) {
+				uploadResp = await handleFastUpload(fileName, size, md5)
+			} else {
+				// 附件上传
+				uploadResp = await handleFileUpload(filePath, md5)
+			}
+			// 上传完成
+			if (uploadResp.code === 200) {
+				// 将服务器id记录到 fileItem 对象
+				fileItem.id = uploadResp.data
+				// 修改状态
+				fileItem.status = 'done'
+			} else {
+				fileItem.status = 'failed'
+				fileItem.message = uploadResp.msg
+			}
+		} else {
+			fileItem.status = 'failed'
+			fileItem.message = resp.msg
+		}
+	} catch(err) {
+		fileItem.status = 'failed'
+		if (err instanceof ResponseError) {
+			fileItem.message = err.msg
+		} else {
+			fileItem.message = "上传失败"
+		}
+	} finally {
+		// 重新赋值
 		fileList.value = [...fileList.value]
-	}, 1500)
+		// 处理双向绑定
+		handleModelValue()
+	}
+}
+
+// 处理文件秒传
+const handleFastUpload = async (fileName: string, size: number, md5: string) => {
+	return await fastUpload(fileName, props.businessCode, props.businessName, size, md5)
+}
+
+// 处理附件上传
+const handleFileUpload = async (filePath: string, md5: string) => {
+	return await upload(filePath, props.businessCode, props.businessName, md5)
+}
+
+// 处理超出指定大小
+const handleOverSize = (fileItem: UploadFileItem[]) => {
+	toast(fileItem.length + "个附件上传失败，单个附件不能超过" + (props.maxSize / 1024 / 1024) + "MB")
+}
+
+// 处理附件删除
+const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
+	const id = fileItem.id
+	if (id) {
+		try {
+			// 业务删除数据，真实删除需要从后台附件管理进行删除
+			const resp = await deleteFromBusiness(id)
+			if (resp.code === 200) {
+				// 只有上传类型为 file 或 all 时进行手动删除fileList数据
+				if (props.uploadType === 'file' || props.uploadType === 'all') {
+					fileList.value = fileList.value.filter(item => item.id !== id)
+				}
+				emits("remove", {id: id, status: "success"})
+			} else {
+				emits("remove", {id: id, status: "error"})
+			}
+		} catch(err) {
+			if (err instanceof ResponseError) {
+				toast(err.msg)
+			} else {
+				toast("删除失败")
+				console.error(err)
+			}
+		} finally {
+			// 处理双向绑定
+			handleModelValue()
+		}
+	} else {
+		toast("附件id不存在")
+	}
 }
 
 // 微信消息文件选择
 const handleMessageChoose = () => {
 	uni.chooseMessageFile({
-		count: props.maxCount,
+		count: props.maxCount - fileList.value.length,
 		type: props.uploadType,
 		extension: props.extension,
 		success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
+			// 超出大小的附件
+			const overSizeFiles = []
+			
 			tempFiles.forEach(file => {
 				const {size, path, name, type} = file
-				if (size > props.maxSize) {
-					toast("上传失败，附件不能超过" + (props.maxSize / 1024 / 1024) + "MB")
+				const fileItem = {url: path, name: name, type: type}
+				if (size <= props.maxSize) {
+					// 大小范围内的附件进行上传
+					handleUpload(fileItem)
+					fileList.value.push(fileItem)
 				} else {
-					afterRead({url: path, name: name, type: type})
+					// 超出大小的附件进行收集
+					overSizeFiles.push(fileItem)
 				}
 			})
+			
+			// 同一处理超出大小的附件
+			if (overSizeFiles.length > 0) {
+				handleOverSize(overSizeFiles)
+			}
 		}
 	})
 }
 
 // 处理微信图片预览
-const handleWechatImgPreview = (index: number) => {
+const handleWechatImgPreview = (_index: number, item: UploadFileItem) => {
 	// 过滤image
 	const urls = fileList.value.filter(item => item.type === 'image').map(item => item.url)
+	const idx = urls.findIndex(url => url === item.url)
 	// 预览
-	uni.previewImage({
-		current: index,
-		urls: urls
-	})
+	uni.previewImage({current: idx, urls: urls})
 }
+
+// 处理回显
+watch(() => props.modelValue, (value) => {
+    if (value) initModelValue()
+  },{ immediate: true })
+
 </script>

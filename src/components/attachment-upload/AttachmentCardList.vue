@@ -10,9 +10,9 @@
 						<!-- 视频封面 -->
 						<video v-if="props.fileType === 'video' || item.type === 'video'" :src="item.url" class="file-item" controls @click="handleClickVideo(index, item)"/>
 						<!-- 文件名称 -->
-						<sar-button v-if="props.fileType === 'file' || item.type === 'file'" type="pale-text" class="file-item" inline @click="handleClickFile(index, item)">{{item.name}}</sar-button>
+						<text v-if="props.fileType === 'file' && item.type === 'file'" class="file-name" style="max-width: 63vw; color: var(--sar-blue)" @click="handleClickFile(index, item)"> {{item.name}} </text>
 						<!-- 附件名称（file类型不显示） -->
-						<text v-if="props.fileType !== 'file' && item.type !== 'file'" class="file-name" style="max-width: 50vw;" @click="handleClickFileName(index, item)">{{item.name}}</text>
+						<text v-if="props.fileType !== 'file' || item.type !== 'file'" class="file-name" style="max-width: 40vw;" @click="handleClickFileName(index, item)">{{item.name}}</text>
 					</sar-space>
 				</template>
 				<!-- 右侧按钮 -->

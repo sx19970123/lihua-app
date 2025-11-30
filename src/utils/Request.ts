@@ -44,26 +44,31 @@ service.interceptors.request.use(
 // 响应拦截器
 service.interceptors.response.use(
 	(response: Response) => {
-		console.warn("服务器返回的完整数据", response);
-		// statusCode 不为200 直接提示异常码
-		if (response.statusCode !== 200) {
-			throw new ResponseError(500, response.statusCode + '异常')
-		}
 		const data = response.data as ResponseType<any>
 		console.info("接收响应===>", data);
 		// 登录信息失效，调用store中的登录失效逻辑
-		if (data.code === 401) {
+		if (data.code === 401 || response.statusCode === 403) {
 			const userStore = useUserStore()
 			userStore.authenticationFailure()
+			throw new ResponseError(data.code, data.msg)
 		}
+		
 		// 非法ip访问
 		if (data.code === 407) {
 			// todo 等待系统开发完善
+			throw new ResponseError(data.code, data.msg)
 		}
+		
 		// 服务器处理文件异常，提示异常信息
 		if (data.code === 501) {
 			throw new ResponseError(data.code, data.msg)
 		}
+		
+		// statusCode 不为200、403 直接提示异常码
+		if (response.statusCode !== 200) {
+			throw new ResponseError(500, response.statusCode + '异常')
+		}
+		
 		return response
 	},
 	(error) => {
