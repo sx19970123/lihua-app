@@ -21,8 +21,8 @@
 import { onMounted, ref } from 'vue'
 // 不同强度正则表达式
 const weakRegex = /^.{6,}$/;
-const mediumRegex = /^(?=.*\p{L})(?=.*\d).{8,}$/u;
-const strongRegex = /^(?=.*\p{L})(?=.*\d)(?=.*[^\p{L}\d]).{10,}$/u;
+const mediumRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/;
 
 const props = defineProps<{value?: string, showPrepend?: boolean, placeholder?: string, class?: string}>()
 const emits = defineEmits(['update:value'])
