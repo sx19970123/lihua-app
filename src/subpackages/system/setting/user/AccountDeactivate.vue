@@ -2,7 +2,7 @@
 	<view class="content">
 		<!-- 密码验证 -->
 		<sar-space direction="vertical" size="large" v-if="!isCheck">
-			<sar-input root-class="rounded-input" type="password" placeholder="请输入当前账号密码" v-model="password"></sar-input>
+			<sar-input root-class="rounded-input" type="password" :focus="autoFocus" placeholder="请输入当前账号密码" v-model="password"></sar-input>
 			<sar-button round :loading="checkLoading" @click="handleCheck">下一步</sar-button>
 		</sar-space>
 		<!-- 注销账号 -->
@@ -17,13 +17,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick, onMounted} from 'vue';
 import {rasEncryptPassword} from "@/utils/Crypto";
 import {checkPassword, accountDeactivate} from "@/api/system/profile/Profile";
 import {toast} from '@/utils/Toast';
 import { ResponseError } from '@/api/global/Type';
 import { useUserStore } from '@/stores/user';
+
 const userStore = useUserStore()
+// 自动聚焦
+const autoFocus = ref<boolean>(false)
 /**
  * 初始化密码校验
  */
@@ -113,6 +116,10 @@ const initDeactivate = () => {
 }
 
 const {deactivateLoading, countDownLoading, handleDeactivate} = initDeactivate()
+
+onMounted(() => {
+	nextTick(() => autoFocus.value = true)
+})
 </script>
 
 <style lang="scss">
