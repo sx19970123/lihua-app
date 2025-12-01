@@ -29,7 +29,7 @@
 							<movable-area class="move-block" :animation="true">
 								<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
 								<view class="move-shadow"></view>
-								<movable-view class="block-button" :x="x" :animation="true" direction="horizontal"
+								<movable-view class="block-button" :x="x" :animation="true" direction="all"
 									@change="startMove" @touchstart="touchstart" @touchmove="touchmove"
 									@touchend="touchend">
 									<text class="arrow">
