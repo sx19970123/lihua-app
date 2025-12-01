@@ -8,7 +8,10 @@ type FileInfoType = {
 /**
  * 获取附件详情
  */
-export const getFileInfo = async (filePath: string): Promise<FileInfoType> => {
+export const getFileInfo = async (filePath?: string): Promise<FileInfoType> => {
+	if (!filePath) {
+		return {}
+	}
 	// 从路径中截取文件名
 	const fileName = filePath.split('/').pop();
 	

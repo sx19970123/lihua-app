@@ -55,10 +55,11 @@ export const existsAttachmentByMd5 = (md5: string, originFileName?: string) => {
 }
 
 // 附件业务删除
-export const deleteFromBusiness = (id: string) => {
+export const deleteFromBusiness = (ids: string[]) => {
     return request({
-        url: `app/system/attachment/storage/business/${id}`,
-        method: "DELETE"
+        url: `app/system/attachment/storage/business`,
+        method: "DELETE",
+		data: ids
     })
 }
 

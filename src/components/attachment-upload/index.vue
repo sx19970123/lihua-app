@@ -1,84 +1,92 @@
 <template>
-	<!-- 上传附件类型为 image 或 video 并设置为按钮模式 -->
-	<sar-upload v-model="fileList"
-		:after-read="handleUpload" 
-		:accept="props.uploadType" 
-		:max-count="props.maxCount" 
-		:max-size="props.maxSize" 
-		:disabled="props.disabled"
-		:readonly="props.readonly"
-		:removable="props.removable"
-		:multiple="props.maxCount > 1"
-		:over-size="handleOverSize"
-		:before-remove="handleDelete"
-		v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.model === 'button'">
-		<template #default="{list, onSelect, onRemove, onImageClick}">
-			<sar-space direction="vertical">
-				<sar-button 
-					@click="onSelect" 
-					v-if="!props.readonly && !props.disabled && fileList.length < props.maxCount"
-					:buttonType="props.buttonType"
-					:buttonTheme="props.buttonTheme"
-					:buttonIsSquare="props.buttonIsSquare"
-					:buttonIsRound="props.buttonIsRound"
-					:buttonSize="props.buttonSize"
-					:buttonIcon="props.buttonIcon"
-					:buttonIconFamily="props.buttonIconFamily" 
-				>{{props.buttonText}}</sar-button>
-				<attachment-card-list 
-					:fileType="props.uploadType" 
-					:list="list" 
-					:disabled="props.disabled"
-					:readonly="props.readonly"
-					:removable="props.removable"
-					@delete="onRemove" 
-					@clickImage="onImageClick"/>
-			</sar-space>
-		</template>
-	</sar-upload>
-	
-	<!-- 上传附件类型为 image 或 video 并设置为图片模式 -->
-	<sar-upload v-model="fileList" 
-		:after-read="handleUpload" 
-		:accept="props.uploadType" 
-		:max-count="props.maxCount" 
-		:max-size="props.maxSize" 
-		:disabled="props.disabled"
-		:readonly="props.readonly"
-		:removable="props.removable"
-		:multiple="props.maxCount > 1"
-		:over-size="handleOverSize"
-		:before-remove="handleDelete"
-		v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.model === 'picture'"/>
-	
-	<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（仅微信小程序支持） -->
-	<sar-space direction="vertical" v-if="props.uploadType === 'file' || props.uploadType === 'all'">
-		<sar-button 
-			v-if="!props.readonly && !props.disabled && fileList.length < props.maxCount" 
-			@click="handleMessageChoose"
-			:buttonType="props.buttonType"
-			:buttonTheme="props.buttonTheme"
-			:buttonIsSquare="props.buttonIsSquare"
-			:buttonIsRound="props.buttonIsRound"
-			:buttonSize="props.buttonSize"
-			:buttonIcon="props.buttonIcon"
-			:buttonIconFamily="props.buttonIconFamily" 
-			>{{props.buttonText}}</sar-button>
-		<attachment-card-list
-			fileType="file" 
-			:list="fileList"
+	<view>
+		<!-- 上传附件类型为 image 或 video 并设置为按钮模式 -->
+		<sar-upload v-model="fileList"
+			:after-read="handleUpload" 
+			:accept="props.uploadType" 
+			:max-count="props.maxCount" 
+			:max-size="props.maxSize" 
 			:disabled="props.disabled"
 			:readonly="props.readonly"
 			:removable="props.removable"
-			@clickImage="handleWechatImgPreview"
-			@delete="handleDelete" 
-		/>
-	</sar-space>
+			:multiple="props.maxCount > 1"
+			:over-size="handleOverSize"
+			:before-remove="handleDelete"
+			@remove="handleModelValue"
+			v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.mode === 'button'">
+			<template #default="{list, onSelect, onRemove, onImageClick}">
+				<sar-space direction="vertical">
+					<sar-button 
+						@click="onSelect" 
+						v-if="!props.readonly && fileList.length < props.maxCount"
+						:disabled="props.disabled"
+						:buttonType="props.buttonType"
+						:buttonTheme="props.buttonTheme"
+						:buttonIsSquare="props.buttonIsSquare"
+						:buttonIsRound="props.buttonIsRound"
+						:buttonSize="props.buttonSize"
+						:buttonIcon="props.buttonIcon"
+						:buttonIconFamily="props.buttonIconFamily" 
+					>{{props.buttonText}}</sar-button>
+					<attachment-card-list 
+						:fileType="props.uploadType" 
+						:list="list" 
+						:disabled="props.disabled"
+						:readonly="props.readonly"
+						:removable="props.removable"
+						@delete="onRemove" 
+						@clickImage="onImageClick"/>
+				</sar-space>
+			</template>
+		</sar-upload>
+		
+		<!-- 上传附件类型为 image 或 video 并设置为图片模式 -->
+		<sar-upload v-model="fileList" 
+			:after-read="handleUpload" 
+			:accept="props.uploadType" 
+			:max-count="props.maxCount" 
+			:max-size="props.maxSize" 
+			:disabled="props.disabled"
+			:readonly="props.readonly"
+			:removable="props.removable"
+			:multiple="props.maxCount > 1"
+			:over-size="handleOverSize"
+			:before-remove="handleDelete"
+			@remove="handleModelValue"
+			v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.mode === 'picture'"/>
+		
+		<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（仅微信小程序支持） -->
+		<sar-space direction="vertical" v-if="props.uploadType === 'file' || props.uploadType === 'all'">
+			<sar-button 
+				v-if="!props.readonly && fileList.length < props.maxCount" 
+				:disabled="props.disabled"
+				:buttonType="props.buttonType"
+				:buttonTheme="props.buttonTheme"
+				:buttonIsSquare="props.buttonIsSquare"
+				:buttonIsRound="props.buttonIsRound"
+				:buttonSize="props.buttonSize"
+				:buttonIcon="props.buttonIcon"
+				:buttonIconFamily="props.buttonIconFamily" 
+				@click="handleMessageChoose"
+				>{{props.buttonText}}</sar-button>
+			<attachment-card-list
+				fileType="file" 
+				:list="fileList"
+				:disabled="props.disabled"
+				:readonly="props.readonly"
+				:removable="props.removable"
+				@clickImage="handleWechatImgPreview"
+				@delete="handleDelete" 
+			/>
+		</sar-space>
+		<sar-dialog-agent />
+	</view>
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults, watch } from 'vue'
+import { ref, withDefaults, watch, nextTick } from 'vue'
 import type { UploadFileItem } from 'sard-uniapp'
+import { dialog } from 'sard-uniapp'
 import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue'
 import {toast} from '@/utils/Toast'
 import {getFileInfo} from '@/utils/attachment/AttachmentUtils'
@@ -86,54 +94,63 @@ import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, del
 import { ResponseError } from '@/api/global/Type'
 // 记录双向绑定回显是否已经完成
 let modelValueInitComplete = false
+// 删除的id
+const deleteIds: string[] = []
 
 // 传入参数
 const props = withDefaults(defineProps<{
 	// 双向绑定
 	modelValue?: string,
 	// 类型
-	model: 'button' | 'picture',
+	mode?: 'button' | 'picture',
 	// 可上传的附件类型（设置为file会从微信聊天中选取文件，仅微信小程序支持）
 	uploadType?: 'image' | 'video' | 'file' | 'all',
 	// 包含的文件后缀，仅 uploadType === file 时生效
 	extension?: string[],
 	// 文件上传限制的数量
-	maxCount: number,
+	maxCount?: number,
 	// 文件上传大小限制
-	maxSize: number,
+	maxSize?: number,
 	// 禁用状态
-	disabled: boolean,
+	disabled?: boolean,
 	// 只读状态
-	readonly: boolean,
+	readonly?: boolean,
 	// 可否删除
-	removable: boolean,
+	removable?: boolean,
 	// 业务编码（自定义，用于后台附件管理区分附件对应的业务）
 	businessCode: string,
 	// 业务名称（自定义，用于后台附件管理区分附件对应的业务）
 	businessName: string,
-	buttonText: string,
+	// 自动删除（点击删除按钮是否自动进行业务删除）
+	autoDelete?: boolean,
+	// 删除描述（自动删除开启后，点击删除弹框提示文本）
+	deleteText?: string,
+	// 按钮文本
+	buttonText?: string,
 	// 按钮类型
-	buttonType: 'default' | 'pale' | 'mild' | 'outline' | 'text' | 'pale-text',
+	buttonType?: 'default' | 'pale' | 'mild' | 'outline' | 'text' | 'pale-text',
 	// 按钮主题
-	buttonTheme: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'danger',
+	buttonTheme?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'danger',
 	// 是否为圆形按钮
-	buttonIsRound: boolean,
+	buttonIsRound?: boolean,
 	// 是否为方形按钮
-	buttonIsSquare: boolean,
+	buttonIsSquare?: boolean,
 	// 按钮尺寸
-	buttonSize: 'mini' | 'small' | 'medium' | 'large',
+	buttonSize?: 'mini' | 'small' | 'medium' | 'large',
 	// 按钮图标
 	buttonIcon?: string,
 	// 按钮图标字体
 	buttonIconFamily?: string,
 }>(), {
-	model: 'picture',
+	mode: 'picture',
 	uploadType: 'image',
 	maxCount: 10,
 	maxSize: 1 * 1024 * 1024,
 	disabled: false,
 	readonly: false,
 	removable: true,
+	autoDelete: true,
+	deleteText: '删除后无法恢复，是否删除？',
 	buttonText: '点击上传',
 	buttonType: 'default',
 	buttonTheme: 'primary',
@@ -143,7 +160,7 @@ const props = withDefaults(defineProps<{
 })
 
 // 抛出方法
-const emits = defineEmits(['update:model-value', 'remove', 'uploadSuccess', 'uploadError', 'exceedMaxCount'])
+const emits = defineEmits(['update:model-value', 'uploadSuccess', 'uploadError', 'exceedMaxCount'])
 
 // 初始化双向绑定
 const initModelValue = async () => {
@@ -167,9 +184,8 @@ const initModelValue = async () => {
 				toast(resp.msg)
 			}
 		} catch(err) {
-			fileItem.status = 'failed'
 			if (err instanceof ResponseError) {
-				toast(err.msg)
+				toast((err as unknown as ResponseError).msg)
 			} else {
 				toast("附件加载失败")
 			}
@@ -199,6 +215,10 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 	// 获取附件md5
 	try {
 		const { md5, fileName, filePath, size } = await getFileInfo(fileItem.url)
+		if (!md5 || !fileName || !filePath || !size) {
+			toast("附件信息获取异常")
+			return
+		}
 		const resp = await existsAttachmentByMd5(md5)
 		if (resp.code === 200) {
 			let uploadResp
@@ -228,7 +248,7 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 	} catch(err) {
 		fileItem.status = 'failed'
 		if (err instanceof ResponseError) {
-			fileItem.message = err.msg
+			fileItem.message = (err as unknown as ResponseError).msg
 		} else {
 			fileItem.message = "上传失败"
 		}
@@ -258,65 +278,113 @@ const handleOverSize = (fileItemList: UploadFileItem[]) => {
 
 // 处理附件删除
 const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
-	const id = fileItem.id
-	if (id) {
-		try {
-			// 业务删除数据，真实删除需要从后台附件管理进行删除
-			const resp = await deleteFromBusiness(id)
-			if (resp.code === 200) {
-				// 只有上传类型为 file 或 all 时进行手动删除fileList数据
+	return new Promise((resolve, reject) => {
+		const id = fileItem.id
+		if (id) {
+			// 开启自动删除后，点击附件删除直接调用业务删除方法
+			if (props.autoDelete) {
+				dialog.confirm({
+					message: props.deleteText,
+					buttonType: 'round',
+					onConfirm: async () => {
+						// 业务删除数据，真实删除需要从后台附件管理进行删除
+						try {
+							const resp = await deleteFromBusiness([id])
+							if (resp.code === 200) {
+								// 只有上传类型为 file 或 all 时进行手动删除fileList数据
+								if (props.uploadType === 'file' || props.uploadType === 'all') {
+									fileList.value = fileList.value.filter(item => item.id !== id)
+									handleModelValue()
+								}
+								resolve({})
+							} else {
+								toast(resp.msg)
+								reject()
+							}
+						} catch(err) {
+							if (err instanceof ResponseError) {
+								toast((err as unknown as ResponseError).msg)
+							} else {
+								toast("删除失败")
+								console.error(err)
+							}
+							reject()
+						}
+					},
+					onCancel: () => {
+						// 取消删除
+						reject()
+					}
+				})
+			} else {
+				// 上传类型为file 或 all 则手动控制列表元素
 				if (props.uploadType === 'file' || props.uploadType === 'all') {
 					fileList.value = fileList.value.filter(item => item.id !== id)
+					handleModelValue()
 				}
-				emits("remove", {id: id, status: "success"})
-			} else {
-				emits("remove", {id: id, status: "error"})
+				// 向删除id列表中添加数据
+				deleteIds.push(id)
+				resolve({})
 			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast(err.msg)
-			} else {
-				toast("删除失败")
-				console.error(err)
-			}
-		} finally {
-			// 处理双向绑定
-			handleModelValue()
+		} else {
+			toast("附件id不存在")
+			reject()
 		}
-	} else {
-		toast("附件id不存在")
-	}
+	})
+}
+
+// 处理业务删除
+const businessDelete = async () => {
+	return new Promise((resolve, reject) => {
+		if (deleteIds.length === 0) {
+			reject({msg: '附件id不存在'})
+			return
+		}
+		deleteFromBusiness(deleteIds)
+		.then(resp => {
+			if (resp.code === 200) {
+				deleteIds.length = 0
+			}
+			resolve(resp)
+		})
+		.catch(err => reject(err))
+	})
 }
 
 // 微信消息文件选择
 const handleMessageChoose = () => {
-	uni.chooseMessageFile({
-		count: props.maxCount - fileList.value.length,
-		type: props.uploadType,
-		extension: props.extension,
-		success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
-			// 超出大小的附件
-			const overSizeFiles = []
-			
-			tempFiles.forEach(file => {
-				const {size, path, name, type} = file
-				const fileItem = {url: path, name: name, type: type}
-				if (size <= props.maxSize) {
-					// 大小范围内的附件进行上传
-					handleUpload(fileItem)
-					fileList.value.push(fileItem)
-				} else {
-					// 超出大小的附件进行收集
-					overSizeFiles.push(fileItem)
+	// #ifdef MP-WEIXIN
+		uni.chooseMessageFile({
+			count: props.maxCount - fileList.value.length,
+			type: props.uploadType,
+			extension: props.extension,
+			success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
+				// 超出大小的附件
+				const overSizeFiles: UploadFileItem[] = []
+				
+				tempFiles.forEach(file => {
+					const {size, path, name, type} = file
+					const fileItem = {url: path, name: name, type: type}
+					if (size <= props.maxSize) {
+						// 大小范围内的附件进行上传
+						handleUpload(fileItem)
+						fileList.value.push(fileItem)
+					} else {
+						// 超出大小的附件进行收集
+						overSizeFiles.push(fileItem)
+					}
+				})
+				
+				// 同一处理超出大小的附件
+				if (overSizeFiles.length > 0) {
+					handleOverSize(overSizeFiles)
 				}
-			})
-			
-			// 同一处理超出大小的附件
-			if (overSizeFiles.length > 0) {
-				handleOverSize(overSizeFiles)
 			}
-		}
-	})
+		})
+	// #endif
+	// #ifdef APP-PLUS
+		throw new Error("APP 不支持传入uploadType为 file 和 all")
+	// #endif
 }
 
 // 处理微信图片预览
@@ -325,12 +393,19 @@ const handleWechatImgPreview = (_index: number, item: UploadFileItem) => {
 	const urls = fileList.value.filter(item => item.type === 'image').map(item => item.url)
 	const idx = urls.findIndex(url => url === item.url)
 	// 预览
-	uni.previewImage({current: idx, urls: urls})
+	uni.previewImage({current: idx, urls: urls as string[]})
+
 }
 
 // 处理回显
 watch(() => props.modelValue, (value) => {
     if (value) initModelValue()
   },{ immediate: true })
+
+// 抛出函数
+defineExpose({
+	businessDelete
+})
+
 
 </script>
