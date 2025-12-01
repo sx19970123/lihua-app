@@ -9,7 +9,7 @@
 		</sar-input>
 		<sar-input v-else :placeholder="props.placeholder" root-class="rounded-input" :class="class" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus />
 		<!-- 密码强度指示条 -->
-		<sar-space size="small" class="indicator-bar" v-if="strong !== 0 || medium !== 0 || weak !== 0">
+		<sar-space size="small" class="indicator-bar" v-if="props.value">
 			<sar-progress-bar root-style="width: 100%" :percent="weak" color="#ff4d4f" :show-text="false" />
 			<sar-progress-bar root-style="width: 100%" :percent="medium" color="#faad14" :show-text="false" />
 			<sar-progress-bar root-style="width: 100%" :percent="strong" color="#52c41a" :show-text="false" />

@@ -16,8 +16,8 @@ page {
   }
 
   .auth-item { 
-    height: 90rpx;
-    border-radius: 24rpx;
+    height: 90rpx !important;
+    border-radius: 24rpx !important;
 
     &.show-caret {
       caret-color: var(--sar-primary-text);

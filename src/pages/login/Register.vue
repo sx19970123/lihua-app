@@ -1,7 +1,7 @@
 <template>
 	<view class="auth-body">
 		<view class="auth-content" :style="{ transform: openKeyboard ? 'translateY(-30%)' : 'translateY(0)' }">
-			<sar-space direction="vertical" justify="center" size="large">
+			<sar-space direction="vertical" size="large">
 				<text class="auth-title">欢迎注册狸花猫</text>
 				<sar-space align="center" size="0rpx">
 					<text class="text-font">已有账号？</text>
@@ -26,7 +26,6 @@
 				
 				<password-input 
 					v-model:value="registerData.password" 
-					class="auth-item"
 					:class="{ 'show-caret': openKeyboard }"
 					placeholder="密码" 
 					showPrepend>
