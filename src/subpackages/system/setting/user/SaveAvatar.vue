@@ -49,7 +49,7 @@ import UserAvatar from '@/components/user-avatar/index.vue'
 import ColorSelect from '@/components/color-select/index.vue'
 import type { AvatarType } from '@/api/system/profile/type/AvatarType'
 import { saveBasics } from '@/api/system/profile/Profile'
-import { upload } from '@/api/system/attachment/AttachmentStorage'
+import { upload, deleteFromBusiness } from '@/api/system/attachment/AttachmentStorage'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
 import { toast } from '@/utils/Toast'
@@ -117,6 +117,8 @@ const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 			if (resp.code === 200) {
 				// 刷新store
 				await userStore.initUserInfo()
+				// 删除图片头像
+				removeLastImage()
 				router.navigateBack({})
 			} else {
 				toast(resp.msg)
@@ -134,8 +136,9 @@ const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
  * 初始化图片头像
  */
 const initImageAvatar = () => {
-	// 头像地址
-	const imageUrl = ref('')
+	// 首次加载时的图片头像id
+	let lastImageId: string | undefined = undefined
+	
 	// 选择头像
 	const chooseImage = async () => {
 		try {
@@ -165,7 +168,7 @@ const initImageAvatar = () => {
 			const {size, md5} = await getFileInfo(croppedFilePath)
 
 			// 限制 2MB
-			if (size / 1024 / 1024 > 2) {
+			if (!size || (size / 1024 / 1024 > 2)) {
 				toast("上传失败，头像不能超过 2MB");
 				return;
 			}
@@ -191,15 +194,29 @@ const initImageAvatar = () => {
 			console.error("操作失败:", err);
 		}
 	}
-
-
+	
+	// 删除上一个图片头像
+	const removeLastImage = () => {
+		if (lastImageId) {
+			deleteFromBusiness([lastImageId])
+		}
+	}
+	
+	// 初始化上一个图片头像的id
+	const initLastImageId = () => {
+		if (avatarData.value.type === 'image') {
+			lastImageId = cloneDeep(avatarData.value.value)
+		}
+	}
+	
+	initLastImageId()
 	return {
-		imageUrl,
-		chooseImage
+		chooseImage,
+		removeLastImage
 	}
 }
 
-const { imageUrl, chooseImage } = initImageAvatar()
+const { chooseImage, removeLastImage } = initImageAvatar()
 
 /**
  * 初始化图标头像
