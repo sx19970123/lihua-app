@@ -95,7 +95,7 @@ import { ResponseError } from '@/api/global/Type'
 // 记录双向绑定回显是否已经完成
 let modelValueInitComplete = false
 // 删除的id
-const deleteIds: string[] = []
+const removeIds: string[] = []
 
 // 传入参数
 const props = withDefaults(defineProps<{
@@ -122,9 +122,9 @@ const props = withDefaults(defineProps<{
 	// 业务名称（自定义，用于后台附件管理区分附件对应的业务）
 	businessName: string,
 	// 自动删除（点击删除按钮是否自动进行业务删除）
-	autoDelete?: boolean,
+	autoRemove?: boolean,
 	// 删除描述（自动删除开启后，点击删除弹框提示文本）
-	deleteText?: string,
+	removeText?: string,
 	// 按钮文本
 	buttonText?: string,
 	// 按钮类型
@@ -149,8 +149,8 @@ const props = withDefaults(defineProps<{
 	disabled: false,
 	readonly: false,
 	removable: true,
-	autoDelete: true,
-	deleteText: '删除后无法恢复，是否删除？',
+	autoRemove: true,
+	removeText: '删除后无法恢复，是否删除？',
 	buttonText: '点击上传',
 	buttonType: 'default',
 	buttonTheme: 'primary',
@@ -282,9 +282,9 @@ const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
 		const id = fileItem.id
 		if (id) {
 			// 开启自动删除后，点击附件删除直接调用业务删除方法
-			if (props.autoDelete) {
+			if (props.autoRemove) {
 				dialog.confirm({
-					message: props.deleteText,
+					message: props.removeText,
 					buttonType: 'round',
 					onConfirm: async () => {
 						// 业务删除数据，真实删除需要从后台附件管理进行删除
@@ -323,7 +323,7 @@ const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
 					handleModelValue()
 				}
 				// 向删除id列表中添加数据
-				deleteIds.push(id)
+				removeIds.push(id)
 				resolve({})
 			}
 		} else {
@@ -334,16 +334,16 @@ const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
 }
 
 // 处理业务删除
-const businessDelete = async () => {
+const businessRemove = async () => {
 	return new Promise((resolve, reject) => {
-		if (deleteIds.length === 0) {
+		if (removeIds.length === 0) {
 			reject({msg: '附件id不存在'})
 			return
 		}
-		deleteFromBusiness(deleteIds)
+		deleteFromBusiness(removeIds)
 		.then(resp => {
 			if (resp.code === 200) {
-				deleteIds.length = 0
+				removeIds.length = 0
 			}
 			resolve(resp)
 		})
@@ -404,7 +404,7 @@ watch(() => props.modelValue, (value) => {
 
 // 抛出函数
 defineExpose({
-	businessDelete
+	businessRemove
 })
 
 
