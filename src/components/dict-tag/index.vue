@@ -37,7 +37,6 @@
 </template>
 
 <script setup lang="ts">
-import { watch } from "vue"
 import type { SysDictDataType } from "@/api/system/dict/type/SysDictDataType"
 
 // 给组件命名，递归调用自己

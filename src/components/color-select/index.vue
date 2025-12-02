@@ -16,9 +16,9 @@ type ColorSelectItem = {
 }
 
 const data = defineProps<{
-	dataSource : Array<ColorSelectItem>
-	color ?: string
-	value ?: string
+	dataSource : Array<ColorSelectItem>,
+	color ?: string,
+	value ?: string,
 }>()
 
 const emits = defineEmits(['update:color', 'update:value', 'click'])

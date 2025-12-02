@@ -26,8 +26,8 @@
 		<view class="setting-content">
 			<sar-list card>
 				<sar-list-item title="设置" @click="toUserSetting" icon-family="outlined" icon="SettingOutlined" hover arrow/>
+				<sar-list-item title="组件" @click="toComponentList" icon-family="outlined" icon="SkinOutlined" hover arrow/>
 				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
-				<sar-list-item title="关于" icon-family="outlined" icon="InfoCircleOutlined" hover arrow/>
 			</sar-list>
 		</view>
 	</view>
@@ -52,6 +52,13 @@ const toGitee = () => {
 const toUserSetting = () => {
 	router.navigateTo({
 		url: "/subpackages/system/setting/user/index"
+	})
+}
+
+// 前往组件列表
+const toComponentList = () => {
+	router.navigateTo({
+		url: '/subpackages/system/components/index'
 	})
 }
 

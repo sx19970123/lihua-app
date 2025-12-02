@@ -105,7 +105,37 @@
 			"style": {
 				"navigationBarTitleText": "注销账号"
 			}
-		}]
+		},
+		// -----组件展示页面开始（此页面可完全删除）-----
+		{
+			"path": "components/index",
+			"style": {
+				"navigationBarTitleText": "系统组件"
+			}
+		},
+		{
+			"path": "components/attachment/index",
+			"style": {
+				"navigationBarTitleText": "附件上传"
+			}
+		},{
+			"path": "components/color-select/index",
+			"style": {
+				"navigationBarTitleText": "颜色选择"
+			}
+		},{
+			"path": "components/dict-tag/index",
+			"style": {
+				"navigationBarTitleText": "字典标签"
+			}
+		},{
+			"path": "components/icon-select/index",
+			"style": {
+				"navigationBarTitleText": "图标选择"
+			}
+		}
+		// -----组件展示页面结束-----
+		]
 	}],
 	"tabBar": {
 		"selectedColor": "#3b82f6",

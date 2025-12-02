@@ -20,13 +20,13 @@
 						@click="onSelect" 
 						v-if="!props.readonly && fileList.length < props.maxCount"
 						:disabled="props.disabled"
-						:buttonType="props.buttonType"
-						:buttonTheme="props.buttonTheme"
-						:buttonIsSquare="props.buttonIsSquare"
-						:buttonIsRound="props.buttonIsRound"
-						:buttonSize="props.buttonSize"
-						:buttonIcon="props.buttonIcon"
-						:buttonIconFamily="props.buttonIconFamily" 
+						:type="props.buttonType"
+						:theme="props.buttonTheme"
+						:square="props.buttonIsSquare"
+						:round="props.buttonIsRound"
+						:size="props.buttonSize"
+						:icon="props.buttonIcon"
+						:icon-family="props.buttonIconFamily" 
 					>{{props.buttonText}}</sar-button>
 					<attachment-card-list 
 						:fileType="props.uploadType" 
@@ -60,13 +60,13 @@
 			<sar-button 
 				v-if="!props.readonly && fileList.length < props.maxCount" 
 				:disabled="props.disabled"
-				:buttonType="props.buttonType"
-				:buttonTheme="props.buttonTheme"
-				:buttonIsSquare="props.buttonIsSquare"
-				:buttonIsRound="props.buttonIsRound"
-				:buttonSize="props.buttonSize"
-				:buttonIcon="props.buttonIcon"
-				:buttonIconFamily="props.buttonIconFamily" 
+				:type="props.buttonType"
+				:theme="props.buttonTheme"
+				:square="props.buttonIsSquare"
+				:round="props.buttonIsRound"
+				:size="props.buttonSize"
+				:icon="props.buttonIcon"
+				:icon-family="props.buttonIconFamily" 
 				@click="handleMessageChoose"
 				>{{props.buttonText}}</sar-button>
 			<attachment-card-list
@@ -105,7 +105,7 @@ const props = withDefaults(defineProps<{
 	mode?: 'button' | 'picture',
 	// 可上传的附件类型（设置为file会从微信聊天中选取文件，仅微信小程序支持）
 	uploadType?: 'image' | 'video' | 'file' | 'all',
-	// 包含的文件后缀，仅 uploadType === file 时生效
+	// 包含的文件后缀，仅 uploadType === file 时生效，数组后缀名不带. 如匹配pdf，直接 :extension="['pdf']"
 	extension?: string[],
 	// 文件上传限制的数量
 	maxCount?: number,
@@ -144,7 +144,7 @@ const props = withDefaults(defineProps<{
 }>(), {
 	mode: 'picture',
 	uploadType: 'image',
-	maxCount: 10,
+	maxCount: 6,
 	maxSize: 1 * 1024 * 1024,
 	disabled: false,
 	readonly: false,
@@ -253,10 +253,14 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 			fileItem.message = "上传失败"
 		}
 	} finally {
-		// 重新赋值
-		fileList.value = [...fileList.value]
-		// 处理双向绑定
-		handleModelValue()
+		setTimeout(() => {
+			nextTick(() => {
+				// 重新赋值
+				fileList.value = [...fileList.value]
+				// 处理双向绑定
+				handleModelValue()
+			})
+		}, 100)
 	}
 }
 
@@ -273,7 +277,9 @@ const handleFileUpload = async (filePath: string, md5: string) => {
 // 处理超出指定大小
 const handleOverSize = (fileItemList: UploadFileItem[]) => {
 	emits('exceedMaxCount', fileItemList)
-	toast(fileItemList.length + "个附件上传失败，单个附件不能超过" + (props.maxSize / 1024 / 1024) + "MB")
+	// 根据附件大小转换 mb 和 kb 提示
+	const maxSize = props.maxSize / 1024 / 1024
+	toast(fileItemList.length + "个附件上传失败，单个附件不能超过" + (maxSize < 1 ? maxSize * 1024 + 'KB' : maxSize + 'MB'))
 }
 
 // 处理附件删除
@@ -383,6 +389,7 @@ const handleMessageChoose = () => {
 		})
 	// #endif
 	// #ifdef APP-PLUS
+		toast("仅微信小程序支持此配置")
 		throw new Error("APP 不支持传入uploadType为 file 和 all")
 	// #endif
 }
