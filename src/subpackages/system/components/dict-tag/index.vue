@@ -7,10 +7,7 @@
 				<dict-tag dict-data-value="1" :dict-data-option="sys_status"/>
 			</sar-space>
 			<view class="title">树型字典</view>
-			<view class="description">
-				微信小程序不支持组件递归调用，树型字典标签回显在微信小程序中无法显示
-			</view>
-			<sar-space>
+			<sar-space wrap>
 				<dict-tag dict-data-value="2-2" :dict-data-option="test_tree" plain/>
 				<dict-tag dict-data-value="2-2-1" :dict-data-option="test_tree" full-tree-node/>
 				<dict-tag dict-data-value="2-2-1" :dict-data-option="test_tree" full-tree-node root-tree-node-prefix="~"/>

@@ -8,7 +8,7 @@ import type {MapResponseType} from "@/api/global/Type";
  */
 export const getDictDataOption = (dictTypeCode: string) => {
   return request<Array<SysDictDataType>>({
-    url: 'system/dictData/option/' + dictTypeCode,
+    url: 'app/system/dictData/option/' + dictTypeCode,
     method: 'GET'
   })
 }
@@ -16,7 +16,7 @@ export const getDictDataOption = (dictTypeCode: string) => {
 
 export const getDictDataOptionByCodeList = (dictTypeCodeList: string[]) => {
   return request<MapResponseType<string, SysDictDataType>>({
-    url: 'system/dictData/option',
+    url: 'app/system/dictData/option',
     method: 'POST',
     data: dictTypeCodeList
   })
