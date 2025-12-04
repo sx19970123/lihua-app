@@ -3,19 +3,8 @@ import type {RequestConfig, Response} from 'sard-uniapp'
 import {type ResponseErrorType, ResponseError, type ResponseType} from "@/api/global/Type"
 import {getToken} from '@/utils/Token'
 import {useUserStore} from '@/stores/user'
-
-/**
- * 请求的客户端类型
- */
-const clientType = (): 'app' | 'wechat_mp' => {
-	//#ifdef APP-PLUS
-		return 'app'
-	//#endif
-	
-	//#ifdef MP-WEIXIN
-		return 'wechat_mp'
-	//#endif
-}
+import {getClientType} from '@/utils/Client'
+ 
 
 const service = new Request({
 	baseURL: import.meta.env.VITE_APP_BASE_API,
@@ -27,7 +16,7 @@ service.interceptors.request.use(
 	(config: RequestConfig) => {
 		// 默认请求头
 		config.header['Content-Type'] = "application/json;charset=utf-8"
-		config.header['Client-Type'] = clientType()
+		config.header['Client-Type'] = getClientType()
 		// 验证token
 		const token = getToken()
 		if (token) {

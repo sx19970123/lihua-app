@@ -1,7 +1,7 @@
 import { Router } from 'sard-uniapp'
 import { getToken } from '@/utils/Token'
 import { useUserStore } from '@/stores/user'
-
+import {connect, closeConnect} from '@/utils/WebSocket'
 const router = new Router()
 
 /**
@@ -28,10 +28,14 @@ router.beforeEach((to, from) => {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {
 			userStore.initUserInfo()
+			// 连接到websocket
+			connect()
 		} else {
 			return true
 		}
 	} else {
+		// 没有token断开websocket连接
+		closeConnect()
 		
 		// 访问的页面是公开页面，可直接访问
 		if (publicRoutesList.includes(to.url)) {
