@@ -31,6 +31,7 @@ export const sendMessage = async (type: string, data: any) => {
  * webSocket连接具体实现逻辑
  */
 class WebSocketManager {
+	private webSocket?: UniNamespace.SocketTask
 	// 是否在连接状态
 	private isConnected: boolean
     // 事件监听器
@@ -50,16 +51,13 @@ class WebSocketManager {
         this.listeners = new Map()
         this.retryNumber = 0
 		this.isConnected = false
-		
-		// 全局注册器
-		this.registerUniHandlers()
     }
 
     /**
      * 建立连接
      */
     public connect = async () => {
-        if (!this.isConnected) {
+        if (!this.webSocket) {
 			try {
 			    const { code, data } = await getOnceToken()
 			
@@ -72,7 +70,7 @@ class WebSocketManager {
 				const url = import.meta.env.VITE_APP_WS_API + '?token=' + data + '&clientId=' + await getUUID() + '&clientType=' + getClientType()
 			
 				// 建立连接
-				uni.connectSocket({
+				this.webSocket = uni.connectSocket({
 					url,
 					success: () => console.log("WebSocket连接中"),
 					fail: (e) => {
@@ -80,45 +78,45 @@ class WebSocketManager {
 						this.reconnect()
 					}
 				})
+				
+				// 连接成功
+				this.webSocket.onOpen(() => {
+					console.info('WebSocket连接成功')
+					this.retryNumber = 0
+					this.enableRetry = true
+					this.isConnected = true
+					this.startHeartbeat()
+				})
+				
+				// 连接错误
+				this.webSocket.onError((err) => {
+					this.isConnected = false
+					this.reconnect()
+					console.error('WebSocket连接错误:', err)
+				})
+				
+				// 连接关闭
+				this.webSocket.onClose((event) => {
+					console.info('WebSocket连接关闭:', event)
+					this.isConnected = false
+					this.webSocket = undefined
+					this.closeHeartbeat()
+					if (this.enableRetry) {
+						this.reconnect()
+					}
+				})
+				
+				// 接收消息
+				this.webSocket.onMessage((res) => {
+					this.receiveMessage(res)
+				})
 			} catch (e) {
 			    console.error("websocket连接失败",e)
 			}
+		} else {
+			console.log("当前websocket实例已存在")
 		}
     }
-	
-	// 注册全局监听
-	private registerUniHandlers() {
-		// 连接成功
-		uni.onSocketOpen(() => {
-			console.info('WebSocket连接成功');
-			this.retryNumber = 0
-			this.enableRetry = true;
-			this.isConnected = true;
-			this.startHeartbeat()
-		})
-				
-		// 连接错误
-		uni.onSocketError((err) => {
-			this.isConnected = false;
-			this.reconnect()
-			console.error('WebSocket连接错误:', err)
-		})
-		
-		// 连接关闭
-		uni.onSocketClose((event) => {
-			console.info('WebSocket连接关闭:', event)
-			this.isConnected = false;
-			this.closeHeartbeat()
-			if (this.enableRetry) {
-				this.reconnect()
-			}
-		})
-		
-		// 接收消息
-		uni.onSocketMessage((res) => {
-			this.receiveMessage(res)
-		})
-	}
 
     // 重试连接
     private reconnect = () => {
@@ -126,6 +124,7 @@ class WebSocketManager {
             console.error("websocket 超过重试次数")
             return
         }
+		this.webSocket = undefined
         this.retryNumber ++
         setTimeout(() => {
             console.log("websocket 执行第" + this.retryNumber + "次重试")
@@ -219,9 +218,8 @@ class WebSocketManager {
     public closeConnect = () => {
 		console.log("WebSocket主动关闭")
         this.enableRetry = false
-		uni.closeSocket({
-			code: 1000
-		})
+		this.webSocket?.close({code: 1000})
+		this.webSocket = undefined
         this.listeners?.clear()
     }
 }
@@ -234,6 +232,5 @@ interface WebSocketMessage {
     data: string;
     timestamp: number;
 }
-
 
 const manager = new WebSocketManager()

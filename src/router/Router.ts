@@ -8,10 +8,15 @@ const router = new Router()
  * 无需登录即可访问的路由列表
  */
 const publicRoutesList = [
+	// 首屏页
 	"/pages/splash/index",
+	// 登录
 	"/pages/login/Login",
+	// 注册
 	"/pages/login/Register",
+	// 隐私政策
 	"/subpackages/system/protocol/PrivacyPolicy",
+	// 用户协议
 	"/subpackages/system/protocol/UserAgreement"
 	]
 
