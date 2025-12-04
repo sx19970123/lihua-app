@@ -45,11 +45,18 @@
 		// 第三方连接跳转组件
 		{
 			"path": "pages/webview/index"
+		},
+		// 第三方连接跳转组件
+		{
+			"path": "pages/text",
+			"style": {
+				"navigationBarTitleText": "测试"
+			}
 		}
 	],
 	// 分包
 	"subpackages": [{
-		"root": "subpackages/system/",
+		"root": "subpackages/system",
 		"pages": [{
 			"path": "protocol/PrivacyPolicy",
 			"style": {

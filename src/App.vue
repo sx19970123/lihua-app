@@ -1,15 +1,23 @@
 <script setup lang="ts">
 import {onLaunch, onShow, onHide} from "@dcloudio/uni-app"
+import { toast } from 'sard-uniapp'
 
 onLaunch(() => {
 	console.log("app launch")
 })
 onShow(() => {
 	console.log("app show");
+	
 })
 onHide(() => {
 	console.log("app hide");
 })
+
+const onTopToast = () => {
+  toast('顶部位置', {
+    position: 'top',
+  })
+}
 </script>
 
 <style lang="scss">

@@ -28,6 +28,7 @@
 				<sar-list-item title="设置" @click="toUserSetting" icon-family="outlined" icon="SettingOutlined" hover arrow/>
 				<sar-list-item title="组件" @click="toComponentList" icon-family="outlined" icon="SkinOutlined" hover arrow/>
 				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
+				<sar-list-item title="测试" @click="totext" icon-family="custom" icon="GiteeCustom" hover arrow/>
 			</sar-list>
 		</view>
 	</view>
@@ -45,6 +46,12 @@ const userStore = useUserStore()
 const toGitee = () => {
 	router.navigateTo({
 		url: "/pages/webview/index?url=" + encodeURIComponent('https://gitee.com/yukino_git')
+	})
+}
+// 前往gitee
+const totext = () => {
+	router.navigateTo({
+		url: "/pages/text"
 	})
 }
 
