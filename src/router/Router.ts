@@ -28,7 +28,6 @@ const publicRoutesList = [
  */
 router.beforeEach((to, from) => {
 	const userStore = useUserStore()
-	console.log("执行了");
 	if (getToken()) {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {

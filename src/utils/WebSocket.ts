@@ -1,7 +1,6 @@
 import {getOnceToken} from "@/api/system/auth/Auth";
 import {getUUID} from "@/utils/uuid/uuid"
 import {getClientType} from '@/utils/Client'
-
 // 连接
 export const connect = async () => {
     await manager.connect()
@@ -140,10 +139,15 @@ class WebSocketManager {
                 // json转换为对象
                 const webSocketMessage: WebSocketMessage = JSON.parse(data)
                 // 从注册的事件中拿到对象
-                const listener = this.listeners?.get(webSocketMessage.type)
-                if (listener) {
-                    listener(webSocketMessage.data)
-                }
+                // const listener = this.listeners?.get(webSocketMessage.type)
+                // if (listener) {
+                //     listener(webSocketMessage.data)
+                // }
+				console.log("this.listeners", this.listeners?.size);
+				this.listeners?.forEach((value) => {
+					console.log("ddddd");
+					value(webSocketMessage)
+				})
             } catch (error) {
                 console.error("WebSocket消息处理失败，无法处理的消息格式", error);
             }
@@ -234,3 +238,5 @@ interface WebSocketMessage {
 }
 
 const manager = new WebSocketManager()
+
+console.log(manager);

@@ -8,7 +8,7 @@ let hasBuilt = false
  */
 const buildIcons = () => {
 	if (hasBuilt) {
-		console.warn("图标目录文件（/src/static/icons/icons.json）已生成，如需重新生成，请重启项目")
+		console.warn("图标目录文件（/src/subpackages/system/static/icons.json）已生成，如需重新生成，请重启项目")
 		return
 	}
 	console.info("准备生成icons.json文件...")
@@ -59,7 +59,7 @@ const buildIcons = () => {
 }
 
 /**
- * 在 assets/icons下生成icons.json
+ * 生成icons.json
  * 供组件内引用
  */ 
 export const IconBuildPlugin = () => {

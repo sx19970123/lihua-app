@@ -45,22 +45,16 @@
 		// 第三方连接跳转组件
 		{
 			"path": "pages/webview/index"
-		},
-		// 第三方连接跳转组件
-		{
-			"path": "pages/text",
-			"style": {
-				"navigationBarTitleText": "测试"
-			}
 		}
 	],
 	// 分包
-	"subpackages": [{
+	"subPackages": [{
 		"root": "subpackages/system",
 		"pages": [{
 			"path": "protocol/PrivacyPolicy",
 			"style": {
-				"navigationBarTitleText": "隐私政策"
+				"navigationBarTitleText": "隐私政策",
+				"navigationStyle": "custom"
 			}
 		},{
 			"path": "protocol/UserAgreement",
@@ -147,6 +141,7 @@
 	"tabBar": {
 		"selectedColor": "#3b82f6",
 		"backgroundColor": "@bgColor",
+		"borderStyle": "@borderStyle",
 		"list": [
 			      {
 			        "pagePath": "pages/index/index",

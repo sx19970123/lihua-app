@@ -1,22 +1,29 @@
 <script setup lang="ts">
 import {onLaunch, onShow, onHide} from "@dcloudio/uni-app"
-import { toast } from 'sard-uniapp'
+import {connect, addEventListener, removeEventListener} from "@/utils/Websocket"
 
 onLaunch(() => {
-	console.log("app launch")
+	// 处理通知红点
+	connect()
+	handleNoticeListener()
 })
 onShow(() => {
 	console.log("app show");
-	
 })
 onHide(() => {
 	console.log("app hide");
 })
 
-const onTopToast = () => {
-  toast('顶部位置', {
-    position: 'top',
-  })
+
+
+// 处理websocket消息通知监听
+const handleNoticeListener = () => {
+	// 订阅notice通知消息，收到消息后显示底部红点
+		addEventListener("WS_NOTICE", () => {
+			uni.showTabBarRedDot({
+				index: 1
+			})
+		})
 }
 </script>
 

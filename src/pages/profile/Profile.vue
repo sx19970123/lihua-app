@@ -2,24 +2,30 @@
 	<view>
 		<!--头像-->
 		<view class="title">
-			<sar-space align="center" size="large">
-				<!-- 头像 -->
-				<view class="unobstructed" @click="goSaveDataPage('SaveAvatar')">
-					<user-avatar/>
-				</view>
-				<sar-space direction="vertical" size="small">
-					<!-- 昵称 -->
-					<view class="nickname unobstructed" @click="goSaveDataPage('SaveNickname')">{{userStore.$state.nickname}}</view>
-					<!-- 部门 -->
-					<sar-space align="center" class="dept unobstructed">
-						<view @click="goSaveDataPage('SaveDefaultDept')">
-							{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
-						</view>
-						<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}" @click="goSaveDataPage('SaveDefaultDept')">
-							<sar-icon family="outlined" name="SwapOutlined"/>
-						</sar-tag>
+			<sar-space justify="between">
+				<sar-space align="center" size="large">
+					<!-- 头像 -->
+					<view class="unobstructed" @click="goSaveDataPage('SaveAvatar')">
+						<user-avatar/>
+					</view>
+					<sar-space direction="vertical" size="small">
+						<!-- 昵称 -->
+						<view class="nickname unobstructed" @click="goSaveDataPage('SaveNickname')">{{userStore.$state.nickname}}</view>
+						<!-- 部门 -->
+						<sar-space align="center" class="dept unobstructed">
+							<view @click="goSaveDataPage('SaveDefaultDept')">
+								{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
+							</view>
+							<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}" @click="goSaveDataPage('SaveDefaultDept')">
+								<sar-icon family="outlined" name="SwapOutlined"/>
+							</sar-tag>
+						</sar-space>
 					</sar-space>
 				</sar-space>
+				<!-- 通知 -->
+				<view style="margin-right: 16rpx;">
+					<sar-icon name="BellOutlined" family="outlined" size="42rpx"></sar-icon>
+				</view>
 			</sar-space>
 		</view>
 		<!--操作列表-->
