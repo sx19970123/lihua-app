@@ -4,8 +4,6 @@
 <script setup lang="ts">
 import { onMounted } from "vue"
 import router from "@/router/Router"
-import { getToken } from "@/utils/token"
-
 /**
  * 跳转到首页
  */

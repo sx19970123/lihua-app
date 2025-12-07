@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import {onLaunch, onShow, onHide} from "@dcloudio/uni-app"
-import {connect, addEventListener, removeEventListener} from "@/utils/Websocket"
+import {onLaunch, onShow, onHide, onReady} from "@dcloudio/uni-app"
+import {useThemeStore} from "@/stores/theme"
+import {websocket} from '@/utils/WebSocket'
+const themeStore = useThemeStore()
 
 onLaunch(() => {
+	// 设置当前主题
+	themeStore.setMode()
 	// 处理通知红点
-	connect()
 	handleNoticeListener()
 })
 onShow(() => {
@@ -15,15 +18,14 @@ onHide(() => {
 })
 
 
-
 // 处理websocket消息通知监听
 const handleNoticeListener = () => {
 	// 订阅notice通知消息，收到消息后显示底部红点
-		addEventListener("WS_NOTICE", () => {
-			uni.showTabBarRedDot({
-				index: 1
-			})
+	websocket.addEventListener("WS_NOTICE", () => {
+		uni.showTabBarRedDot({
+			index: 1
 		})
+	})
 }
 </script>
 

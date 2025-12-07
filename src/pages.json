@@ -62,6 +62,16 @@
 				"navigationBarTitleText": "用户协议"
 			}
 		},{
+			"path": "setting/index",
+			"style": {
+				"navigationBarTitleText": "设置"
+			}
+		},{
+			"path": "setting/theme/index",
+			"style": {
+				"navigationBarTitleText": "系统主题"
+			}
+		},{
 			"path": "setting/user/index",
 			"style": {
 				"navigationBarTitleText": "用户设置"
@@ -106,6 +116,13 @@
 			"style": {
 				"navigationBarTitleText": "注销账号"
 			}
+		},{
+			"path": "notice/index",
+			"style": {
+				"navigationBarTitleText": "消息通知"
+			}
+		},{
+			"path": "notice/Detail"
 		},
 		// -----组件展示页面开始（此页面可完全删除）-----
 		{

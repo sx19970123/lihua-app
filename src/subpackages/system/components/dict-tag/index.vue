@@ -22,7 +22,7 @@
 
 <script lang="ts" setup>
 import DictTag from "@/components/dict-tag/index.vue"
-import {initDict} from "@/utils/Dict.ts"
+import {initDict} from "@/utils/Dict"
 
 const {sys_status, test_tree} = initDict("sys_status", "test_tree")
 </script>

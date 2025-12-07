@@ -1,33 +1,10 @@
 import {getOnceToken} from "@/api/system/auth/Auth";
 import {getUUID} from "@/utils/uuid/uuid"
 import {getClientType} from '@/utils/Client'
-// 连接
-export const connect = async () => {
-    await manager.connect()
-}
-
-// 关闭
-export const closeConnect = () => {
-    manager.closeConnect()
-}
-
-// 添加监听订阅
-export const addEventListener = (type: string, callback: (data: any) => void) => {
-    manager.addListener(type, callback)
-}
-
-// 删除监听订阅
-export const removeEventListener = (type: string) => {
-    manager.removeListener(type)
-}
-
-// 发送数据
-export const sendMessage = async (type: string, data: any) => {
-    return await manager.sendMessage(type, data)
-}
 
 /**
  * webSocket连接具体实现逻辑
+ * 
  */
 class WebSocketManager {
 	private webSocket?: UniNamespace.SocketTask
@@ -116,6 +93,52 @@ class WebSocketManager {
 			console.log("当前websocket实例已存在")
 		}
     }
+	
+	// 注册事件
+	public addEventListener = (type: string, callback: (data: any) => void) => {
+	    if (!this.listeners) {
+	        this.listeners = new Map()
+	    }
+	    this.listeners.set(type, callback);
+	}
+	
+	// 删除事件
+	public removeEventListener = (type: string) => {
+	    this.listeners?.delete(type)
+	}
+	
+	// 发送数据
+	public sendMessage = (type: string, data: any): Promise<boolean> => {
+	    return new Promise((resolve, reject) => {
+			if (!this.isReady()) {
+			    console.warn("WebSocket 未连接，消息发送失败")
+			    return resolve(false)
+			}
+			try {
+			    const json = JSON.stringify({type, data, timestamp: new Date().getTime()})
+			    uni.sendSocketMessage({
+			    	data: json,
+					success: () => resolve(true),
+					fail: (error) => {
+						console.error("WebSocket消息发送失败", error);
+						resolve(false)
+					}
+			    })
+			} catch (error) {
+				reject(error)
+			    console.error("WebSocket消息发送失败，无法处理的消息格式", error);
+			}
+		})
+	}
+	
+	// 主动关闭连接
+	public closeConnect = () => {
+		console.log("WebSocket主动关闭")
+	    this.enableRetry = false
+		this.webSocket?.close({code: 1000})
+		this.webSocket = undefined
+	    this.listeners?.clear()
+	}
 
     // 重试连接
     private reconnect = () => {
@@ -139,15 +162,10 @@ class WebSocketManager {
                 // json转换为对象
                 const webSocketMessage: WebSocketMessage = JSON.parse(data)
                 // 从注册的事件中拿到对象
-                // const listener = this.listeners?.get(webSocketMessage.type)
-                // if (listener) {
-                //     listener(webSocketMessage.data)
-                // }
-				console.log("this.listeners", this.listeners?.size);
-				this.listeners?.forEach((value) => {
-					console.log("ddddd");
-					value(webSocketMessage)
-				})
+                const listener = this.listeners?.get(webSocketMessage.type)
+                if (listener) {
+                    listener(webSocketMessage.data)
+                }
             } catch (error) {
                 console.error("WebSocket消息处理失败，无法处理的消息格式", error);
             }
@@ -180,52 +198,6 @@ class WebSocketManager {
     private isReady = (): boolean => {
         return this.isConnected;
     }
-
-    // 注册事件
-    public addListener = (type: string, callback: (data: any) => void) => {
-        if (!this.listeners) {
-            this.listeners = new Map()
-        }
-        this.listeners.set(type, callback);
-    }
-
-    // 删除事件
-    public removeListener = (type: string) => {
-        this.listeners?.delete(type)
-    }
-
-    // 发送数据
-    public sendMessage = (type: string, data: any): Promise<boolean> => {
-        return new Promise((resolve, reject) => {
-			if (!this.isReady()) {
-			    console.warn("WebSocket 未连接，消息发送失败")
-			    return resolve(false)
-			}
-			try {
-			    const json = JSON.stringify({type, data, timestamp: new Date().getTime()})
-			    uni.sendSocketMessage({
-			    	data: json,
-					success: () => resolve(true),
-					fail: (error) => {
-						console.error("WebSocket消息发送失败", error);
-						resolve(false)
-					}
-			    })
-			} catch (error) {
-				reject(error)
-			    console.error("WebSocket消息发送失败，无法处理的消息格式", error);
-			}
-		})
-    }
-
-    // 主动关闭连接
-    public closeConnect = () => {
-		console.log("WebSocket主动关闭")
-        this.enableRetry = false
-		this.webSocket?.close({code: 1000})
-		this.webSocket = undefined
-        this.listeners?.clear()
-    }
 }
 
 /**
@@ -237,6 +209,4 @@ interface WebSocketMessage {
     timestamp: number;
 }
 
-const manager = new WebSocketManager()
-
-console.log(manager);
+export const websocket = new WebSocketManager()

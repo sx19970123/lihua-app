@@ -58,7 +58,11 @@
             },
             /* ios打包配置 */
             "ios" : {
-                "dSYMs" : false
+                "dSYMs" : false,
+                "defaultTheme" : "auto"
+            },
+            "google" : {
+                "defaultNightMode" : "auto"
             },
             /* SDK配置 */
             "sdkConfigs" : {}

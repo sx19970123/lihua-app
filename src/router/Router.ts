@@ -1,7 +1,9 @@
 import { Router } from 'sard-uniapp'
 import { getToken } from '@/utils/Token'
 import { useUserStore } from '@/stores/user'
-import {connect, closeConnect} from '@/utils/WebSocket'
+import { websocket } from '@/utils/WebSocket'
+import {toast} from '@/utils/Toast';
+
 const router = new Router()
 
 /**
@@ -28,25 +30,30 @@ const publicRoutesList = [
  */
 router.beforeEach((to, from) => {
 	const userStore = useUserStore()
+
 	if (getToken()) {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {
 			userStore.initUserInfo()
 			// 连接到websocket
-			connect()
+			websocket.connect()
 		} else {
 			return true
 		}
 	} else {
 		// 没有token断开websocket连接
-		closeConnect()
-		
+		websocket.closeConnect()
 		// 访问的页面是公开页面，可直接访问
 		if (publicRoutesList.includes(to.url)) {
 			return true
 		}
-		// 非公开页面跳转到登录页
-		return '/pages/login/Login'
+		
+		// 退回登录页
+		uni.reLaunch({
+			url: "/pages/login/Login",
+			complete: () => toast("身份验证过期，请重新登陆")
+		})
+		return false
 	}
 })
 

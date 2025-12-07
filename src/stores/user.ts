@@ -11,7 +11,6 @@ import { queryAuthInfo } from "@/api/system/auth/Auth";
 import {publicAttachmentDownload} from "@/api/system/attachment/AttachmentStorage";
 import {ResponseError, type ResponseType} from "@/api/global/Type";
 import {toast} from '@/utils/Toast';
-import router from "@/router/Router";
 import { updatePassword, setDefaultDept } from "@/api/system/profile/Profile";
 
 export const useUserStore = defineStore('user', {
@@ -121,7 +120,7 @@ export const useUserStore = defineStore('user', {
 		authenticationFailure() {
 			removeToken()
 			this.clearUserInfo()
-			router.reLaunch({
+			uni.reLaunch({
 				url: "/pages/login/Login"
 			})
 		},

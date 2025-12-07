@@ -2,28 +2,28 @@
 	<view>
 		<!--头像-->
 		<view class="title">
-			<sar-space justify="between">
+			<sar-space justify="between" align="center">
 				<sar-space align="center" size="large">
 					<!-- 头像 -->
-					<view class="unobstructed" @click="goSaveDataPage('SaveAvatar')">
+					<view class="unobstructed" @click="toUserSetting()">
 						<user-avatar/>
 					</view>
 					<sar-space direction="vertical" size="small">
 						<!-- 昵称 -->
-						<view class="nickname unobstructed" @click="goSaveDataPage('SaveNickname')">{{userStore.$state.nickname}}</view>
+						<view class="nickname unobstructed" @click="toUserSetting()">{{userStore.$state.nickname}}</view>
 						<!-- 部门 -->
 						<sar-space align="center" class="dept unobstructed">
-							<view @click="goSaveDataPage('SaveDefaultDept')">
+							<view @click="toChangeDept()">
 								{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
 							</view>
-							<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}" @click="goSaveDataPage('SaveDefaultDept')">
+							<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}" @click="toChangeDept()">
 								<sar-icon family="outlined" name="SwapOutlined"/>
 							</sar-tag>
 						</sar-space>
 					</sar-space>
 				</sar-space>
 				<!-- 通知 -->
-				<view style="margin-right: 16rpx;">
+				<view style="margin-right: 16rpx;" @click="toNotice">
 					<sar-icon name="BellOutlined" family="outlined" size="42rpx"></sar-icon>
 				</view>
 			</sar-space>
@@ -31,10 +31,9 @@
 		<!--操作列表-->
 		<view class="setting-content">
 			<sar-list card>
-				<sar-list-item title="设置" @click="toUserSetting" icon-family="outlined" icon="SettingOutlined" hover arrow/>
+				<sar-list-item title="设置" @click="toSetting" icon-family="outlined" icon="SettingOutlined" hover arrow/>
 				<sar-list-item title="组件" @click="toComponentList" icon-family="outlined" icon="SkinOutlined" hover arrow/>
 				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
-				<sar-list-item title="测试" @click="totext" icon-family="custom" icon="GiteeCustom" hover arrow/>
 			</sar-list>
 		</view>
 	</view>
@@ -54,17 +53,11 @@ const toGitee = () => {
 		url: "/pages/webview/index?url=" + encodeURIComponent('https://gitee.com/yukino_git')
 	})
 }
-// 前往gitee
-const totext = () => {
-	router.navigateTo({
-		url: "/pages/text"
-	})
-}
 
 // 前往设置
-const toUserSetting = () => {
+const toSetting = () => {
 	router.navigateTo({
-		url: "/subpackages/system/setting/user/index"
+		url: "/subpackages/system/setting/index"
 	})
 }
 
@@ -75,16 +68,26 @@ const toComponentList = () => {
 	})
 }
 
-/**
- * 前往细分设置
- */
-const goSaveDataPage = (pageName: string) => {
-	const baseURL = "/subpackages/system/setting/user/"
+// 前往修改部门
+const toChangeDept = () => {
 	router.navigateTo({
-		url: baseURL + pageName
+		url: "/subpackages/system/setting/user/SaveDefaultDept"
 	})
 }
 
+// 前往用户设置
+const toUserSetting = () => {
+	router.navigateTo({
+		url: "/subpackages/system/setting/user/index"
+	})
+}
+
+// 前往消息通知
+const toNotice = () => {
+	router.navigateTo({
+		url: "/subpackages/system/notice/index"
+	})
+}
 </script>
 
 <style scoped lang="scss">

@@ -22,17 +22,12 @@
 				<sar-list-item title="修改密码" arrow hover @click="goSaveDataPage('SavePassword')"></sar-list-item>
 				<sar-list-item title="注销账号" arrow hover @click="goSaveDataPage('AccountDeactivate')"></sar-list-item>
 			</sar-list>
-			<view class="logout-btn">
-				<sar-button type="pale" theme="danger" round @click="handleLogout">退出登录</sar-button>
-			</view>
 		</sar-space>
-		<sar-dialog-agent />
 	</view>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { dialog } from 'sard-uniapp'
 import { useUserStore } from '@/stores/user'
 import UserAvatar from '@/components/user-avatar/index.vue'
 import router from '@/router/Router'
@@ -77,25 +72,9 @@ const reloadUserInfo = async () => {
 		}
 	}
 }
-
-/**
- * 处理退出登录
- */
-const handleLogout = () => {
-	dialog.confirm({
-		message: "是否退出登录？",
-		buttonType: 'round',
-		onConfirm: () => {
-			userStore.handleLogout()
-		}
-	})
-}
 </script>
 
 <style scoped lang="scss">
-.logout-btn {
-	margin-top: 16rpx;
-}
 :deep(.sar-list__title) {
 	margin-top: 16rpx
 }

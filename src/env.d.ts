@@ -24,3 +24,5 @@ declare module 'wxmp-rsa';
 
 declare module 'crypto-js';
 
+declare module 'markdown-it';
+
