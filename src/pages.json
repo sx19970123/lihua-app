@@ -122,7 +122,14 @@
 				"navigationBarTitleText": "消息通知"
 			}
 		},{
-			"path": "notice/Detail"
+			"path": "notice/Detail",
+			"style": {
+				"app-plus": {
+					"titleNView": {
+						"type": "transparent"
+					}
+				}
+			}
 		},
 		// -----组件展示页面开始（此页面可完全删除）-----
 		{

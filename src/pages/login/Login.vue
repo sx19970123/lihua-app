@@ -61,10 +61,6 @@ import { ResponseError } from '@/api/global/Type'
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 
-const setData = (mode) => {
-	plus.nativeUI.setUIStyle(mode)
-}
-
 /**
  * 初始化登录相关
  */

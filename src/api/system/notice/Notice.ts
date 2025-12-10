@@ -1,13 +1,14 @@
-import request from "@/utils/Request.ts"
-import type {SysNoticeVO} from "@/api/system/notice/type/SysNotice";
-
+import request from "@/utils/Request"
+import type {SysNoticeVO, SysNoticeDTO} from "@/api/system/notice/type/SysNotice";
+import type { PageResponseType } from "@/api/global/Type";
+import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice";
 /**
  * 查询预览
  * @param id
  */
 export const preview = (id: string) => {
     return request<SysNoticeVO>({
-        url: "/system/notice/preview/" + id,
+        url: "app/system/notice/preview/" + id,
         method: "GET"
     })
 }
@@ -19,7 +20,7 @@ export const preview = (id: string) => {
  */
 export const star = (noticeId: string, star: string) => {
     return request({
-        url: '/system/notice/star/' + noticeId + '/' + star,
+        url: 'app/system/notice/star/' + noticeId + '/' + star,
         method: 'POST'
     })
 }
@@ -30,7 +31,7 @@ export const star = (noticeId: string, star: string) => {
  */
 export const read = (noticeId: string) => {
     return request({
-        url: '/system/notice/read/' + noticeId,
+        url: 'app/system/notice/read/' + noticeId,
         method: 'POST'
     })
 }
@@ -40,7 +41,18 @@ export const read = (noticeId: string) => {
  */
 export const queryUnReadCount = () => {
     return request<number>({
-        url: '/system/notice/unread/count',
+        url: 'app/system/notice/unread/count',
         method: 'GET'
+    })
+}
+
+/**
+ * 查询消息列表
+ */
+export const queryListByUserId = (userId: string, data: SysNoticeDTO) => {
+    return request<PageResponseType<SysUserNoticeVO>>({
+        url: 'app/system/notice/list/' + userId,
+        method: 'POST',
+        data: data
     })
 }
