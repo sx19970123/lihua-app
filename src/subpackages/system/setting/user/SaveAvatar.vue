@@ -36,8 +36,6 @@
 				</sar-space>
 			</view>
 		</sar-popout>
-		<!-- 裁剪组件代理 -->
-		<sar-crop-image-agent />
 	</view>
 
 </template>

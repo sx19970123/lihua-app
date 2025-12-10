@@ -15,11 +15,9 @@
 				<sar-list-item title="隐私政策" icon-family="outlined" icon="FileProtectOutlined" arrow hover @click="goProtocol('PrivacyPolicy')"></sar-list-item>
 			</sar-list>
 		</sar-space>
-		
 		<view class="logout-btn">
 			<sar-button type="pale" theme="danger" round @click="handleLogout">退出登录</sar-button>
 		</view>
-		<sar-dialog-agent />
 	</view>
 </template>
 
@@ -27,7 +25,6 @@
 import router from '@/router/Router'
 import { dialog } from 'sard-uniapp'
 import { useUserStore } from '@/stores/user'
-
 const userStore = useUserStore()
 
 // 跳转到不同的配置页面

@@ -24,15 +24,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import NoticeList from '@/subpackages/system/notice/components/NoticeList.vue';
-import {userMessageList, star, read} from '@/api/system/notice/Notice'
+import {userMessageList, star, read} from '@/api/system/notice/Notice';
 import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice"
 import type { SysNoticeDTO } from '@/api/system/notice/type/SysNotice';
-import { onLoad, onReachBottom } from '@dcloudio/uni-app';
+import { onLoad, onReachBottom, onShow } from '@dcloudio/uni-app';
 import { toast } from '@/utils/Toast';
 import type { LoadMoreStatus } from 'sard-uniapp';
 import { ResponseError } from '@/api/global/Type';
-import router from "@/router/Router"
+import router from "@/router/Router";
+import {useNoticeStore} from "@/stores/notice"
 
+const noticeStore = useNoticeStore()
 const noticeListRef = ref<InstanceType<typeof NoticeList>>()
 // 是否为star页面
 const isStarList = ref<boolean>(false)
@@ -140,6 +142,7 @@ const handleRead = (noticeId: string, readFlag?: string) => {
 			// 已读成功去掉红点
 			if (resp.code === 200) {
 				const item = noticeDataList.value.find(item => item.noticeId === noticeId)
+				noticeStore.getUnreadCount()
 				if (item) {
 				  item.readFlag = "1"
 				}
@@ -224,7 +227,8 @@ onLoad((option) => {
 /**
  * 显示页面时加载数据
  */
-onMounted(() => {
+onShow(() => {
 	reload()
+	noticeStore.getUnreadCount()
 })
 </script>

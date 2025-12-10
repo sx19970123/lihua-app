@@ -1,6 +1,7 @@
 import { Router } from 'sard-uniapp'
 import { getToken } from '@/utils/Token'
 import { useUserStore } from '@/stores/user'
+import { useNoticeStore } from '@/stores/notice'
 import { websocket } from '@/utils/WebSocket'
 import {toast} from '@/utils/Toast';
 
@@ -28,15 +29,19 @@ const publicRoutesList = [
  * 返回false阻止跳转
  * 返回Route跳转到指定页面
  */
-router.beforeEach((to, from) => {
+router.beforeEach((to, from) => {	
 	const userStore = useUserStore()
-
+	const noticeStore = useNoticeStore()
+	
 	if (getToken()) {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {
 			userStore.initUserInfo()
 			// 连接到websocket
 			websocket.connect()
+			// 获取最新的未读消息
+			noticeStore.getUnreadCount()
+			
 		} else {
 			return true
 		}

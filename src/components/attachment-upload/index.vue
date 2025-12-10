@@ -79,7 +79,6 @@
 				@delete="handleDelete" 
 			/>
 		</sar-space>
-		<sar-dialog-agent />
 	</view>
 </template>
 

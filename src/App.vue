@@ -1,32 +1,30 @@
 <script setup lang="ts">
-import {onLaunch, onShow, onHide, onReady} from "@dcloudio/uni-app"
+import {watch} from 'vue'
+import {onLaunch} from "@dcloudio/uni-app"
 import {useThemeStore} from "@/stores/theme"
+import {useNoticeStore} from "@/stores/notice"
 import {websocket} from '@/utils/WebSocket'
 const themeStore = useThemeStore()
+const noticeStore = useNoticeStore()
 
 onLaunch(() => {
 	// 设置当前主题
 	themeStore.setMode()
-	// 处理通知红点
-	handleNoticeListener()
-})
-onShow(() => {
-	console.log("app show");
-})
-onHide(() => {
-	console.log("app hide");
+	// 处理通知初始化
+	addNoticeEventListener()
 })
 
 
 // 处理websocket消息通知监听
-const handleNoticeListener = () => {
-	// 订阅notice通知消息，收到消息后显示底部红点
+const addNoticeEventListener = () => {
+	// 订阅notice通知消息
 	websocket.addEventListener("WS_NOTICE", () => {
-		uni.showTabBarRedDot({
-			index: 1
-		})
+		// 重新获取未读消息数量，尝试更新红点
+		noticeStore.getUnreadCount().finally(() => noticeStore.setTabbarRedDot())
 	})
 }
+// 监听未读消息变化
+watch(() => noticeStore.unreadCount, () => noticeStore.setTabbarRedDot())
 </script>
 
 <style lang="scss">

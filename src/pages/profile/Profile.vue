@@ -24,7 +24,9 @@
 				</sar-space>
 				<!-- 通知 -->
 				<view style="margin-right: 16rpx;" @click="toNotice">
-					<sar-icon name="BellOutlined" family="outlined" size="42rpx"></sar-icon>
+					<sar-badge :value="noticeStore.unreadCount">
+						<sar-icon name="BellOutlined" family="outlined" size="42rpx"></sar-icon>
+					</sar-badge>
 				</view>
 			</sar-space>
 		</view>
@@ -40,12 +42,14 @@
 </template>
 <script setup lang="ts">
 import {useUserStore} from '@/stores/user'
+import {useNoticeStore} from "@/stores/notice"
 import router from '@/router/Router'
 import UserAvatar from '@/components/user-avatar/index.vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 const userStore = useUserStore()
+const noticeStore = useNoticeStore()
 
 // 前往gitee
 const toGitee = () => {
@@ -88,6 +92,15 @@ const toNotice = () => {
 		url: "/subpackages/system/notice/index"
 	})
 }
+
+// 监听tabbar红点
+watch(() => noticeStore.unreadCount, (newVal: number) => {
+	if (newVal > 0) { 
+		uni.showTabBarRedDot({ index: 1 }) 
+	} else { 
+		uni.hideTabBarRedDot({ index: 1 })
+	}
+}, {immediate: true})
 </script>
 
 <style scoped lang="scss">
