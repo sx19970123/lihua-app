@@ -39,7 +39,7 @@
 			</sar-swipe-action>
 		</sar-list-item>
 	</sar-list>
-	<sar-empty root-class="empty" v-else/>
+	<sar-empty root-class="empty" v-if="(!props.noticeData || props.noticeData.length === 0) && props.loadStatus !== 'loading'"/>
 </template>
 
 <script setup lang="ts">
@@ -56,7 +56,8 @@ type SwipeStatusType = 'left' | 'right' | false
 
 // 传入数据
 const props = defineProps<{
-	noticeData?: Array<SysUserNoticeVO>
+	noticeData?: Array<SysUserNoticeVO>,
+	loadStatus: string
 }>()
 
 const emits = defineEmits(["clickItem", "clickStar"])

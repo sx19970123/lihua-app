@@ -14,9 +14,9 @@
 				</sar-list-item>
 			</sar-list>
 			<!-- 消息列表 -->
-			<notice-list :notice-data="noticeDataList" @clickItem="handleClickItem" @clickStar="handleStar" ref="noticeListRef"/>
+			<notice-list :notice-data="noticeDataList" :load-status="status" @clickItem="handleClickItem" @clickStar="handleStar" ref="noticeListRef"/>
 			<!-- 加载更多 -->
-			<sar-load-more v-if="noticeDataList.length > 0" :status="status" @load-more="loadMore" @reload="reload"/>
+			<sar-load-more v-if="status === 'loading' || noticeDataList.length > 0" :status="status" @load-more="loadMore" @reload="reload"/>
 		</sar-space>
 	</view>
 </template>
@@ -24,8 +24,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import NoticeList from '@/subpackages/system/notice/components/NoticeList.vue';
-import {queryListByUserId, star, read} from '@/api/system/notice/Notice'
-import { useUserStore } from '@/stores/user';
+import {userMessageList, star, read} from '@/api/system/notice/Notice'
 import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice"
 import type { SysNoticeDTO } from '@/api/system/notice/type/SysNotice';
 import { onLoad, onReachBottom } from '@dcloudio/uni-app';
@@ -34,7 +33,6 @@ import type { LoadMoreStatus } from 'sard-uniapp';
 import { ResponseError } from '@/api/global/Type';
 import router from "@/router/Router"
 
-const userStore = useUserStore()
 const noticeListRef = ref<InstanceType<typeof NoticeList>>()
 // 是否为star页面
 const isStarList = ref<boolean>(false)
@@ -71,7 +69,7 @@ const initList = () => {
 			if (isStarList.value) {
 				query.value.star = "1"
 			}
-			const resp = await queryListByUserId(userStore.userId, query.value)
+			const resp = await userMessageList(query.value)
 			if (resp.code === 200) {
 				const records = resp.data.records
 				

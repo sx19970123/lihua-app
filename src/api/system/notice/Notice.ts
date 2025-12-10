@@ -49,9 +49,9 @@ export const queryUnReadCount = () => {
 /**
  * 查询消息列表
  */
-export const queryListByUserId = (userId: string, data: SysNoticeDTO) => {
+export const userMessageList = (data: SysNoticeDTO) => {
     return request<PageResponseType<SysUserNoticeVO>>({
-        url: 'app/system/notice/list/' + userId,
+        url: 'app/system/notice/list',
         method: 'POST',
         data: data
     })
