@@ -260,6 +260,9 @@ onMounted(() => {
 	
 })
 
+/**
+ * 退出通知公告后关闭监听
+ */
 onUnmounted(() => {
 	if (!isStarList) {
 		uni.$off('changeNoticeMeta', handelChangeNoticeMeta)
