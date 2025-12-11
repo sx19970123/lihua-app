@@ -16,18 +16,18 @@
 			<!-- 消息列表 -->
 			<notice-list :notice-data="noticeDataList" :load-status="status" @clickItem="handleClickItem" @clickStar="handleStar" ref="noticeListRef"/>
 			<!-- 加载更多 -->
-			<sar-load-more v-if="status === 'loading' || noticeDataList.length > 0" :status="status" @load-more="loadMore" @reload="reload"/>
+			<sar-load-more v-if="(status === 'loading' || noticeDataList.length > 0) && !isReload" :status="status" @load-more="loadMore" @reload="reload"/>
 		</sar-space>
 	</view>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import NoticeList from '@/subpackages/system/notice/components/NoticeList.vue';
 import {userMessageList, star, read} from '@/api/system/notice/Notice';
 import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice"
 import type { SysNoticeDTO } from '@/api/system/notice/type/SysNotice';
-import { onLoad, onReachBottom, onShow } from '@dcloudio/uni-app';
+import { onLoad, onReachBottom, onPullDownRefresh } from '@dcloudio/uni-app';
 import { toast } from '@/utils/Toast';
 import type { LoadMoreStatus } from 'sard-uniapp';
 import { ResponseError } from '@/api/global/Type';
@@ -38,6 +38,9 @@ const noticeStore = useNoticeStore()
 const noticeListRef = ref<InstanceType<typeof NoticeList>>()
 // 是否为star页面
 const isStarList = ref<boolean>(false)
+// 是否为刷新
+const isReload = ref<boolean>(false)
+
 /**
  * 初始化加载列表
  */
@@ -58,6 +61,7 @@ const initList = () => {
 	
 	// 重新加载
 	const reload = () => {
+		isReload.value = true
 		noticeDataList.value = []
 		query.value.pageNum = 1
 		queryList()
@@ -92,6 +96,9 @@ const initList = () => {
 				console.error(err)
 			}
 			status.value = "error"
+		} finally {
+			uni.stopPullDownRefresh()
+			isReload.value = false
 		}
 	}
 	
@@ -118,6 +125,10 @@ const handleStar = async (data: SysUserNoticeVO, index: number, hide: () => {}) 
 				hide()
 				// 处理关闭Swipe
 				noticeListRef.value?.closeSwipe(index)
+				// star页面记录操作数据
+				if (isStarList) {
+					uni.$emit("changeNoticeMeta", data)
+				}
 			} else {
 				toast(resp.msg)
 			}
@@ -146,6 +157,10 @@ const handleRead = (noticeId: string, readFlag?: string) => {
 				if (item) {
 				  item.readFlag = "1"
 				}
+				// star页面记录操作数据
+				if (isStarList) {
+					uni.$emit("changeNoticeMeta", item)
+				}
 			} else {
 				toast(resp.msg)
 			}
@@ -157,6 +172,15 @@ const handleRead = (noticeId: string, readFlag?: string) => {
 				console.error(err)
 			}
 		})
+	}
+}
+
+// star页面点击已读｜标星操作
+const handelChangeNoticeMeta = (data: SysUserNoticeVO) => {
+	const item = noticeDataList.value.find(item => item.noticeId === data.noticeId)
+	if (item) {
+		item.starFlag = data.starFlag
+		item.readFlag = data.readFlag
 	}
 }
 
@@ -221,14 +245,33 @@ onLoad((option) => {
 	// 从query中根据参数判断是否为star页面
 	if (type === 'star') {
 		initStarPage()
+	} else {
+		// 非star页面，监听 changeNoticeMeta 事件
+		uni.$on('changeNoticeMeta', handelChangeNoticeMeta)
 	}
 })
 
 /**
  * 显示页面时加载数据
  */
-onShow(() => {
+onMounted(() => {
+	reload()
+	noticeStore.getUnreadCount()
+	
+})
+
+onUnmounted(() => {
+	if (!isStarList) {
+		uni.$off('changeNoticeMeta', handelChangeNoticeMeta)
+	}
+})
+
+/**
+ * 下拉刷新
+ */
+onPullDownRefresh(() => {
 	reload()
 	noticeStore.getUnreadCount()
 })
+
 </script>
