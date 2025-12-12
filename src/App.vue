@@ -4,6 +4,9 @@ import {onLaunch} from "@dcloudio/uni-app"
 import {useThemeStore} from "@/stores/theme"
 import {useNoticeStore} from "@/stores/notice"
 import {websocket} from '@/utils/WebSocket'
+import MessageNotify from '@/utils/MessageNotify'
+import type {NoticeMessage} from '@/api/system/notice/type/NoticeMessage'
+import router from "@/router/Router"
 const themeStore = useThemeStore()
 const noticeStore = useNoticeStore()
 
@@ -18,7 +21,16 @@ onLaunch(() => {
 // 处理websocket消息通知监听
 const addNoticeEventListener = () => {
 	// 订阅notice通知消息
-	websocket.addEventListener("WS_NOTICE", () => {
+	websocket.addEventListener("WS_NOTICE", (data: NoticeMessage) => {
+		MessageNotify.show({title: '收到一条新通知', content: data.title}, () => {
+			router.navigateTo({
+				url: "/subpackages/system/notice/Detail",
+				query: {
+					id: data.id,
+					title: data.title
+				}
+			})
+		})
 		// 重新获取未读消息数量，尝试更新红点
 		noticeStore.getUnreadCount().finally(() => noticeStore.setTabbarRedDot())
 	})

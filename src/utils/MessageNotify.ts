@@ -1,4 +1,20 @@
 type NotifyStyle = {height: number; width: number; top: number; left: number}
+type TouchEventData = {
+  clientX: number;
+  clientY: number;
+  pageX: number;
+  pageY: number;
+  screenX: number;
+  screenY: number;
+  target: EventTarget;
+  currentImageIndex?: number;
+}
+type ShowNotify = {
+	title?: string
+	content: string
+	image?: string
+	duration?: number
+}
 
 class MessageNotify {
 	// 通知载体
@@ -11,13 +27,10 @@ class MessageNotify {
 	private noticeImage: NotifyStyle
 	
 	// 通知标题尺寸
-	private noticeTitle: NotifyStyle & {color: string, size: string}
+	private noticeTitle: NotifyStyle & {size: string}
 	
 	// 通知内容尺寸
-	private noticeContent: NotifyStyle & {color: string, size: string}
-	
-	// 背景颜色
-	private backageColor: string
+	private noticeContent: NotifyStyle & {size: string}
 	
 	// 圆角
 	private radius: string
@@ -25,27 +38,79 @@ class MessageNotify {
 	// 通知状态为开启
 	private noticeIsShow: boolean
 	
+	// 通知点击事件
+	private clickEvent: () => void
+	
+	// 通知移动事件
+	private moveEndEvent: (direction: 'right' | 'left' | 'bottom' | 'top') => void
+	
+	// 自动关闭毫秒数
+	private duration:number
+	
+	// 关闭延迟
+	private closeTimeout: any
+	
+	// 通知栏滑动状态
+	private draggingMeta: {
+		// 是否正在滑动
+		noticeIsdragging: boolean
+		// 开始的y值
+		startY: number,
+		// 开始的x值
+		startX: number,
+		// 透明度
+		opacity?: number,
+		// 滑动方向
+		direction?: 'x' | 'y',
+		// 向下滑动的最大top值
+		maxTop: number,
+		// 当前的top值
+		currentTop: number
+	}
+	// 操作系统名称
+	private osName: string
+	
+	// 系统主题
+	private theme: string
+	// 颜色
+	private color: {
+		// 卡片背景颜色
+		backageColor: '#e5e5e5' | '#2b2b2b',
+		// 标题颜色
+		titleColor: '#000' | '#fff',
+		// 内容颜色
+		contentColor: 'rgba(0, 0, 0, 0.45)' | 'rgba(255, 255, 255, 0.45)',
+		// 头像遮罩颜色
+		maskColor: 'rgba(0,0,0,0)' | 'rgba(0,0,0,0.2)'
+	}
+	
 	constructor() {
+		// 系统信息
+		const sysInfo = uni.getSystemInfoSync()
 		// 初始化容器尺寸
 		const windowInfo = uni.getWindowInfo()
+		// 操作系统名称
+		this.osName = sysInfo.osName
+		// 当前主题
+		this.theme = sysInfo.theme || 'light'
 		// 容器最大宽度，480 以下的设备都以边距16进行计算
 		const maxWidth = 480
 		// 边距
 		const margin = 8
 		// 高度
 		const height = 72
-		
 		// 容器全部宽度
 		const width = windowInfo.screenWidth > maxWidth ? maxWidth : windowInfo.screenWidth
 		// 左位置
 		const left = width === maxWidth ? (windowInfo.screenWidth - width) / 2 : margin
-		// 背景颜色
-		this.backageColor = "#fff"
+		
 		// 圆角
 		this.radius = "16px"
-		
+		// 通知是否在显示中
 		this.noticeIsShow = false
-		
+		// 自动关闭毫秒数
+		this.duration = 3000
+	
 		// 容器尺寸
 		this.noticeContainer = {
 			width: width - left * 2,
@@ -66,9 +131,8 @@ class MessageNotify {
 		this.noticeTitle = {
 			top: margin * 1.5,
 			left: this.noticeImage.width + margin * 2,
-			width: width - (this.noticeImage.width + margin * 2 + margin),
+			width: width - (this.noticeImage.width + margin * 3 + margin),
 			height: height / 2,
-			color: "#000",
 			size: '17px'
 		}
 		
@@ -76,9 +140,8 @@ class MessageNotify {
 		this.noticeContent = {
 			top: height / 2 + margin / 2,
 			left: this.noticeImage.width + margin * 2,
-			width: width - (this.noticeImage.width + margin * 2 + margin),
+			width: width - (this.noticeImage.width + margin * 3 + margin),
 			height: height / 2,
-			color: 'rgba(0, 0, 0, 0.45)',
 			size: '16px'
 		}
 		
@@ -89,15 +152,68 @@ class MessageNotify {
 			width: this.noticeContainer.width + 'px',
 			height: this.noticeContainer.height + 'px'
 		});
+		
+		// 点击和移动结束事件
+		this.clickEvent = () => {}
+		this.moveEndEvent = () => {}
+		
+		// 滑动元数据
+		this.draggingMeta = {noticeIsdragging: false, startX: 0, startY: 0, maxTop: windowInfo.screenHeight * (1 / 3), currentTop: this.noticeContainer.top}
+		
+		// 添加事件
+		this.addEventListener(() => {
+			// 滑动过程中无法触发点击事件
+			if (this.draggingMeta.noticeIsdragging) {
+				return
+			}
+			// 触发业务点击
+			this.clickEvent()
+			// 关闭通知
+			this.hide()
+		}, (direction) => {
+			this.moveEndEvent(direction)
+		})
+		
+		// 监听主题变化
+		this.watchTheme()
+		
+		if (this.theme === 'light') {
+			this.color = {
+				backageColor: '#e5e5e5',
+				titleColor: '#000',
+				contentColor: 'rgba(0, 0, 0, 0.45)',
+				maskColor: 'rgba(0,0,0,0)',
+			}
+		} else {
+			this.color = {
+				backageColor: '#2b2b2b',
+				titleColor: '#fff',
+				contentColor: 'rgba(255, 255, 255, 0.45)',
+				maskColor: 'rgba(0,0,0,0.2)',
+			}
+		}
 	}
 	
 	/**
 	 * 显示弹窗
 	 */
-	public show = (title: string = "收到一条新通知", content: string = "通知通知通知通知通知通知通知", image: string = "_www/static/logo.png") => {
+	public show = (showNotify: ShowNotify, clickCallback: () => void, moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
+		const {title, content, image, duration} = showNotify
+		if (!content) {
+			throw new Error("通知内容不存在")
+		}
+		if (duration) {
+			this.duration = duration
+		}
+		
+		const step = this.noticeContainer.top / 10
+		// 先关闭已存在的消息再打开
 		this.hide().then(() => {
 			// 绘制通知
-			this.drawNotice(title, content, image)
+			this.drawNotice(title || '通知', content, image || '_www/static/logo.png')
+			// 赋值事件
+			this.clickEvent = clickCallback
+			this.moveEndEvent = moveEndCallback
 			// 显示通知（窗口在屏幕外，并且透明度为0）
 			this.view.show()
 			this.noticeIsShow = true
@@ -107,18 +223,20 @@ class MessageNotify {
 			const interval = setInterval(() => {
 				// top值判断动画是否结束
 				if (top >= this.noticeContainer.top) {
+					this.view.setStyle({top: this.noticeContainer.top + 'px', opacity: 1, left: this.noticeContainer.left + 'px'})
 					clearInterval(interval)
+					this.autoClose()
 					return
 				}
 				// 每帧步进
-				top = top + 12
+				top = top + step
 				opacity = opacity + 0.2
 				// 刷新样式
 				this.view.setStyle({
 					top: top + 'px',
 					opacity: opacity
 				})
-			}, 16)
+			}, 8)
 		})
 	}
 	
@@ -127,7 +245,9 @@ class MessageNotify {
 	 * 使用定时器渐变消失
 	 */
 	public hide = () => {
-		return new Promise((resolve, reject) => {
+		return new Promise((resolve, _reject) => {
+			// 取消自动关闭
+			this.cancelAutoClose()
 			// 通知为关闭状态直接返回
 			if (!this.noticeIsShow) {
 				resolve({})
@@ -153,19 +273,173 @@ class MessageNotify {
 	}
 	
 	// 绘制通知
-	private drawNotice(title: string, content: string, image: string) {
+	private drawNotice = (title: string, content: string, image: string) => {
+		const {backageColor, titleColor, contentColor, maskColor} = this.color
 		// 设置动画开始时top值和透明度
-		this.view.setStyle({top: '0px', opacity: 0})
+		this.view.setStyle({top: '0px', opacity: 0, left: this.noticeContainer.left + 'px'})
 		// 绘制通知最外层content
-		this.view.drawRect({color: this.backageColor, radius: this.radius})
+		this.view.drawRect({color: backageColor, radius: this.radius})
 		// 绘制标题
-		this.view.drawText(title, {top: this.noticeTitle.top + 'px', left: this.noticeTitle.left + 'px', width: this.noticeTitle.width + 'px', height: this.noticeTitle.height + 'px'}, {align: 'left', verticalAlign: 'top', size: this.noticeTitle.size, color: this.noticeTitle.color})
+		this.view.drawText(title, {top: this.noticeTitle.top + 'px', left: this.noticeTitle.left + 'px', width: this.noticeTitle.width + 'px', height: this.noticeTitle.height + 'px'}, {align: 'left', verticalAlign: 'top', size: this.noticeTitle.size, color: titleColor})
 		// 绘制内容
-		this.view.drawText(content, {top: this.noticeContent.top + 'px', left: this.noticeContent.left + 'px', width: this.noticeContent.width + 'px', height: this.noticeContent.height + 'px'}, {align: 'left', verticalAlign: 'top', color: this.noticeContent.color, size: this.noticeContent.size})
+		this.view.drawText(content, {top: this.noticeContent.top + 'px', left: this.noticeContent.left + 'px', width: this.noticeContent.width + 'px', height: this.noticeContent.height + 'px'}, {align: 'left', verticalAlign: 'top', color: contentColor, size: this.noticeContent.size})
 		// 绘制左侧图片
 		this.view.drawBitmap(image, {}, {top: this.noticeImage.top + 'px', left: this.noticeImage.left + 'px', width: this.noticeImage.width + 'px', height: this.noticeImage.height + 'px'})
-		// 绘制图片遮罩，呈现圆角
-		this.view.drawRect({color: 'rgba(0,0,0,0)', borderWidth:'8px',radius: this.radius, borderColor: this.backageColor}, {height: this.noticeContainer.height + 'px', width: this.noticeImage.width + this.noticeImage.left * 2 + 'px'}, 'mask')
+		// 绘制图片遮罩，呈现圆角（安卓和ios渲染方式不同，根据系统类型进行调用）
+		if (this.osName === 'android') {
+			this.view.drawRect({color: maskColor, borderWidth: this.noticeImage.left * 1.5 + 'px', radius: this.radius, borderColor: backageColor}, {height: this.noticeContainer.height - this.noticeImage.left * 2 + 'px',width: this.noticeContainer.height - this.noticeImage.left * 2 + 'px', top: this.noticeImage.left + 'px', left: this.noticeImage.left + 'px'}, 'mask')
+		} else {
+			this.view.drawRect({color: maskColor, borderWidth: this.noticeImage.left + 'px' ,radius: this.radius, borderColor: backageColor}, {height: this.noticeContainer.height + 'px', width: this.noticeImage.width + this.noticeImage.left * 2 + 'px'}, 'mask')
+		}
+	}
+	
+	// 添加事件
+	private addEventListener = (clickCallback: () => void, moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
+		this.view.addEventListener("click", clickCallback)
+		this.view.addEventListener("touchstart", this.touchStart)
+		this.view.addEventListener("touchmove", this.touchMove)
+		this.view.addEventListener("touchend", (event: TouchEventData) => this.touchEnd(event, moveEndCallback))
+	}
+
+	// 开始滑动
+	private touchStart = (event: TouchEventData) => {
+		this.draggingMeta.startX = event.screenX
+		this.draggingMeta.startY = event.screenY
+		// 取消自动关闭
+		this.cancelAutoClose()
+	}
+	
+	// 滑动过程中
+	private touchMove = (event: TouchEventData) => {
+		if (!this.draggingMeta.direction) {
+			// 判断滑动方向
+			const {screenX, screenY} = event
+			const x = Math.abs(this.draggingMeta.startX - screenX)
+			const y = Math.abs(this.draggingMeta.startY - screenY)
+			this.draggingMeta.direction = x > y ? 'x' : 'y'
+			// 修改滑动状态
+			this.draggingMeta.noticeIsdragging = true
+		}
+		
+		// 上下滑动
+		if (this.draggingMeta.direction === 'y' && this.draggingMeta.startY !== 0) {
+			let targetTop = this.noticeContainer.top + event.screenY - this.draggingMeta.startY
+			// 滑动距离（为正数表示向下滑动）
+			const specificDirection = event.screenY - this.draggingMeta.startY
+			
+			// 下滑，有阻尼
+			if (specificDirection > 0) {
+				this.draggingMeta.opacity = 1
+				// 计算算上阻尼的targetTop
+				// 阻尼系数，越高越容易滑动
+				const DAMPING = 300;
+				const damped = (specificDirection * DAMPING) / (specificDirection + DAMPING)
+				targetTop = this.noticeContainer.top + damped;
+			} else {
+				this.draggingMeta.opacity = 1 - Math.abs(Math.trunc(specificDirection)) * 0.005
+			}
+			const maxTop = this.draggingMeta.maxTop
+			this.draggingMeta.currentTop =  targetTop >= maxTop ? maxTop : targetTop 
+			
+			this.view.setStyle({
+				top: this.draggingMeta.currentTop + 'px',
+				opacity: this.draggingMeta.opacity
+			})
+		}
+		
+		// 左右滑动
+		if (this.draggingMeta.direction === 'x' && this.draggingMeta.startX !== 0) {
+			const targetLeft = this.noticeContainer.left + event.screenX - this.draggingMeta.startX
+			const specificDirection = Math.abs(event.screenX - this.draggingMeta.startX)
+			const opacity = 1 - Math.trunc(specificDirection) * 0.005
+			this.draggingMeta.opacity = opacity
+			this.view.setStyle({
+				left: targetLeft + 'px',
+				opacity: opacity
+			})
+		}
+	}
+	
+	// 滑动结束
+	private touchEnd = (event: TouchEventData, moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
+		// 滑动方向
+		let direction: 'right' | 'left' | 'bottom' | 'top'
+		// 关闭阈值
+		let threshold: number = 0
+		if (this.draggingMeta.direction === 'x') {
+			direction = event.screenX > this.draggingMeta.startX ? 'right' : 'left'
+			threshold = 0.4
+		} else {
+			direction = event.screenY > this.draggingMeta.startY? 'bottom' : 'top'
+			direction === 'top' ? threshold = 0.8 : threshold = 0.4
+		}
+	
+		// 滑动满足阈值后即销毁关闭
+		if (this.draggingMeta.opacity && this.draggingMeta.opacity < threshold) {
+			this.view.reset()
+			this.view.hide()
+			moveEndCallback(direction)
+		} else {
+			// 否则复原
+			this.view.setStyle({top: this.noticeContainer.top + 'px', opacity: 1, left: this.noticeContainer.left + 'px'})
+		}
+		
+		// 向下滑动超过maxTop的一般，则触发回调
+		if (direction === 'bottom' && this.draggingMeta.currentTop > this.draggingMeta.maxTop * (3 / 5)) {
+			moveEndCallback(direction)
+		}
+		
+		// 重置拖动状态
+		setTimeout(() => {
+			this.draggingMeta.noticeIsdragging = false
+			this.draggingMeta.startX = 0
+			this.draggingMeta.startY = 0
+			this.draggingMeta.direction = undefined
+		}, 20)
+		// 重新开始自动关闭
+		this.autoClose()
+	}
+	
+	// 自动关闭
+	private autoClose = () => {
+		this.closeTimeout = setTimeout(() => {
+			this.hide()
+			clearTimeout(this.closeTimeout)
+		}, this.duration)
+	}
+	
+	// 取消自动关闭
+	private cancelAutoClose = () => {
+		if (this.closeTimeout) {
+			clearTimeout(this.closeTimeout)
+		}
+	}
+	
+	// 监听主题变化
+	private watchTheme = () => {
+		uni.onThemeChange((resp) => {
+			// 正在开启时主题变化直接关闭弹窗，避免穿帮
+			if (this.noticeIsShow) {
+				this.hide()
+			}
+			
+			this.theme = resp.theme
+			if (this.theme === 'light') {
+				this.color = {
+					backageColor: '#e5e5e5',
+					titleColor: '#000',
+					contentColor: 'rgba(0, 0, 0, 0.45)',
+					maskColor: 'rgba(0,0,0,0)',
+				}
+			} else {
+				this.color = {
+					backageColor: '#2b2b2b',
+					titleColor: '#fff',
+					contentColor: 'rgba(255, 255, 255, 0.45)',
+					maskColor: 'rgba(0,0,0,0.2)',
+				}
+			}
+		});
 	}
 
 }
