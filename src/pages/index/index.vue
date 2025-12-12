@@ -7,7 +7,7 @@
 import MessageNotify from '@/utils/MessageNotify'
 import { toast } from '@/utils/Toast';
 const show = () => {
-	MessageNotify.show({title: '点击通知', content: '点击通知内容'}, () => {
+	MessageNotify.show({title: '点击通知', content: '点击通知内容', duration: 3000000}, () => {
 		toast("点击了")
 	}, (direction) => {
 		toast("滑动方向" + direction)
