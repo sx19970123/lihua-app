@@ -1,4 +1,5 @@
 import {measureTextWidth} from '@/utils/TextUtils'
+
 type NotifyStyle = {height: number; width: number; top: number; left: number}
 type TouchEventData = {
   clientX: number;
@@ -16,6 +17,8 @@ type NotifyContent = {
 	image?: string
 	duration?: number
 }
+const defaultImage = '_www/static/notice/MessageOutlined.png'
+const defaultTitle = '通知'
 
 class MessageNotify {
 	// 通知载体
@@ -221,7 +224,7 @@ class MessageNotify {
 		// 在拖动过程中有新消息，直接重绘
 		if (this.draggingMeta.noticeIsdragging) {
 			this.view.reset()
-			this.drawNotice(title || '通知', content, image || '_www/static/logo.png')
+			this.drawNotice(title || defaultTitle, content, image || defaultImage)
 			return
 		}
 		
@@ -232,7 +235,7 @@ class MessageNotify {
 			// 设置动画开始时top值和透明度
 			this.view.setStyle({top: '0px', opacity: 0, left: this.noticeContainer.left + 'px'})
 			// 绘制通知
-			this.drawNotice(title || '通知', content, image || '_www/static/logo.png')
+			this.drawNotice(title || defaultTitle, content, image || defaultImage)
 			// 显示通知（窗口在屏幕外，并且透明度为0）
 			this.view.show()
 			this.noticeIsShow = true
@@ -380,7 +383,6 @@ class MessageNotify {
 	
 	// 滑动结束
 	private touchEnd = (event: TouchEventData, moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
-			console.log("1");
 		// 滑动方向
 		let direction: 'right' | 'left' | 'bottom' | 'top'
 		// 关闭阈值
@@ -392,28 +394,23 @@ class MessageNotify {
 			direction = event.screenY > this.draggingMeta.startY? 'bottom' : 'top'
 			direction === 'top' ? threshold = 0.8 : threshold = 0.4
 		}
-			console.log("2");
 		// 滑动满足阈值后即销毁关闭
 		if (this.draggingMeta.opacity && this.draggingMeta.opacity < threshold) {
 			this.view.reset()
 			this.view.hide()
-			console.log("3.4");
 			if (moveEndCallback) {
-				console.log("33.443");
 				moveEndCallback(direction)
 			}
 		} else {
 			// 否则复原
 			this.view.setStyle({top: this.noticeContainer.top + 'px', opacity: 1, left: this.noticeContainer.left + 'px'})
 		}
-		console.log(3.5);
 		// 向下滑动超过maxTop比例则触发回调
 		if (direction === 'bottom' && this.draggingMeta.currentTop > this.draggingMeta.maxTop * (3 / 5)) {
 			if (moveEndCallback) {
 				moveEndCallback(direction)
 			}
 		}
-		console.log("3");
 		// 重置拖动状态
 		setTimeout(() => {
 			this.draggingMeta.noticeIsdragging = false
@@ -426,15 +423,42 @@ class MessageNotify {
 	}
 	
 	// 截取文本
-	private textCut = (text: string, fontSize: number, contentWidth: number) => {
-		const textWidth = measureTextWidth(text, fontSize)
-		if (textWidth < contentWidth) {
-			return text
-		}
-		
-		const index = Math.trunc(text.length * (contentWidth / textWidth)) - 2
-		return text.substring(0,index) + '...'
+	private textCut = ( text: string, fontSize: number, contentWidth: number ) => {
+	  if (!text) return ''
+	
+	  const ellipsis = '...'
+	  const ellipsisWidth = measureTextWidth(ellipsis, fontSize)
+	  contentWidth = contentWidth
+	  // 宽度过小
+	  if (ellipsisWidth > contentWidth) {
+	    return ''
+	  }
+	
+	  // 原文无需截取
+	  if (measureTextWidth(text, fontSize) <= contentWidth) {
+	    return text
+	  }
+	
+	  let left = 0
+	  let right = text.length
+	  let result = ''
+	
+	  while (left <= right) {
+	    const mid = Math.floor((left + right) / 2)
+	    const slice = text.slice(0, mid)
+	    const width = measureTextWidth(slice, fontSize) + ellipsisWidth
+	
+	    if (width <= contentWidth) {
+	      result = slice
+	      left = mid + 1
+	    } else {
+	      right = mid - 1
+	    }
+	  }
+	
+	  return result + ellipsis
 	}
+
 	
 	// 自动关闭
 	private autoClose = () => {
@@ -475,7 +499,7 @@ class MessageNotify {
 			if (this.noticeIsShow && this.notifyContent) {
 				const {title, content, image} = this.notifyContent
 				this.view.reset()
-				this.drawNotice(title || '通知', content, image || '_www/static/logo.png')
+				this.drawNotice(title || defaultTitle, content, image || defaultImage)
 			}
 		});
 	}

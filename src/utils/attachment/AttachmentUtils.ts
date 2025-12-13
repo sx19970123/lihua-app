@@ -44,23 +44,31 @@ export const getFileInfo = async (filePath?: string): Promise<FileInfoType> => {
 }
 
 /**
- * 缓存文件，返回路径
+ * url转临时地址
  */
-export const cacheFile = (url: string) => {
-	return new Promise((resolve, reject) => {
-		// 下载文件
-		uni.downloadFile({
-			url: url,
-			success: (resp) => {
-				uni.saveFile({
-					tempFilePath: resp.tempFilePath,
-					success: (saveResp) => {
-						resolve(saveResp.savedFilePath)
-					},
-					fail: (err) => reject(err)
-				})
-			},
-			fail: (err) => reject(err)
-		})
-	})
+export const getFileTempPath = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!url) {
+      reject(new Error('附件输入为空'))
+      return
+    }
+
+    // 网络地址
+    if (/^https?:\/\//i.test(url)) {
+      uni.downloadFile({
+        url: url,
+        success: (resp) => {
+          if (resp.tempFilePath) {
+            resolve(resp.tempFilePath)
+          } else {
+            reject(new Error('下载失败'))
+          }
+        },
+        fail: reject
+      })
+      return
+    }
+
+    reject(new Error('路径错误'))
+  })
 }

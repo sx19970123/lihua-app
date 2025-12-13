@@ -32,7 +32,7 @@
 		{
 			"path": "pages/index/index",
 			"style": {
-				"navigationBarTitleText": "index"
+				"navigationStyle": "custom"
 			}
 		},
 		// 个人页
@@ -54,12 +54,21 @@
 			"path": "protocol/PrivacyPolicy",
 			"style": {
 				"navigationBarTitleText": "隐私政策",
-				"navigationStyle": "custom"
+				"app-plus": {
+					"titleNView": {
+						"type": "transparent"
+					}
+				}
 			}
 		},{
 			"path": "protocol/UserAgreement",
 			"style": {
-				"navigationBarTitleText": "用户协议"
+				"navigationBarTitleText": "用户协议",
+				"app-plus": {
+					"titleNView": {
+						"type": "transparent"
+					}
+				}
 			}
 		},{
 			"path": "setting/index",
@@ -158,6 +167,11 @@
 			"path": "components/icon-select/index",
 			"style": {
 				"navigationBarTitleText": "图标选择"
+			}
+		},{
+			"path": "components/notice/index",
+			"style": {
+				"navigationBarTitleText": "消息通知（原生）"
 			}
 		}
 		// -----组件展示页面结束-----
