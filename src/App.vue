@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import {watch} from 'vue'
+import {watch, onMounted, ref} from 'vue'
 import {onLaunch} from "@dcloudio/uni-app"
 import {useThemeStore} from "@/stores/theme"
 import {useNoticeStore} from "@/stores/notice"
+import {useRootRefStore} from "@/stores/root"
 import {websocket} from '@/utils/WebSocket'
-import MessageNotify from '@/utils/MessageNotify'
 import type {NoticeMessage} from '@/api/system/notice/type/NoticeMessage'
 import router from "@/router/Router"
 import { initDict, getDictLabel } from '@/utils/Dict'
 
+// #ifdef APP-PLUS
+// 仅app支持原生消息通知
+import MessageNotify from '@/utils/MessageNotify'
+// #endif
+
 const themeStore = useThemeStore()
 const noticeStore = useNoticeStore()
+const rootrefStore = useRootRefStore()
 
 onLaunch(() => {
 	// 设置当前主题
@@ -19,12 +25,10 @@ onLaunch(() => {
 	addNoticeEventListener()
 })
 
-
 // 处理websocket消息通知监听
 const addNoticeEventListener = () => {
 	// 订阅notice通知消息
 	websocket.addEventListener("WS_NOTICE", (data: NoticeMessage) => {
-		
 		// #ifdef APP-PLUS
 		// 全局通知推送（仅原生app）
 		showNotify(data)
@@ -33,8 +37,6 @@ const addNoticeEventListener = () => {
 		// 重新获取未读消息数量，尝试更新红点
 		noticeStore.getUnreadCount().finally(() => noticeStore.setTabbarRedDot())
 	})
-	
-	
 }
 
 // 全局通知推送（仅原生app）
@@ -45,6 +47,7 @@ const showNotify = (data: NoticeMessage) => {
 	const pngName = data.type === '0' ? 'MessageOutlined.png' : 'NotificationOutlined.png'
 	// 全局消息提醒
 	MessageNotify.show({title: '收到一条新' + getDictLabel(sys_notice_type.value, data.type), content: data.title, image: '_www/static/notice/' + pngName}, () => {
+		// 跳转到详情页
 		router.navigateTo({
 			url: "/subpackages/system/notice/Detail",
 			query: {
@@ -53,7 +56,13 @@ const showNotify = (data: NoticeMessage) => {
 			}
 		})
 	}, (direction) => {
+		// 向下拖动打开抽屉预览，以根节点为媒介，拿到保存到rootStore中的根节点实例，调用通知方法
 		if (direction === 'bottom') {
+			const ref = rootrefStore.getRootRef()
+			if (ref && ref.showNoticeLite) {
+				ref.showNoticeLite(data.id)
+			}
+			// 向下拖动需要手动关闭通知
 			MessageNotify.hide()
 		}
 	})
