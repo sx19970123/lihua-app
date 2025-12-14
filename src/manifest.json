@@ -20,7 +20,7 @@
         },
         "safearea" : {
             "background" : "#ffffff",
-            "backgroundDark" : "#2f0508",
+            "backgroundDark" : "#242628",
             "bottom" : {
                 "offset" : "none"
             }
@@ -112,7 +112,7 @@
             "minified" : true
         },
         "usingComponents" : true,
-		"lazyCodeLoading": "requiredComponents"
+        "lazyCodeLoading" : "requiredComponents"
     },
     "mp-alipay" : {
         "usingComponents" : true

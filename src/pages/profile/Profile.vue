@@ -54,7 +54,7 @@ const noticeStore = useNoticeStore()
 // 前往gitee
 const toGitee = () => {
 	router.navigateTo({
-		url: "/pages/webview/index?url=" + encodeURIComponent('https://gitee.com/yukino_git')
+		url: "/pages/webview/index?url=" + encodeURIComponent('https://gitee.com/yukino_git/lihua-app')
 	})
 }
 
