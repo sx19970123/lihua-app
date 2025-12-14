@@ -10,16 +10,21 @@
 - 包含状态管理、网络请求、加密等功能
 
 ## 项目截图
-![](static-image/IMG_1920.png)
-![](static-image/IMG_1925.png)
-![](static-image/IMG_1917.png)
-![](static-image/IMG_1918.png)
-![](static-image/IMG_1916.png)
-![](static-image/IMG_1923.png)
-![](static-image/IMG_1921.png)
-![](static-image/IMG_1922.png)
-![](static-image/IMG_1919.png)
-![](static-image/IMG_1924.png)
+<div style="display:flex; flex-wrap:wrap; gap:8px;">
+  <img src="static-image/IMG_1920.png" width="32%" />
+  <img src="static-image/IMG_1925.png" width="32%" />
+  <img src="static-image/IMG_1917.png" width="32%" />
+
+  <img src="static-image/IMG_1918.png" width="32%" />
+  <img src="static-image/IMG_1916.png" width="32%" />
+  <img src="static-image/IMG_1923.png" width="32%" />
+
+  <img src="static-image/IMG_1921.png" width="32%" />
+  <img src="static-image/IMG_1922.png" width="32%" />
+  <img src="static-image/IMG_1919.png" width="32%" />
+
+  <img src="static-image/IMG_1924.png" width="32%" />
+</div>
 
 ## 目录结构
 
