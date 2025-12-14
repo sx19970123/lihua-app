@@ -9,6 +9,18 @@
 - 提供了丰富的 UI 组件和工具函数
 - 包含状态管理、网络请求、加密等功能
 
+## 项目截图
+![](static-image/IMG_1920.png)
+![](static-image/IMG_1925.png)
+![](static-image/IMG_1917.png)
+![](static-image/IMG_1918.png)
+![](static-image/IMG_1916.png)
+![](static-image/IMG_1923.png)
+![](static-image/IMG_1921.png)
+![](static-image/IMG_1922.png)
+![](static-image/IMG_1919.png)
+![](static-image/IMG_1924.png)
+
 ## 目录结构
 
 ```
@@ -41,27 +53,7 @@
 │   └── vite.config.ts              # Vite 配置文件
 ```
 
-## 安装指南
-
-1. 确保已安装 Node.js 和 npm
-2. 克隆仓库: `git clone https://gitee.com/yukino_git/lihua-app.git`
-3. 进入项目目录: `cd lihua-app`
-4. 安装依赖: `npm install`
-
-## 使用说明
-
-- 开发模式: `npm run dev`
-- 构建生产环境: `npm run build`
-- 查看文档: `npm run serve`
-
-## 贡献指南
-
-欢迎贡献代码！请遵循以下步骤：
-1. Fork 仓库
-2. 创建新分支
-3. 提交代码更改
-4. 创建 Pull Request
-
 ## 许可证
 
 本项目采用 MIT 许可证。详情请查看 LICENSE 文件。
+
