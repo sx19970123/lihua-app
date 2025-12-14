@@ -33,6 +33,7 @@
 						<text>👤 个人中心：头像、昵称等基础信息与后端保持一致</text>
 						<text>🛡️ 权限体系：支持角色、权限、部门标识，user store 可获取</text>
 						<text>🔔 通知公告：WebSocket 实时消息，App 原生通知提醒</text>
+						<text>🌗 暗色模式：支持全局暗色主题，App 端可手动切换，微信小程序跟随系统设置</text>
 					</sar-space>
 				</sar-read-more>
 			</sar-card>
@@ -46,8 +47,7 @@
 						</text>
 
 						<text>🧩 技术特性</text>
-
-						<text>🌗 暗色模式：支持全局暗色主题，App 端可手动切换，微信小程序跟随系统设置</text>
+						<text>🗂️ 状态管理：内置 Pinia 状态管理方案，统一管理全局状态，提升数据流可维护性</text>
 						<text>🌐 网络请求：内置 Request 工具，支持统一的请求 / 响应拦截处理</text>
 						<text>🧭 路由管理：基于 Router 实现路由跳转，支持前置拦截与权限校验</text>
 						<text>🧱 全局能力：集成 uni-ku/root，模拟 Web 端 Vue 根组件，便于集中处理全局逻辑</text>
