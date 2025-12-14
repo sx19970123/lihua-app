@@ -16,7 +16,7 @@ import MessageNotify from '@/utils/MessageNotify'
 
 const themeStore = useThemeStore()
 const noticeStore = useNoticeStore()
-const rootrefStore = useRootRefStore()
+const rootRefStore = useRootRefStore()
 
 onLaunch(() => {
 	// 设置当前主题
@@ -53,12 +53,13 @@ const showNotify = (data: NoticeMessage) => {
 			query: {
 				id: data.id,
 				title: data.title
-			}
+			},
+			success: () => noticeStore.markAsRead(data.id)
 		})
 	}, (direction) => {
 		// 向下拖动打开抽屉预览，以根节点为媒介，拿到保存到rootStore中的根节点实例，调用通知方法
 		if (direction === 'bottom') {
-			const ref = rootrefStore.getRootRef()
+			const ref = rootRefStore.getRootRef()
 			if (ref && ref.showNoticeLite) {
 				ref.showNoticeLite(data.id)
 			}

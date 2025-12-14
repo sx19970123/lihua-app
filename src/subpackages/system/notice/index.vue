@@ -24,7 +24,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import NoticeList from '@/subpackages/system/notice/components/NoticeList.vue';
-import {userMessageList, star, read} from '@/api/system/notice/Notice';
+import {userMessageList, star} from '@/api/system/notice/Notice';
 import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice"
 import type { SysNoticeDTO } from '@/api/system/notice/type/SysNotice';
 import { onLoad, onReachBottom, onPullDownRefresh } from '@dcloudio/uni-app';
@@ -148,12 +148,10 @@ const handleStar = async (data: SysUserNoticeVO, index: number, hide: () => {}) 
 const handleRead = (noticeId: string, readFlag?: string) => {
 	// 未读时发送已读标记
 	if (readFlag === "0") {
-		read(noticeId)
+		noticeStore.markAsRead(noticeId)
 		.then(resp => {
-			// 已读成功去掉红点
 			if (resp.code === 200) {
 				const item = noticeDataList.value.find(item => item.noticeId === noticeId)
-				noticeStore.getUnreadCount()
 				if (item) {
 				  item.readFlag = "1"
 				}

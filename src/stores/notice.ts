@@ -1,5 +1,10 @@
-import { defineStore } from "pinia";
+import { defineStore } from "pinia"
 import { queryUnReadCount } from '@/api/system/notice/Notice'
+import {read} from '@/api/system/notice/Notice';
+import type {PreviewNotice} from '@/api/system/notice/type/PreviewNotice';
+import { preview } from '@/api/system/notice/Notice'
+import dayjs from "dayjs"
+
 /**
  * 消息通知
  */
@@ -28,6 +33,36 @@ export const useNoticeStore = defineStore('notice', {
 				}).catch(err => {
 					reject(err)
 				})
+			})
+		},
+		// 预览
+		previewNotice(noticeId: string): Promise<PreviewNotice> {
+			return new Promise(async (resolve, reject) => {
+				try {
+					const resp = await preview(noticeId)
+					if (resp.code === 200) {
+						const data = resp.data
+						resolve({
+							title: data.title,
+							content: data.content,
+							releaseUser: data.releaseUser,
+							releaseTime: dayjs(data.releaseTime).format('YYYY-MM-DD HH:mm')
+						})
+					} else {
+						reject(resp.msg)
+					}
+				} catch(err) {
+					reject(err)
+				}
+			})
+		},
+		// 标记为已读，并重新查询未读数量，设置未读红点
+		markAsRead(noticeId: string) {
+			return new Promise((resolve, reject) => {
+				read(noticeId).then((resp) => {
+					this.getUnreadCount().then(() => this.setTabbarRedDot())
+					resolve(resp)
+				}).catch(err => reject(err))
 			})
 		},
 		// 处理底部导航栏红点
