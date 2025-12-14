@@ -1,6 +1,6 @@
 # Lihua App
 
-这是一个基于 Vue 和 TypeScript 的跨平台应用程序，旨在提供现代化的移动体验。
+基于「狸花猫后台管理系统」的业务扩展方案，uni-app 开发，适配 App 与微信小程序，与 Web 端能力保持一致。
 
 ## 功能特性
 
@@ -13,14 +13,15 @@
 
 ## 技术特性
 
+- 🔧 基础框架：Vue 3 + TypeScript，提供良好的类型约束与开发体验
 - 🗂️ 状态管理：内置 Pinia 状态管理方案，统一管理全局状态，提升数据流可维护性
 - 🌐 网络请求：内置 Request 工具，支持统一的请求 / 响应拦截处理
 - 🧭 路由管理：基于 Router 实现路由跳转，支持前置拦截与权限校验
 - 🧱 全局能力：集成 uni-ku/root，模拟 Web 端 Vue 根组件，便于集中处理全局逻辑
 
 ## 组件库&关键依赖
-项目组件库： [sard-uniapp](https://sard.wzt.zone/sard-uniapp-docs/)
-虚拟根组件： [Uni Ku Root](https://uni-ku.js.org/projects/root/introduction)
+- 项目组件库： [sard-uniapp](https://sard.wzt.zone/sard-uniapp-docs/)
+- 虚拟根组件： [Uni Ku Root](https://uni-ku.js.org/projects/root/introduction)
 
 ## 项目截图
 <div style="display:flex; flex-wrap:wrap; gap:8px;">

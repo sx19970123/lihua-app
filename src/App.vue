@@ -41,10 +41,10 @@ const addNoticeEventListener = () => {
 
 // 全局通知推送（仅原生app）
 const showNotify = (data: NoticeMessage) => {
-	// 获取字典
-	const {sys_notice_type} = initDict("sys_notice_type")
 	// 消息/公告标识
 	const pngName = data.type === '0' ? 'MessageOutlined.png' : 'NotificationOutlined.png'
+	// 获取字典
+	const {sys_notice_type} = initDict("sys_notice_type")
 	// 全局消息提醒
 	MessageNotify.show({title: '收到一条新' + getDictLabel(sys_notice_type.value, data.type), content: data.title, image: '_www/static/notice/' + pngName}, () => {
 		// 跳转到详情页

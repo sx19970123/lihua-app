@@ -1,8 +1,8 @@
 import { useDictStore } from "@/stores/dict";
-import {getDictDataOption, getDictDataOptionByCodeList} from "@/api/system/dict/DictData";
+import { getDictDataOptionByCodeList} from "@/api/system/dict/DictData";
 import { ref, toRefs} from "vue";
 import type {SysDictDataType} from "@/api/system/dict/type/SysDictDataType";
-import {ResponseError, type ResponseType} from "@/api/global/Type";
+import {ResponseError} from "@/api/global/Type";
 import {toast} from '@/utils/Toast'
 
 // 初始化组件中需要的字典数据
@@ -63,19 +63,3 @@ export const getDictLabel = (option: SysDictDataType[], value?: string) => {
   return value
 }
 
-// 重新从后端拉取对应字典
-export const reLoadDict = (code: string) => {
-  return new Promise((resolve, reject) => {
-    const dictStore= useDictStore()
-    getDictDataOption(code).then((resp: ResponseType<Array<SysDictDataType>>) => {
-      if (resp.code === 200) {
-        dictStore.setDict(code,resp.data)
-        resolve(resp.data)
-      } else {
-        reject(new ResponseError(resp.code, resp.msg))
-      }
-    }).catch(e => {
-      reject(e)
-    })
-  })
-}

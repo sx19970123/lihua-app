@@ -137,7 +137,6 @@ class WebSocketManager {
 	    this.enableRetry = false
 		this.webSocket?.close({code: 1000})
 		this.webSocket = undefined
-	    this.listeners?.clear()
 	}
 
     // 重试连接

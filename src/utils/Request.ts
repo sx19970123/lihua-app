@@ -4,7 +4,7 @@ import {type ResponseErrorType, ResponseError, type ResponseType} from "@/api/gl
 import {getToken} from '@/utils/Token'
 import {useUserStore} from '@/stores/user'
 import {getClientType} from '@/utils/Client'
- 
+ import {toast} from '@/utils/Toast'
 
 const service = new Request({
 	baseURL: import.meta.env.VITE_APP_BASE_API,
@@ -39,6 +39,7 @@ service.interceptors.response.use(
 		if (data.code === 401 || response.statusCode === 403) {
 			const userStore = useUserStore()
 			userStore.authenticationFailure()
+			toast("身份验证过期，请重新登陆")
 			throw new ResponseError(data.code, data.msg)
 		}
 		

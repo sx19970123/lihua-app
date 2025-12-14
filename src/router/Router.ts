@@ -3,8 +3,7 @@ import { getToken } from '@/utils/Token'
 import { useUserStore } from '@/stores/user'
 import { useNoticeStore } from '@/stores/notice'
 import { websocket } from '@/utils/WebSocket'
-import {toast} from '@/utils/Toast';
-
+import { initDict } from '@/utils/Dict'
 const router = new Router()
 
 /**
@@ -41,7 +40,8 @@ router.beforeEach((to, from) => {
 			websocket.connect()
 			// 获取最新的未读消息
 			noticeStore.getUnreadCount()
-			
+			// 缓存通知类型字典
+			initDict("sys_notice_type")
 		} else {
 			return true
 		}
@@ -55,8 +55,7 @@ router.beforeEach((to, from) => {
 		
 		// 退回登录页
 		uni.reLaunch({
-			url: "/pages/login/Login",
-			complete: () => toast("身份验证过期，请重新登陆")
+			url: "/pages/login/Login"
 		})
 		return false
 	}

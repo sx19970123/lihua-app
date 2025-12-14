@@ -12,6 +12,7 @@ import {publicAttachmentDownload} from "@/api/system/attachment/AttachmentStorag
 import {ResponseError, type ResponseType} from "@/api/global/Type";
 import {toast} from '@/utils/Toast';
 import { updatePassword, setDefaultDept } from "@/api/system/profile/Profile";
+import { websocket } from '@/utils/WebSocket'
 
 export const useUserStore = defineStore('user', {
 	state: () => {
@@ -120,6 +121,7 @@ export const useUserStore = defineStore('user', {
 		authenticationFailure() {
 			removeToken()
 			this.clearUserInfo()
+			websocket.closeConnect()
 			uni.reLaunch({
 				url: "/pages/login/Login"
 			})
