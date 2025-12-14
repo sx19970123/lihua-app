@@ -9,7 +9,7 @@
 						快速注册
 					</sar-button>
 				</sar-space>
-
+				<text class="text-font err-msg" v-if="serverConnectionFailed" @click="reload">连接服务器失败，点击重试</text>
 				<sar-input placeholder="用户名" v-model="loginData.username" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					clearable show-clear-only-focus>
 					<template #prepend>
@@ -60,7 +60,7 @@ import {rememberMe, getRememberedInfo} from '@/utils/Token'
 import { ResponseError } from '@/api/global/Type'
 const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
-
+const serverConnectionFailed = ref<boolean>(false)
 /**
  * 初始化登录相关
  */
@@ -152,7 +152,9 @@ const initCaptcha = () => {
 			} else {
 				toast(resp.msg)
 			}
+			serverConnectionFailed.value = false
 		} catch(err) {
+			serverConnectionFailed.value = true
 			if (err instanceof ResponseError) {
 				toast((err as unknown as ResponseError).msg)
 			} else {
@@ -337,12 +339,17 @@ const onRegisterSuccess = (username: string) => {
 	nextTick(() => toast("注册成功，用户名已自动代入", 2500))
 }
 
-onMounted(() => {
+const reload = () => {
+	uni.$off('registerSuccess', onRegisterSuccess)
 	captcha()
 	getRegisterStatus()
 	initRememberMeInfo()
 	initProtocolStatus()
 	uni.$on('registerSuccess', onRegisterSuccess)
+}
+
+onMounted(() => {
+	reload()
 })
 
 onUnmounted(() => {
@@ -360,4 +367,7 @@ onHide(() => {
 
 <style lang="scss">
 @import "@/static/style/auth.scss";
+.err-msg {
+	color: var(--sar-danger);
+}
 </style>
