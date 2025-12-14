@@ -14,7 +14,6 @@
 	<img src="static-image/IMG_1917.png" width="32%" />
 	<img src="static-image/IMG_1918.png" width="32%" />
 	<img src="static-image/IMG_1919.png" width="32%" />
-	
 	<img src="static-image/IMG_1916.png" width="32%" />
 	<img src="static-image/IMG_1925.png" width="32%" />
 	<img src="static-image/IMG_1926.png" width="32%" />
