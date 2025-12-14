@@ -11,19 +11,13 @@
 
 ## 项目截图
 <div style="display:flex; flex-wrap:wrap; gap:8px;">
-  <img src="static-image/IMG_1920.png" width="32%" />
-  <img src="static-image/IMG_1925.png" width="32%" />
-  <img src="static-image/IMG_1917.png" width="32%" />
-
-  <img src="static-image/IMG_1918.png" width="32%" />
-  <img src="static-image/IMG_1916.png" width="32%" />
-  <img src="static-image/IMG_1923.png" width="32%" />
-
-  <img src="static-image/IMG_1921.png" width="32%" />
-  <img src="static-image/IMG_1922.png" width="32%" />
-  <img src="static-image/IMG_1919.png" width="32%" />
-
-  <img src="static-image/IMG_1924.png" width="32%" />
+	<img src="static-image/IMG_1917.png" width="32%" />
+	<img src="static-image/IMG_1918.png" width="32%" />
+	<img src="static-image/IMG_1919.png" width="32%" />
+	
+	<img src="static-image/IMG_1916.png" width="32%" />
+	<img src="static-image/IMG_1925.png" width="32%" />
+	<img src="static-image/IMG_1926.png" width="32%" />
 </div>
 
 ## 目录结构
