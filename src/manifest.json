@@ -1,6 +1,6 @@
 {
     "name" : "lihua-app",
-    "appid" : "__UNI__697415C",
+    "appid" : "",
     "description" : "",
     "versionName" : "1.0.0",
     "versionCode" : "101",
@@ -104,13 +104,15 @@
     "quickapp" : {},
     /* 小程序特有相关 */
     "mp-weixin" : {
-        "appid" : "wxa7cac788181a9fca",
+        "appid" : "",
         "darkmode" : true,
         "themeLocation" : "theme.json",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "minified" : true
         },
-        "usingComponents" : true
+        "usingComponents" : true,
+		"lazyCodeLoading": "requiredComponents"
     },
     "mp-alipay" : {
         "usingComponents" : true
