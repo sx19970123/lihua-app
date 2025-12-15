@@ -1,14 +1,23 @@
 <template>
 	<sar-popout :title="noticeData.title" v-model:visible="visible" @update:visible="handleUpdate" :show-confirm="false">
 	    <scroll-view scroll-y style="max-height: 60vh;">
-			<view class="content">
+			<view v-if="loading" class="notice-lite-loading">
+				<sar-loading
+					vertical
+				    color="var(--sar-primary)"
+				    text-color="var(--sar-primary)"
+				    text="努力加载中"
+				  />
+			</view>
+			<view class="content" v-else>
 				<view class="notice-meta">
 					<text>
 						{{noticeData.releaseUser}} {{noticeData.releaseTime}}
 					</text>
 				</view>
 				<!-- 富文本解析组件 -->
-				<mp-html :content="noticeData.content" :tag-style="tagStyle"/>
+				<mp-html v-if="noticeData.content" :content="noticeData.content" :tag-style="tagStyle"/>
+				<sar-empty v-else description="正文为空"/>
 			</view>
 		</scroll-view>
 	</sar-popout>
@@ -30,20 +39,30 @@ const props = defineProps<{
 const emits = defineEmits(["update:modelValue"])
 // 显隐抽屉
 const visible = ref<boolean>(props.modelValue)
-// 双向绑定更新
+// 抽屉变化
 const handleUpdate = (val: boolean) => {
 	visible.value = val
+	// 关闭抽屉清空数据
+	if (val === false) {
+		noticeData.value = {}
+	}
+	// 双向绑定
 	emits("update:modelValue", val)
 }
 
 // 通知公告数据
 const noticeData = ref<PreviewNotice>({})
 
+// 加载中
+const loading = ref<boolean>(false)
+
 // 预览通知公告
 const handlePreview = async () => {
+	loading.value = true
 	noticeStore.previewNotice(props.noticeId).then((resp) => {
 		noticeData.value = resp
 		noticeStore.markAsRead(props.noticeId)
+		loading.value = false
 	})
 }
 
@@ -64,4 +83,9 @@ const tagStyle = {
 
 <style lang="scss">
 @import "@/static/style/notice-detail.scss";
+.notice-lite-loading {
+	text-align: center;
+	height: 10vh;
+	padding-top: 5vh;
+}
 </style>

@@ -166,8 +166,8 @@ class MessageNotify {
 		// 添加点击、滑动事件
 		this.addEventListener(() => {
 			if (this.clickEvent) {
-				// 滑动过程中无法触发点击事件
-				if (this.draggingMeta.noticeIsdragging) {
+				// 滑动过程中、startX、startY 为 0 都无法触发点击事件；触发点击事件移动需要先触发touchstart事件
+				if (this.draggingMeta.noticeIsdragging || this.draggingMeta.startX === 0 || this.draggingMeta.startY === 0) {
 					return
 				}
 				// 触发业务点击
@@ -308,7 +308,7 @@ class MessageNotify {
 		this.view.drawBitmap(image, {}, {top: this.noticeImage.top + 'px', left: this.noticeImage.left + 'px', width: this.noticeImage.width + 'px', height: this.noticeImage.height + 'px'})
 		// 绘制图片遮罩，呈现圆角（安卓和ios渲染方式不同，根据系统类型进行调用）
 		if (this.osName === 'android') {
-			this.view.drawRect({color: maskColor, borderWidth: this.noticeImage.left * 1.5 + 'px', radius: this.radius, borderColor: backageColor}, {height: this.noticeContainer.height - this.noticeImage.left * 2 + 'px',width: this.noticeContainer.height - this.noticeImage.left * 2 + 'px', top: this.noticeImage.left + 'px', left: this.noticeImage.left + 'px'}, 'mask')
+			this.view.drawRect({color: maskColor, borderWidth: this.noticeImage.left * 1.7 + 'px', radius: this.radius, borderColor: backageColor}, {height: this.noticeContainer.height - this.noticeImage.left * 2 + 'px',width: this.noticeContainer.height - this.noticeImage.left * 2 + 'px', top: this.noticeImage.left + 'px', left: this.noticeImage.left + 'px'}, 'mask')
 		} else {
 			this.view.drawRect({color: maskColor, borderWidth: this.noticeImage.left + 'px' ,radius: this.radius, borderColor: backageColor}, {height: this.noticeContainer.height + 'px', width: this.noticeImage.width + this.noticeImage.left * 2 + 'px'}, 'mask')
 		}
@@ -318,7 +318,16 @@ class MessageNotify {
 	private addEventListener = (clickCallback: () => void, moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
 		this.view.addEventListener("click", clickCallback)
 		this.view.addEventListener("touchstart", this.touchStart)
-		this.view.addEventListener("touchmove", this.touchMove)
+		
+		if (this.osName === 'android') {
+			// todo 安卓手机概率性无法触发touchend
+			// 等待官方解决，期间进行兼容操作，只允许向上滑动关闭和点击打开
+			// 官方解决完成后，该方法直接删除即可
+			this.view.addEventListener("touchmove", (event: TouchEventData) => this.androidMove(event, moveEndCallback))
+		} else {
+			this.view.addEventListener("touchmove", this.touchMove)
+		}
+		
 		this.view.addEventListener("touchend", (event: TouchEventData) => this.touchEnd(event, moveEndCallback))
 	}
 
@@ -404,22 +413,89 @@ class MessageNotify {
 		} else {
 			// 否则复原
 			this.view.setStyle({top: this.noticeContainer.top + 'px', opacity: 1, left: this.noticeContainer.left + 'px'})
+			// 重新开始自动关闭
+			this.autoClose()
 		}
 		// 向下滑动超过maxTop比例则触发回调
 		if (direction === 'bottom' && this.draggingMeta.currentTop > this.draggingMeta.maxTop * (3 / 5)) {
 			if (moveEndCallback) {
 				moveEndCallback(direction)
+				// 重新开始自动关闭
+				this.autoClose()
 			}
 		}
-		// 重置拖动状态
+		
+		// 延迟20ms，不与点击事件打架
 		setTimeout(() => {
+			// 重置拖动状态
 			this.draggingMeta.noticeIsdragging = false
 			this.draggingMeta.startX = 0
 			this.draggingMeta.startY = 0
 			this.draggingMeta.direction = undefined
 		}, 20)
-		// 重新开始自动关闭
-		this.autoClose()
+	}
+	
+	// 安卓正在滑动
+	// todo 安卓手机概率性无法触发touchend
+	// 等待官方解决，期间进行兼容操作，只允许向上滑动关闭和点击打开
+	// 官方解决完成后，该方法直接删除即可
+	private androidMove = (event: TouchEventData, moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
+		if (this.draggingMeta.startX === 0 || this.draggingMeta.startY === 0) {
+			return
+		}
+		
+		if (!this.draggingMeta.direction) {
+			// 判断滑动方向
+			const {screenX, screenY} = event
+			const x = Math.abs(this.draggingMeta.startX - screenX)
+			const y = Math.abs(this.draggingMeta.startY - screenY)
+			this.draggingMeta.direction = x > y ? undefined : 'y'
+			if (this.draggingMeta.direction) {
+				this.draggingMeta.noticeIsdragging = true
+			}
+		}
+		
+		if (this.draggingMeta.direction === 'y') {
+			const specificDirection = event.screenY - this.draggingMeta.startY
+			this.draggingMeta.opacity = 1 - Math.abs(Math.trunc(specificDirection)) * 0.005
+			// 只能向上滑动
+			if (specificDirection <= 0) {
+				let targetTop = this.noticeContainer.top + event.screenY - this.draggingMeta.startY
+				const maxTop = this.draggingMeta.maxTop
+				this.draggingMeta.currentTop =  targetTop >= maxTop ? maxTop : targetTop 
+				this.view.setStyle({
+					top: this.draggingMeta.currentTop + 'px',
+					opacity: this.draggingMeta.opacity
+				})
+				
+				// 向上滑动50像素就执行关闭
+				if (specificDirection < - 40) {
+					this.androidMoveClose(moveEndCallback);
+				}
+			}
+		}
+	}
+	
+	// 安卓滑动关闭
+	// todo 安卓手机概率性无法触发touchend，
+	// 等待官方解决，期间进行兼容操作，只允许向上滑动关闭和点击打开
+	// 官方解决完成后，该方法直接删除即可
+	private androidMoveClose = (moveEndCallback: (direction: 'right' | 'left' | 'bottom' | 'top') => void) => {
+		// 重置拖动状态
+		if (!this.draggingMeta.noticeIsdragging) {
+			return
+		}
+		
+		this.view.reset()
+		this.view.hide()
+		if (moveEndCallback) {
+			moveEndCallback('top')
+		}
+		
+		this.draggingMeta.noticeIsdragging = false
+		this.draggingMeta.startX = 0
+		this.draggingMeta.startY = 0
+		this.draggingMeta.direction = undefined
 	}
 	
 	// 截取文本
@@ -459,9 +535,10 @@ class MessageNotify {
 	  return result + ellipsis
 	}
 
-	
 	// 自动关闭
 	private autoClose = () => {
+		// 先取消再添加
+		this.cancelAutoClose()
 		this.closeTimeout = setTimeout(() => {
 			this.hide()
 			clearTimeout(this.closeTimeout)
@@ -472,13 +549,21 @@ class MessageNotify {
 	private cancelAutoClose = () => {
 		if (this.closeTimeout) {
 			clearTimeout(this.closeTimeout)
+			this.closeTimeout = undefined
 		}
 	}
 	
 	// 监听主题变化
 	private watchTheme = () => {
 		uni.onThemeChange((resp) => {
-			this.theme = resp.theme
+			// 监听到的主题可能为auto，auto 则调用系统信息接口获取主题
+			const theme = resp.theme as 'light' | 'dark' | 'auto'
+			if (theme === 'auto') {
+				this.theme = uni.getSystemInfoSync().theme || 'light'
+			} else {
+				this.theme = theme
+			}
+			
 			if (this.theme === 'light') {
 				this.color = {
 					backageColor: '#e5e5e5',
