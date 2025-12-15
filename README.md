@@ -19,6 +19,9 @@
 - 🧭 路由管理：基于 Router 实现路由跳转，支持前置拦截与权限校验
 - 🧱 全局能力：集成 uni-ku/root，模拟 Web 端 Vue 根组件，便于集中处理全局逻辑
 
+## 下载体验（apk）
+- [狸花猫APP](https://gitee.com/yukino_git/lihua-app/releases/download/1.0.0/%E7%8B%B8%E8%8A%B1%E7%8C%ABAPP.apk)
+
 ## 组件库&关键依赖
 - 项目组件库： [sard-uniapp](https://sard.wzt.zone/sard-uniapp-docs/)
 - 虚拟根组件： [Uni Ku Root](https://uni-ku.js.org/projects/root/introduction)
