@@ -418,6 +418,8 @@ class MessageNotify {
 		}
 		// 向下滑动超过maxTop比例则触发回调
 		if (direction === 'bottom' && this.draggingMeta.currentTop > this.draggingMeta.maxTop * (3 / 5)) {
+			this.view.reset()
+			this.view.hide()
 			if (moveEndCallback) {
 				moveEndCallback(direction)
 				// 重新开始自动关闭

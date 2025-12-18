@@ -47,11 +47,7 @@ const callbackShow = () => {
 	MessageNotify.show({content: "测试内容"}, () => {
 		toast("点击了通知")
 	}, (direction) => {
-		if (direction === 'bottom') {
-			toast("向下滑动不会主动关闭，可自行调用MessageNotify.hide()关闭")
-		} else {
-			toast("滑动方向" + direction)
-		}
+		toast("滑动方向" + direction)
 	})
 }
 </script>
