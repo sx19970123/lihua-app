@@ -19,6 +19,11 @@
 - 🧭 路由管理：基于 Router 实现路由跳转，支持前置拦截与权限校验
 - 🧱 全局能力：集成 uni-ku/root，模拟 Web 端 Vue 根组件，便于集中处理全局逻辑
 
+## 相关资源
+- [开发文档](https://sx19970123.github.io/lihua-document/doc-app/basic/overview.html)
+- [后端仓库](https://gitee.com/yukino_git/lihua)
+- 技术交流群：850464676
+
 ## 下载体验（apk）
 - [狸花猫APP](https://gitee.com/yukino_git/lihua-app/releases/download/1.0.0/%E7%8B%B8%E8%8A%B1%E7%8C%ABAPP.apk)
 
