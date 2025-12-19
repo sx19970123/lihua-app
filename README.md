@@ -20,7 +20,8 @@
 - 🧱 全局能力：集成 uni-ku/root，模拟 Web 端 Vue 根组件，便于集中处理全局逻辑
 
 ## 相关资源
-- [开发文档](https://sx19970123.github.io/lihua-document/doc-app/basic/overview.html)
+- [开发文档](https://doc.lihua.xyz/)
+- [介绍视频](https://www.bilibili.com/video/BV1RkqfBEEWx/?share_source=copy_web&vd_source=21488b91c9ae03cb3f590ee0d0bdb943)
 - [后端仓库](https://gitee.com/yukino_git/lihua)
 - 技术交流群：850464676
 
