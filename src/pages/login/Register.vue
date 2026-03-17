@@ -60,7 +60,6 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { enable } from '@/api/system/captcha/Captcha'
 import type { RegisterType } from '@/api/system/login/type/RegisterType'
 import {register, checkUserName} from '@/api/system/login/Login'
 import { useUserStore } from '@/stores/user'
@@ -68,7 +67,6 @@ import router from '@/router/Router'
 import Captcha from '@/components/captcha/index'
 import {toast} from '@/utils/Toast'
 import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
-import {rasEncryptPassword} from "@/utils/Crypto"
 import {cloneDeep} from "lodash-es"
 import PasswordInput from '@/components/password-input/index.vue'
 import { ResponseError } from '@/api/global/Type'
@@ -172,16 +170,7 @@ const initRegister = () => {
 		try {
 			registerLoading.value = true
 			const data = cloneDeep(registerData.value) as RegisterType
-			// 密码加密
-			const passwordEncrypt = await rasEncryptPassword(data.password)
-			// 确认密码加密
-			const confirmPasswordEncrypt = await rasEncryptPassword(data.confirmPassword)
 			
-			// 加密后的密码和密码加密key
-			data.password = passwordEncrypt.ciphertext
-			data.confirmPassword = confirmPasswordEncrypt.ciphertext
-			data.passwordRequestKey = passwordEncrypt.requestKey
-			data.confirmPasswordRequestKey = confirmPasswordEncrypt.requestKey
 			// 验证码id
 			data.captchaVerification = captchaId
 			// 注册

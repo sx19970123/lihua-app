@@ -108,25 +108,17 @@ const avatarData = ref<AvatarType>(cloneDeep(userStore.avatar))
 // 执行保存
 const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 	if (type === 'confirm') {
-		try {
-			// url 字段无需保存
-			avatarData.value.url = undefined
-			const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
-			if (resp.code === 200) {
-				// 刷新store
-				await userStore.initUserInfo()
-				// 删除图片头像
-				removeLastImage()
-				router.navigateBack({})
-			} else {
-				toast(resp.msg)
-			}
-		} catch (err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
-			}
+		// url 字段无需保存
+		avatarData.value.url = undefined
+		const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
+		if (resp.code === 200) {
+			// 刷新store
+			await userStore.initUserInfo()
+			// 删除图片头像
+			removeLastImage()
+			router.navigateBack({})
+		} else {
+			toast(resp.msg)
 		}
 	}
 }
@@ -139,57 +131,53 @@ const initImageAvatar = () => {
 	
 	// 选择头像
 	const chooseImage = async () => {
+		// 选择照片｜拍照
+		const filePath = await new Promise<string>((resolve, reject) => {
+			uni.chooseImage({
+				count: 1,
+				sizeType: ['original', 'compressed'],
+				sourceType: ['album', 'camera'],
+				success: (resp) => resolve(resp.tempFilePaths[0]),
+				fail: reject,
+			});
+		});
+		
+		// 裁剪图片
+		const croppedFilePath = await new Promise<string>((resolve, reject) => {
+			cropImage({
+				// 图片压缩到一半的清晰度
+				beforeCrop: () => 0.5,
+				src: filePath,
+				success: resolve,
+				fail: reject,
+			});
+		});
+		
+		// 获取图片信息
+		const {size, md5} = await getFileInfo(croppedFilePath)
+		
+		// 限制 2MB
+		if (!size || (size / 1024 / 1024 > 2)) {
+			toast("上传失败，头像不能超过 2MB");
+			return;
+		}
+		
+		// 上传图片
+		uni.showLoading({ title: "正在上传", mask: true });
 		try {
-			// 选择照片｜拍照
-			const filePath = await new Promise<string>((resolve, reject) => {
-				uni.chooseImage({
-					count: 1,
-					sizeType: ['original', 'compressed'],
-					sourceType: ['album', 'camera'],
-					success: (resp) => resolve(resp.tempFilePaths[0]),
-					fail: reject,
-				});
-			});
-
-			// 裁剪图片
-			const croppedFilePath = await new Promise<string>((resolve, reject) => {
-				cropImage({
-					// 图片压缩到一半的清晰度
-					beforeCrop: () => 0.5,
-					src: filePath,
-					success: resolve,
-					fail: reject,
-				});
-			});
-
-			// 获取图片信息
-			const {size, md5} = await getFileInfo(croppedFilePath)
-
-			// 限制 2MB
-			if (!size || (size / 1024 / 1024 > 2)) {
-				toast("上传失败，头像不能超过 2MB");
-				return;
-			}
-
-			// 上传图片
-			uni.showLoading({ title: "正在上传", mask: true });
-			try {
-				const resp = await upload(croppedFilePath, "UserAvatar", "用户头像", md5);
-				if (resp.code === 200) {
-					avatarData.value.type = "image";
-					avatarData.value.value = resp.data;
-					handleSave("confirm");
-				} else {
-					toast(resp.msg);
-				}
-			} catch (err) {
-				console.error(err);
-				toast("上传失败");
-			} finally {
-				uni.hideLoading();
+			const resp = await upload(croppedFilePath, "UserAvatar", "用户头像", md5);
+			if (resp.code === 200) {
+				avatarData.value.type = "image";
+				avatarData.value.value = resp.data;
+				handleSave("confirm");
+			} else {
+				toast(resp.msg);
 			}
 		} catch (err) {
-			console.error("操作失败:", err);
+			console.error(err);
+			toast("上传失败");
+		} finally {
+			uni.hideLoading();
 		}
 	}
 	

@@ -4,7 +4,6 @@ import type { SysRole } from "@/api/system/role/type/SysRole";
 import type { SysDept } from "@/api/system/dept/type/SysDept";
 import type { SysPost } from "@/api/system/post/type/SysPost";
 import type { AvatarType } from "@/api/system/profile/type/AvatarType";
-import {rasEncryptPassword} from "@/utils/Crypto";
 import { login, logout } from "@/api/system/login/Login";
 import { setToken, removeToken } from "@/utils/Token";
 import { queryAuthInfo } from "@/api/system/auth/Auth";
@@ -60,19 +59,13 @@ export const useUserStore = defineStore('user', {
 		 * 账号密码登录
 		 */
 		async login(username: string, password: string, captchaVerification?: string) {
-			try {
-				// 对密码进行加密处理，获取密文和requestKey
-				const {ciphertext, requestKey} = await rasEncryptPassword(password)
-				// 调用登录接口
-				const resp = await login({username, password: ciphertext, captchaVerification, requestKey})
-				// 登录成功，设置Token
-				if (resp.code === 200) {
-					setToken(resp.data)
-				}
-				return resp
-			} catch(err) {
-				throw err
+			// 调用登录接口
+			const resp = await login({username, password, captchaVerification})
+			// 登录成功，设置Token
+			if (resp.code === 200) {
+				setToken(resp.data)
 			}
+			return resp
 		},
 		/**
 		 * 退出登录
@@ -90,21 +83,8 @@ export const useUserStore = defineStore('user', {
 		async updatePassword({oldPassword, newPassword, confirmPassword}: {oldPassword: string, newPassword: string, confirmPassword: string}): Promise<ResponseType<string>> {
 			return new Promise(async (resolve, reject) => {
 				try {
-					// 对旧密码进行加密处理
-					const oldPasswordEncrypt = await rasEncryptPassword(oldPassword)
-					// 对新密码进行加密处理
-					const newPasswordEncrypt = await rasEncryptPassword(newPassword)
-					// 对确认密码进行加密处理
-					const confirmPasswordEncrypt = await rasEncryptPassword(confirmPassword)
-
 					// 更新密码
-					const resp = await updatePassword(
-						oldPasswordEncrypt.ciphertext,
-						oldPasswordEncrypt.requestKey,
-						newPasswordEncrypt.ciphertext,
-						newPasswordEncrypt.requestKey,
-						confirmPasswordEncrypt.ciphertext,
-						confirmPasswordEncrypt.requestKey)
+					const resp = await updatePassword(oldPassword, newPassword, confirmPassword)
 					if (resp.code === 200) {
 						resolve(resp)
 					} else {

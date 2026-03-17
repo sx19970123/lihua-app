@@ -47,12 +47,6 @@ const handleSaveData = async () => {
 		if (resp.code === 200) {
 			router.navigateBack({})
 		}
-	} catch(err) {
-		if (err instanceof ResponseError) {
-			toast((err as unknown as ResponseError).msg, 1000)
-		} else {
-		  console.error(err)
-		}
 	} finally {
 		saveLoading.value = false
 	}

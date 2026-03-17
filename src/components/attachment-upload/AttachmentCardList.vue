@@ -1,6 +1,6 @@
 <template>
 	<sar-space direction="vertical">
-		<sar-list v-for="(item, index) in props.list" :key="item.name + index" card>
+		<sar-list v-for="(item, index) in props.list" :key="item?.name + index" card>
 			<sar-list-item>
 				<!-- 左侧内容 -->
 				<template #title>

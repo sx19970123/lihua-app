@@ -11,8 +11,4 @@ export interface LoginType {
 	 * 验证码信息
 	 */
     captchaVerification?: string
-	/**
-	 * 请求key
-	 */
-    requestKey?: string
 }

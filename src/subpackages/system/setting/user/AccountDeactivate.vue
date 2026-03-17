@@ -18,7 +18,6 @@
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted} from 'vue';
-import {rasEncryptPassword} from "@/utils/Crypto";
 import {checkPassword, accountDeactivate} from "@/api/system/profile/Profile";
 import {toast} from '@/utils/Toast';
 import { ResponseError } from '@/api/global/Type';
@@ -45,9 +44,7 @@ const initPasswordCheck = () => {
 		}
 		try {
 			checkLoading.value = true
-			// 对密码进行加密处理，获取密文和requestKey
-			const {ciphertext, requestKey} = await rasEncryptPassword(password.value)
-			const resp = await checkPassword(ciphertext, requestKey)
+			const resp = await checkPassword(password.value)
 			if (resp.code === 200) {
 				isCheck.value = resp.data
 				if (resp.data) {
@@ -57,12 +54,6 @@ const initPasswordCheck = () => {
 				}
 			} else {
 				toast(resp.msg)
-			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
 			}
 		} finally {
 			checkLoading.value = false
@@ -96,12 +87,6 @@ const initDeactivate = () => {
 				userStore.handleLogout()
 			} else {
 				toast(resp.msg)
-			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
 			}
 		} finally {
 			deactivateLoading.value = false

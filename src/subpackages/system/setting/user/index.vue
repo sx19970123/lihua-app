@@ -63,13 +63,8 @@ const reloadUserInfo = async () => {
 			userAvatarRef.value.initAvatar()
 		}
 		toast("更新完成")
-	} catch(err) {
-		if (err instanceof ResponseError) {
-			toast((err as unknown as ResponseError).msg)
-		} else {
-			console.error(err)
-			uni.hideLoading()
-		}
+	} finally {
+		uni.hideLoading()
 	}
 }
 </script>

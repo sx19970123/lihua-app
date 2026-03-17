@@ -40,12 +40,6 @@ const handleSaveData = async () => {
 		} else {
 			toast(resp.msg)
 		}
-	} catch(err) {
-		if (err instanceof ResponseError) {
-			toast((err as unknown as ResponseError).msg)
-		} else {
-			console.error(err)
-		}
 	} finally {
 		uni.hideLoading()
 	}

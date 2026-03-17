@@ -89,13 +89,6 @@ const initList = () => {
 					status.value = "incomplete"
 				}
 			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
-			}
-			status.value = "error"
 		} finally {
 			uni.stopPullDownRefresh()
 			isReload.value = false

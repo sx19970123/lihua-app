@@ -2,16 +2,6 @@ import request from "@/utils/Request";
 import type {CaptchaRequestData, CaptchaResponseData} from "@/api/system/captcha/type/CaptchaType"
 
 /**
- * 是否启用验证码
- */
-export const enable = () => {
-    return request<boolean>({
-        url: 'captcha/enable',
-        method: 'GET'
-    })
-}
-
-/**
  * 获取验证码数据
  */
 export const getCaptchaData = () => {

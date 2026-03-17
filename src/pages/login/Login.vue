@@ -28,7 +28,7 @@
 				<sar-button 
 					root-class="auth-item auth-item-btn" 
 					:loading="loginLoading"
-					@click="() => enableCaptcha ? openCaptcha() : handleLogin()">登 录</sar-button>
+					@click="() => isEnableCaptcha ? openCaptcha() : handleLogin()">登 录</sar-button>
 			</sar-space>
 		</view>
 
@@ -42,15 +42,14 @@
 			</sar-space>
 		</view>
 		<!-- 验证码 -->
-		<Captcha @success="handleLogin" ref="captchaRef" v-if="enableCaptcha"/>
+		<Captcha @success="handleLogin" ref="captchaRef" v-if="isEnableCaptcha"/>
 	</view>
 </template>
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { enable } from '@/api/system/captcha/Captcha'
+import { enableCaptcha, enableSignUp } from '@/api/system/setting/Setting'
 import type { LoginType } from '@/api/system/login/type/LoginType'
-import { enableRegister } from '@/api/system/login/Login'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
 import Captcha from '@/components/captcha/index'
@@ -115,12 +114,6 @@ const initLogin = () => {
 			} else {
 				toast(resp.msg)
 			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
-			}
 		} finally {
 			loginLoading.value = false
 		}
@@ -141,25 +134,20 @@ const {loginData, loginLoading, checkLoginData, handleLogin} = initLogin()
  */
 const initCaptcha = () => {
 	// 是否启用验证码
-	const enableCaptcha = ref<boolean>(false)
+	const isEnableCaptcha = ref<boolean>(false)
 	
 	// 是否启用验证码
 	const captcha = async () => {
 		try {
-			const resp = await enable()
+			const resp = await enableCaptcha()
 			if (resp.code === 200) {
-				enableCaptcha.value = resp.data
+				isEnableCaptcha.value = resp.data
 			} else {
 				toast(resp.msg)
 			}
 			serverConnectionFailed.value = false
 		} catch(err) {
 			serverConnectionFailed.value = true
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
-			}
 		}
 	}
 	
@@ -177,13 +165,13 @@ const initCaptcha = () => {
 	}
 	
 	return {
-		enableCaptcha,
+		isEnableCaptcha,
 		captcha,
 		openCaptcha
 	}
 }
 
-const {enableCaptcha, captcha, openCaptcha} = initCaptcha()
+const {isEnableCaptcha, captcha, openCaptcha} = initCaptcha()
 
 
 /**
@@ -260,17 +248,9 @@ const initRegister = () => {
 	
 	// 获取用户注册状态
 	const getRegisterStatus = async () => {
-		try {
-			const resp = await enableRegister()
-			if (resp.code === 200) {
-				isRegistrationEnable.value = resp.data
-			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
-			}
+		const resp = await enableSignUp()
+		if (resp.code === 200) {
+			isRegistrationEnable.value = resp.data
 		}
 	}
 	

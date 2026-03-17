@@ -57,12 +57,6 @@ const handleChangeDefaultDept = (key: string) => {
 			// 更新默认部门
 			userStore.updateDefaultDept(item).then(() => {
 				router.navigateBack({})
-			}).catch((err) => {
-				if (err instanceof ResponseError) {
-					toast(err.msg)
-				} else {
-					console.error(err)
-				}
 			}).finally(() => {
 				uni.hideLoading()
 			})

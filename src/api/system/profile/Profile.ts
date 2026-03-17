@@ -15,22 +15,13 @@ export const saveBasics = (userInfo: {avatar?: string,nickname?: string,gender?:
 /**
  * 修改密码
  */
-export const updatePassword = (oldPassword: string,
-                               oldPasswordRequestKey: string,
-                               newPassword: string,
-                               newPasswordRequestKey: string,
-                               confirmPassword: string,
-                               confirmPasswordRequestKey: string
-                               ) => {
+export const updatePassword = (oldPassword: string, newPassword: string, confirmPassword: string) => {
     return request<string>({
         url: 'app/system/profile/password',
         data: {
             oldPassword,
-            oldPasswordRequestKey,
             newPassword,
-            newPasswordRequestKey,
-            confirmPassword,
-            confirmPasswordRequestKey
+            confirmPassword
         },
         method: 'POST'
     })
@@ -59,13 +50,12 @@ export const accountDeactivate = () => {
 /**
  * 检查密码
  */
-export const checkPassword = (password: string, passwordRequestKey: string) => {
+export const checkPassword = (password: string) => {
 	return request<boolean>({
 		url: 'app/system/profile/checkPassword',
 		method: "POST",
 		data: {
-			password,
-			passwordRequestKey
+			password
 		}
 	})
 }
