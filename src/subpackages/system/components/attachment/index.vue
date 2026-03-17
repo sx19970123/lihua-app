@@ -68,7 +68,7 @@
 
 <script lang="ts" setup>
 import { ref } from "vue";
-import AttachmentUpload from "@/components/attachment-upload/index"
+import AttachmentUpload from "@/components/attachment-upload/index.vue"
 
 const attachmentValue1 = ref<string>()
 const attachmentValue2 = ref<string>()

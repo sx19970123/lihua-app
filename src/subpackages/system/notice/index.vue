@@ -97,41 +97,32 @@ const initList = () => {
 	
 	return {
 		status,
-		query,
 		noticeDataList,
 		reload,
 		loadMore
 	}
 }
 
-const {status, query, noticeDataList, reload, loadMore} = initList()
+const {status, noticeDataList, reload, loadMore} = initList()
 
 /**
  * 处理标星
  */
 const handleStar = async (data: SysUserNoticeVO, index: number, hide: () => {}) => {
 	if (data.noticeId && data.starFlag) {
-		try {
-			data.starFlag = data.starFlag === '0' ? '1' : '0'
-			const resp = await star(data.noticeId, data.starFlag)
-			if (resp.code === 200) {
-				hide()
-				// 处理关闭Swipe
-				noticeListRef.value?.closeSwipe(index)
-				// star页面记录操作数据
-				if (isStarList) {
-					uni.$emit("changeNoticeMeta", data)
-				}
-			} else {
-				toast(resp.msg)
-			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
-			}
-		}
+    data.starFlag = data.starFlag === '0' ? '1' : '0'
+    const resp = await star(data.noticeId, data.starFlag)
+    if (resp.code === 200) {
+      hide()
+      // 处理关闭Swipe
+      noticeListRef.value?.closeSwipe(index)
+      // star页面记录操作数据
+      if (isStarList) {
+        uni.$emit("changeNoticeMeta", data)
+      }
+    } else {
+      toast(resp.msg)
+    }
 	}
 }
 
@@ -142,7 +133,7 @@ const handleRead = (noticeId: string, readFlag?: string) => {
 	// 未读时发送已读标记
 	if (readFlag === "0") {
 		noticeStore.markAsRead(noticeId)
-		.then(resp => {
+		.then((resp) => {
 			if (resp.code === 200) {
 				const item = noticeDataList.value.find(item => item.noticeId === noticeId)
 				if (item) {

@@ -1,5 +1,6 @@
 import request from "@/utils/Request";
 import type {SysDept} from "@/api/system/dept/type/SysDept";
+import type {passwordType} from "@/api/system/profile/type/PasswordType";
 
 /**
  * 保存基础信息
@@ -15,14 +16,10 @@ export const saveBasics = (userInfo: {avatar?: string,nickname?: string,gender?:
 /**
  * 修改密码
  */
-export const updatePassword = (oldPassword: string, newPassword: string, confirmPassword: string) => {
+export const updatePassword = (password: passwordType) => {
     return request<string>({
         url: 'app/system/profile/password',
-        data: {
-            oldPassword,
-            newPassword,
-            confirmPassword
-        },
+        data: password,
         method: 'POST'
     })
 }

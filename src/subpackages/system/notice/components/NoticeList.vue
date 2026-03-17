@@ -46,9 +46,8 @@
 import {ref, watch, nextTick} from 'vue'
 import DictTag from "@/components/dict-tag/index.vue"
 import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice"
-import {initDict} from '@/utils/dict'
+import {initDict} from '@/utils/Dict'
 import {handleTime} from "@/utils/HandleDate"
-import dayjs from "dayjs"
 // 加载字典
 const {sys_notice_priority} = initDict('sys_notice_priority')
 // 滑动状态

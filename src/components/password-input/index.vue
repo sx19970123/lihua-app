@@ -2,12 +2,12 @@
 	<sar-space direction="vertical">
 		<!-- 输入框 -->
 		<!-- 微信小程序下 插槽使用v-if禁用也会出现样式变化，所以对整个组件进行v-if -->
-		<sar-input v-if="props.showPrepend" :placeholder="props.placeholder" root-class="rounded-input" :class="class" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus>
+		<sar-input v-if="props.showPrepend" :placeholder="props.placeholder" root-class="rounded-input" :class="clazz" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus>
 			<template #prepend v-if="props.showPrepend">
 				<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="LockOutlined" />
 			</template>
 		</sar-input>
-		<sar-input v-else :placeholder="props.placeholder" root-class="rounded-input" :class="class" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus />
+		<sar-input v-else :placeholder="props.placeholder" root-class="rounded-input" :class="clazz" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus />
 		<!-- 密码强度指示条 -->
 		<sar-space size="small" class="indicator-bar" v-if="props.value">
 			<sar-progress-bar root-style="width: 100%" :percent="weak" color="#ff4d4f" :show-text="false" />
@@ -24,7 +24,7 @@ const weakRegex = /^.{6,}$/;
 const mediumRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/;
 
-const props = defineProps<{value?: string, showPrepend?: boolean, placeholder?: string, class?: string}>()
+const props = defineProps<{value?: string, showPrepend?: boolean, placeholder?: string, clazz?: string}>()
 const emits = defineEmits(['update:value'])
 
 // 强

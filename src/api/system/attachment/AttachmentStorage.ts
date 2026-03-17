@@ -10,7 +10,20 @@ export const queryAttachmentInfoByIds = (ids: string[]) => {
     })
 }
 
-//  附件上传
+//  附件上传，返回路径
+export const publicUpload = (filePath: string, businessCode: string) => {
+    return attachmentUpload<string>({
+        url: "app/system/attachment/storage/public/upload",
+        filePath: filePath,
+        name: 'file',
+        formData: {
+            businessCode
+        },
+        header: {'Content-Type': 'multipart/form-data'}
+    })
+}
+
+//  附件上传，返回附件表id
 export const upload = (filePath: string, businessCode: string, businessName: string, md5?: string) => {
 	return attachmentUpload<string>({
 		url: "app/system/attachment/storage/upload",
@@ -60,14 +73,5 @@ export const deleteFromBusiness = (ids: string[]) => {
         url: `app/system/attachment/storage/business`,
         method: "DELETE",
 		data: ids
-    })
-}
-
-// 公开附件下载
-export const publicAttachmentDownload = (id: string) => {
-    return request<ArrayBuffer>({
-        url: `app/system/attachment/storage/download/p/${id}`,
-        method: 'GET',
-        responseType: 'arraybuffer'
     })
 }

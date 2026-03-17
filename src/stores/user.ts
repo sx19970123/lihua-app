@@ -4,13 +4,12 @@ import type { SysRole } from "@/api/system/role/type/SysRole";
 import type { SysDept } from "@/api/system/dept/type/SysDept";
 import type { SysPost } from "@/api/system/post/type/SysPost";
 import type { AvatarType } from "@/api/system/profile/type/AvatarType";
-import { login, logout } from "@/api/system/login/Login";
-import { setToken, removeToken } from "@/utils/Token";
+import { logout } from "@/api/system/login/Login";
+import { removeToken } from "@/utils/Token";
 import { queryAuthInfo } from "@/api/system/auth/Auth";
-import {publicAttachmentDownload} from "@/api/system/attachment/AttachmentStorage";
 import {ResponseError, type ResponseType} from "@/api/global/Type";
-import {toast} from '@/utils/Toast';
-import { updatePassword, setDefaultDept } from "@/api/system/profile/Profile";
+import {attachmentUrl} from "@/utils/attachment/AttachmentUrl";
+import { setDefaultDept } from "@/api/system/profile/Profile";
 import { websocket } from '@/utils/WebSocket'
 
 export const useUserStore = defineStore('user', {
@@ -56,44 +55,14 @@ export const useUserStore = defineStore('user', {
 	},
 	actions: {
 		/**
-		 * 账号密码登录
-		 */
-		async login(username: string, password: string, captchaVerification?: string) {
-			// 调用登录接口
-			const resp = await login({username, password, captchaVerification})
-			// 登录成功，设置Token
-			if (resp.code === 200) {
-				setToken(resp.data)
-			}
-			return resp
-		},
-		/**
 		 * 退出登录
 		 */
 		async handleLogout() {
 			try {
 				await logout()
-			} catch(err) {
-				console.error(err)
 			} finally {
 				this.authenticationFailure()
 			}
-		},
-		 // 修改密码
-		async updatePassword({oldPassword, newPassword, confirmPassword}: {oldPassword: string, newPassword: string, confirmPassword: string}): Promise<ResponseType<string>> {
-			return new Promise(async (resolve, reject) => {
-				try {
-					// 更新密码
-					const resp = await updatePassword(oldPassword, newPassword, confirmPassword)
-					if (resp.code === 200) {
-						resolve(resp)
-					} else {
-						reject(new ResponseError(resp.code, resp.msg))
-					}
-				} catch (error) {
-					reject(error)
-				}
-			})
 		},
 		/**
 		 * 认证失效
@@ -213,17 +182,7 @@ export const useUserStore = defineStore('user', {
 			if (avatar.type === 'image') {
 				// 当头像类型为 image 但 image不存在时，赋值默认头像
 				if (avatar.value) {
-					publicAttachmentDownload(avatar.value).then((resp: ArrayBuffer) => {
-						// 将头像转为base64
-						avatar.url = 'data:image/png;base64,' + uni.arrayBufferToBase64(resp)
-					}).catch((e) => {
-						if (e instanceof ResponseError) {
-							toast(e.msg)
-						} else {
-							console.error(e)
-						}
-						this.$state.avatar = this.getDefaultAvatar()
-					})
+					avatar.url = attachmentUrl(avatar.value)
 				} else {
 					this.$state.avatar = this.getDefaultAvatar()
 				}

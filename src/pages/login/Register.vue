@@ -59,19 +59,16 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import type { RegisterType } from '@/api/system/login/type/RegisterType'
 import {register, checkUserName} from '@/api/system/login/Login'
-import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
-import Captcha from '@/components/captcha/index'
+import Captcha from '@/components/captcha/index.vue'
 import {toast} from '@/utils/Toast'
 import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
 import {cloneDeep} from "lodash-es"
 import PasswordInput from '@/components/password-input/index.vue'
-import { ResponseError } from '@/api/global/Type'
 
-const userStore = useUserStore()
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 
 /**
@@ -181,12 +178,6 @@ const initRegister = () => {
 				toLogin()
 			} else {
 				toast(resp.msg)
-			}
-		} catch(err) {
-			if (err instanceof ResponseError) {
-				toast((err as unknown as ResponseError).msg)
-			} else {
-				console.error(err)
 			}
 		} finally {
 			registerLoading.value = false

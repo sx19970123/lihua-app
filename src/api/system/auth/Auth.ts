@@ -15,13 +15,6 @@ export const reloadData = () => {
         method: 'POST'
     })
 }
-// 获取公钥
-export const getPublicKey = (requestKey: string) => {
-    return request<string>({
-        url: 'app/system/publicKey/' + requestKey,
-        method: 'GET'
-    })
-}
 
 // 获取一次性令牌
 export const getOnceToken = () => {

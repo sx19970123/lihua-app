@@ -45,8 +45,7 @@ import {useUserStore} from '@/stores/user'
 import {useNoticeStore} from "@/stores/notice"
 import router from '@/router/Router'
 import UserAvatar from '@/components/user-avatar/index.vue'
-import { ref, watch } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { watch } from 'vue'
 
 const userStore = useUserStore()
 const noticeStore = useNoticeStore()

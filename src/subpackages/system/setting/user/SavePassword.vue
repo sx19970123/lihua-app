@@ -11,21 +11,14 @@
 
 <script setup lang="ts">
 import {reactive, ref, nextTick, onMounted} from 'vue';
-import { useUserStore } from '@/stores/user';
 import router from '@/router/Router';
 import {toast} from '@/utils/Toast';
-import {updatePassword} from '@/api/system/profile/Profile';
 import PasswordInput from '@/components/password-input/index.vue'
-import { ResponseError } from '@/api/global/Type';
+import type {passwordType} from "@/api/system/profile/type/PasswordType";
+import {updatePassword} from "@/api/system/profile/Profile";
 
-const userStore = useUserStore()
 // 自动聚焦
 const autoFocus = ref<boolean>(false)
-type passwordType = {
-  oldPassword: string,
-  newPassword: string,
-  confirmPassword: string
-}
 
 const password = reactive<passwordType>({
   oldPassword: '',
@@ -43,7 +36,7 @@ const handleSaveData = async () => {
 	// 保存密码
 	try {
 		saveLoading.value = true
-		const resp = await userStore.updatePassword(password)
+		const resp = await updatePassword(password)
 		if (resp.code === 200) {
 			router.navigateBack({})
 		}

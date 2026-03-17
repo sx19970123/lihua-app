@@ -37,9 +37,9 @@
 
 <script setup lang="ts">
 import MessageNotify from '@/utils/MessageNotify'
-import {toast} from '@/utils/toast'
+import {toast} from '@/utils/Toast'
 
-const show = (title?: string, content: string, image?: string, duration?: number) => {
+const show = (title: string, content: string, image?: string, duration?: number) => {
 	MessageNotify.show({title: title, content: content, duration: duration, image: image})
 }
 

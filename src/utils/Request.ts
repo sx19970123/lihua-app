@@ -70,10 +70,10 @@ service.interceptors.response.use(
 
 // 数据返回统一封装样式
 export default <T> (config: RequestConfig) => {
-    return new Promise<ResponseType<T> & ArrayBuffer>((resolve, reject) => {
+    return new Promise<ResponseType<T>>((resolve, reject) => {
         service
-          .request<ResponseType<T> & ArrayBuffer>(config)
-          .then((response: Response<ResponseType<T> & ArrayBuffer>) => {
+          .request<ResponseType<T>>(config)
+          .then((response: Response<ResponseType<T>>) => {
               resolve(response.data)
           })
           .catch((err: ResponseErrorType) => {

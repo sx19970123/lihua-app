@@ -30,7 +30,7 @@ export const star = (noticeId: string, star: string) => {
  * @param noticeId
  */
 export const read = (noticeId: string) => {
-    return request({
+    return request<string>({
         url: 'app/system/notice/read/' + noticeId,
         method: 'POST'
     })

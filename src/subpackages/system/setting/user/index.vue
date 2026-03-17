@@ -15,8 +15,8 @@
 			</sar-list>
 			<sar-list card title="权限信息">
 				<sar-list-item title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>
-				<sar-list-item title="所属岗位" :value="userStore.defaultDeptPosts.map(post => post.name).join('、')" hover></sar-list-item>
-				<sar-list-item title="我的角色" :value="userStore.roles.map(role => role.name).join('、')" hover></sar-list-item>
+				<sar-list-item title="所属岗位" :value="userStore.defaultDeptPosts.map((post: SysPost) => post.name).join('、')" hover></sar-list-item>
+				<sar-list-item title="我的角色" :value="userStore.roles.map((role: SysRole) => role.name).join('、')" hover></sar-list-item>
 			</sar-list>
 			<sar-list card title="安全设置">
 				<sar-list-item title="修改密码" arrow hover @click="goSaveDataPage('SavePassword')"></sar-list-item>
@@ -34,7 +34,8 @@ import router from '@/router/Router'
 import {toast} from '@/utils/Toast'
 import { reloadData } from '@/api/system/auth/Auth'
 import {getDictLabel, initDict} from '@/utils/Dict'
-import { ResponseError } from '@/api/global/Type'
+import type {SysPost} from "@/api/system/post/type/SysPost";
+import type {SysRole} from "@/api/system/role/type/SysRole";
 
 const { user_gender } = initDict('user_gender')
 const userStore = useUserStore()

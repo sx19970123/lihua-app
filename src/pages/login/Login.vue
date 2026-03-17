@@ -50,14 +50,12 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { enableCaptcha, enableSignUp } from '@/api/system/setting/Setting'
 import type { LoginType } from '@/api/system/login/type/LoginType'
-import { useUserStore } from '@/stores/user'
 import router from '@/router/Router'
-import Captcha from '@/components/captcha/index'
+import Captcha from '@/components/captcha/index.vue'
 import {toast} from '@/utils/Toast'
 import {onShow, onHide} from '@dcloudio/uni-app'
-import {rememberMe, getRememberedInfo} from '@/utils/Token'
-import { ResponseError } from '@/api/global/Type'
-const userStore = useUserStore()
+import {rememberMe, getRememberedInfo, setToken} from '@/utils/Token'
+import {login} from "@/api/system/login/Login";
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 const serverConnectionFailed = ref<boolean>(false)
 /**
@@ -92,7 +90,7 @@ const initLogin = () => {
 	}
 	
 	// 用户登录
-	const handleLogin = async (captchaId?: string) => {
+	const handleLogin = async (captchaVerification?: string) => {
 		// 检查表单填写是否完整
 		if (!checkLoginData()) {
 			return
@@ -100,11 +98,11 @@ const initLogin = () => {
 		
 		try {
 			loginLoading.value = true
-			
-			const {username, password} = loginData.value as LoginType
-			const resp = await userStore.login(username, password, captchaId)
+      loginData.value.captchaVerification = captchaVerification
+			const resp = await login(loginData.value)
 			// 登录成功
 			if (resp.code === 200) {
+        setToken(resp.data)
 				// 处理记住账号
 				handleRememberMe()
 				// 跳转至首页
@@ -290,7 +288,7 @@ const toRegister = () => {
 	}
 	openKeyboard.value = false
 	router.navigateTo({
-		url: "/pages/login/Register?enableCaptcha=" + enableCaptcha.value,
+		url: "/pages/login/Register?enableCaptcha=" + isEnableCaptcha.value,
 		animationType: "slide-in-bottom"
 	})
 }
