@@ -4,7 +4,7 @@
 			<sar-list card>
 				<sar-list-item title="用户设置" icon-family="outlined" icon="UserOutlined" arrow hover @click="toSettingPage('user/index')"></sar-list-item>		
 			</sar-list>
-			<!-- #ifdef APP-PLUS -->
+			<!-- #ifdef APP -->
 			<!-- 仅app支持手动切换主题 -->
 			<sar-list card>	
 				<sar-list-item title="系统主题" icon-family="outlined" icon="BgColorsOutlined" arrow hover @click="toSettingPage('theme/index')"></sar-list-item>

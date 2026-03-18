@@ -22,25 +22,25 @@ const defaultTitle = '通知'
 
 class MessageNotify {
 	// 通知载体
-	private view: PlusNativeObjView
+	private view: PlusNativeObjView | any
 	
 	// 通知容器尺寸
-	private noticeContainer: NotifyStyle
+	private noticeContainer: NotifyStyle | any
 	
 	// 通知图片尺寸
-	private noticeImage: NotifyStyle
+	private noticeImage: NotifyStyle | any
 	
 	// 通知标题尺寸
-	private noticeTitle: NotifyStyle & {size: number}
+	private noticeTitle: NotifyStyle & {size: number} | any
 	
 	// 通知内容尺寸
-	private noticeContent: NotifyStyle & {size: number}
+	private noticeContent: NotifyStyle & {size: number} | any
 	
 	// 圆角
-	private radius: string
+	private radius: string | any
 	
 	// 通知状态为开启
-	private noticeIsShow: boolean
+	private noticeIsShow: boolean | any
 	
 	// 通知点击事件
 	private clickEvent?: () => void
@@ -49,7 +49,7 @@ class MessageNotify {
 	private moveEndEvent?: (direction: 'right' | 'left' | 'bottom' | 'top') => void
 	
 	// 自动关闭毫秒数
-	private duration:number
+	private duration:number | any
 	
 	// 关闭延迟
 	private closeTimeout: any
@@ -70,12 +70,12 @@ class MessageNotify {
 		maxTop: number,
 		// 当前的top值
 		currentTop: number
-	}
+	} | any
 	// 操作系统名称
-	private osName: string
+	private osName: string | any
 	
 	// 系统主题
-	private theme: string
+	private theme: string | any
 	// 颜色
 	private color: {
 		// 卡片背景颜色
@@ -86,120 +86,128 @@ class MessageNotify {
 		contentColor: 'rgba(0, 0, 0, 0.45)' | 'rgba(255, 255, 255, 0.45)',
 		// 头像遮罩颜色
 		maskColor: 'rgba(0,0,0,0)' | 'rgba(0,0,0,0.2)'
-	}
+	} | any
 	
 	// 通知内容
 	private notifyContent?: NotifyContent
 	
 	constructor() {
-		// 系统信息
-		const sysInfo = uni.getSystemInfoSync()
-		// 初始化容器尺寸
-		const windowInfo = uni.getWindowInfo()
-		// 操作系统名称
-		this.osName = sysInfo.osName
-		// 当前主题
-		this.theme = sysInfo.theme || 'light'
-		// 容器最大宽度，480 以下的设备都以边距16进行计算
-		const maxWidth = 480
-		// 边距
-		const margin = 8
-		// 高度
-		const height = 72
-		// 容器全部宽度
-		const width = windowInfo.screenWidth > maxWidth ? maxWidth : windowInfo.screenWidth
-		// 左位置
-		const left = width === maxWidth ? (windowInfo.screenWidth - width) / 2 : margin
+		try {
+			// 系统信息
+			const sysInfo = uni.getSystemInfoSync()
+
+			// 初始化容器尺寸
+			const windowInfo = uni.getWindowInfo()
+			// 操作系统名称
+			this.osName = sysInfo.osName
+			// 当前主题
+			this.theme = sysInfo.theme || 'light'
+			// 容器最大宽度，480 以下的设备都以边距16进行计算
+			const maxWidth = 480
+			// 边距
+			const margin = 8
+			// 高度
+			const height = 72
+			// 容器全部宽度
+			const width = windowInfo.screenWidth > maxWidth ? maxWidth : windowInfo.screenWidth
+			// 左位置
+			const left = width === maxWidth ? (windowInfo.screenWidth - width) / 2 : margin
+			
+			// 圆角
+			this.radius = "16px"
+			// 通知是否在显示中
+			this.noticeIsShow = false
+			// 自动关闭毫秒数
+			this.duration = 3000
 		
-		// 圆角
-		this.radius = "16px"
-		// 通知是否在显示中
-		this.noticeIsShow = false
-		// 自动关闭毫秒数
-		this.duration = 3000
-	
-		// 容器尺寸
-		this.noticeContainer = {
-			width: width - left * 2,
-			height: height,
-			top: windowInfo.statusBarHeight,
-			left: left
-		}
-		
-		// 图片尺寸
-		this.noticeImage = {
-			top: margin,
-			left: margin,
-			width: height - margin * 2,
-			height: height - margin * 2
-		}
-		
-		// 标题尺寸
-		this.noticeTitle = {
-			top: margin * 1.5,
-			left: this.noticeImage.width + margin * 2,
-			width: width - (this.noticeImage.width + margin * 3 + margin),
-			height: height / 2,
-			size: 17
-		}
-		
-		// 内容尺寸
-		this.noticeContent = {
-			top: height / 2 + margin / 2,
-			left: this.noticeImage.width + margin * 2,
-			width: width - (this.noticeImage.width + margin * 3 + margin),
-			height: height / 2,
-			size: 16
-		}
-		
-		// 创建原生View对象
-		this.view = new (plus as any).nativeObj.View('messageNotify', {
-			top: this.noticeContainer.top + 'px',
-			left: this.noticeContainer.left + 'px',
-			width: this.noticeContainer.width + 'px',
-			height: this.noticeContainer.height + 'px'
-		});
-		
-		// 滑动元数据
-		this.draggingMeta = {noticeIsdragging: false, startX: 0, startY: 0, maxTop: windowInfo.screenHeight * (1 / 3), currentTop: this.noticeContainer.top}
-		
-		// 添加点击、滑动事件
-		this.addEventListener(() => {
-			if (this.clickEvent) {
-				// 滑动过程中、startX、startY 为 0 都无法触发点击事件；触发点击事件移动需要先触发touchstart事件
-				if (this.draggingMeta.noticeIsdragging || this.draggingMeta.startX === 0 || this.draggingMeta.startY === 0) {
-					return
+			// 容器尺寸
+			this.noticeContainer = {
+				width: width - left * 2,
+				height: height,
+				top: windowInfo.statusBarHeight,
+				left: left
+			}
+			
+			// 图片尺寸
+			this.noticeImage = {
+				top: margin,
+				left: margin,
+				width: height - margin * 2,
+				height: height - margin * 2
+			}
+			
+			// 标题尺寸
+			this.noticeTitle = {
+				top: margin * 1.5,
+				left: this.noticeImage.width + margin * 2,
+				width: width - (this.noticeImage.width + margin * 3 + margin),
+				height: height / 2,
+				size: 17
+			}
+			
+			// 内容尺寸
+			this.noticeContent = {
+				top: height / 2 + margin / 2,
+				left: this.noticeImage.width + margin * 2,
+				width: width - (this.noticeImage.width + margin * 3 + margin),
+				height: height / 2,
+				size: 16
+			}
+			
+			
+			// 创建原生View对象
+			this.view = new (plus as any).nativeObj.View('messageNotify', {
+				top: this.noticeContainer.top + 'px',
+				left: this.noticeContainer.left + 'px',
+				width: this.noticeContainer.width + 'px',
+				height: this.noticeContainer.height + 'px'
+			});
+			
+			
+			// 滑动元数据
+			this.draggingMeta = {noticeIsdragging: false, startX: 0, startY: 0, maxTop: windowInfo.screenHeight * (1 / 3), currentTop: this.noticeContainer.top}
+			
+			// 添加点击、滑动事件
+			this.addEventListener(() => {
+				if (this.clickEvent) {
+					// 滑动过程中、startX、startY 为 0 都无法触发点击事件；触发点击事件移动需要先触发touchstart事件
+					if (this.draggingMeta.noticeIsdragging || this.draggingMeta.startX === 0 || this.draggingMeta.startY === 0) {
+						return
+					}
+					// 触发业务点击
+					this.clickEvent()
 				}
-				// 触发业务点击
-				this.clickEvent()
+				// 关闭通知
+				this.hide()
+			}, (direction) => {
+				// 触发业务滑动
+				if (this.moveEndEvent) {
+					this.moveEndEvent(direction)
+				}
+			})
+			
+			// 监听主题变化
+			this.watchTheme()
+			
+			// 根据当前主题赋值颜色
+			if (this.theme === 'light') {
+				this.color = {
+					backageColor: '#e5e5e5',
+					titleColor: '#000',
+					contentColor: 'rgba(0, 0, 0, 0.45)',
+					maskColor: 'rgba(0,0,0,0)',
+				}
+			} else {
+				this.color = {
+					backageColor: '#2b2b2b',
+					titleColor: '#fff',
+					contentColor: 'rgba(255, 255, 255, 0.45)',
+					maskColor: 'rgba(0,0,0,0.2)',
+				}
 			}
-			// 关闭通知
-			this.hide()
-		}, (direction) => {
-			// 触发业务滑动
-			if (this.moveEndEvent) {
-				this.moveEndEvent(direction)
-			}
-		})
-		
-		// 监听主题变化
-		this.watchTheme()
-		
-		// 根据当前主题赋值颜色
-		if (this.theme === 'light') {
-			this.color = {
-				backageColor: '#e5e5e5',
-				titleColor: '#000',
-				contentColor: 'rgba(0, 0, 0, 0.45)',
-				maskColor: 'rgba(0,0,0,0)',
-			}
-		} else {
-			this.color = {
-				backageColor: '#2b2b2b',
-				titleColor: '#fff',
-				contentColor: 'rgba(255, 255, 255, 0.45)',
-				maskColor: 'rgba(0,0,0,0.2)',
-			}
+		} catch(e) {
+			console.error("创建消息通知出错，可能是当前系统不兼容原生对象")
+			console.error(e)
 		}
 	}
 	
