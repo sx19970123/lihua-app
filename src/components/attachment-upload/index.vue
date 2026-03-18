@@ -171,12 +171,15 @@ const initModelValue = async () => {
 				// 组合数据
 				fileList.value = resp.data.map(item => {
 					return {
-						url: import.meta.env.VITE_APP_BASE_API + '/app' + item.path,
+						// 返回路径以http开头，则直接回显，否则拼接路径访问后台获取附件
+						url: item.path?.startsWith("http") ? item.path : import.meta.env.VITE_APP_BASE_API + '/app' + item.path,
 						name: item.originalName,
 						status: item.status === 'error' ? "failed" : "done",
 						message: item.errorMsg,
 						id: item.id,
-						type: item.type?.includes("image") ? 'image' : item.type?.includes("video") ? 'video' : 'file'
+						type: item.type?.includes("image") ? 'image' : item.type?.includes("video") ? 'video' : 'file',
+						isImage: item.type?.includes("image"),
+						isVideo: item.type?.includes("video")
 					}
 				})
 			} else {
