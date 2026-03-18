@@ -1,8 +1,8 @@
-// #ifdef APP-PLUS
+// #ifdef APP
 import { v4 as uuid } from 'uuid';
 // #endif
 
-// #ifndef APP-PLUS
+// #ifndef APP
 import uuidv4 from "@/utils/uuid/lib/uuidv4";
 // #endif
 
@@ -10,11 +10,11 @@ import uuidv4 from "@/utils/uuid/lib/uuidv4";
  * 获取uuid，兼容app和微信小程序
  */
 export const getUUID = async () => {
-	// #ifdef APP-PLUS
+	// #ifdef APP
 		return uuid()
 	// #endif
 	
-	// #ifndef APP-PLUS
+	// #ifndef APP
 		return await uuidv4()
 	// #endif
 }
