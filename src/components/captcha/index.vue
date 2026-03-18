@@ -11,13 +11,19 @@
 					<view class="verify-content">
 						<view class="verify-body">
 							<view class="verify-bg">
+								<!-- 图片背景 -->
 								<image id="bg" :src="captchaProcess.backgroundImage" mode="heightFix"></image>
 							</view>
-							<view v-if="captchaProcess.type === 'CONCAT'" id="verify-concat-bg" class="verify-concat-bg"
+							<!-- 拼接 -->
+							<view v-if="captchaProcess.type === 'CONCAT'" 
+								id="verify-concat-bg" 
+								class="verify-concat-bg"
 								:style="imgStyle"></view>
+								<!-- 滑块 -->
 							<view v-else class="verify-slider" :style="imgStyle">
 								<image id="slider-img" :src="captchaProcess.sliderImage" mode="heightFix"></image>
 							</view>
+								<!-- 旋转 -->
 							<view v-if="verifyResult.isSuccess" class="check-status check-success">
 								<text class="check-msg">{{verifyResult.successMsg}}</text>
 							</view>
@@ -557,7 +563,13 @@
 			case "SLIDER":
 				return `left: ${leftDistance.value}px;`;
 			case "CONCAT":
-				return `background-position:${leftDistance.value}px 0;background-image:url(${captchaProcess.value.backgroundImage});background-size: cover;height:${sliderImg.value.height}px`;
+				// 鸿蒙app高度使用rpx * 2
+				// #ifdef APP-HARMONY
+				return `background-position:${leftDistance.value}px 0;background-image:url(${captchaProcess.value.backgroundImage});background-size: cover;height:${(sliderImg.value.height || 0) * 2}rpx;`
+				// #endif
+				// #ifndef APP-HARMONY
+				return `background-position:${leftDistance.value}px 0;background-image:url(${captchaProcess.value.backgroundImage});background-size: cover;height:${sliderImg.value.height}px;`
+				// #endif
 			default:
 				return ''
 		}

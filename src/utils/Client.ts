@@ -2,7 +2,7 @@
  * 请求的客户端类型
  */
 export const getClientType = (): 'app' | 'wechat_mp' => {
-	//#ifdef APP-PLUS
+	//#ifdef APP
 		return 'app'
 	//#endif
 	

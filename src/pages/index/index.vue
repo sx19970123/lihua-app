@@ -3,7 +3,7 @@
 		<sar-tabbar-pit />
 		<sar-space direction="vertical" size="large">
 			<!-- 提示栏 -->
-			<sar-notice-bar>基于 uni-app 开发，仅适配 App（Android、iOS）及微信小程序，其余平台请自行测试。</sar-notice-bar>
+			<sar-notice-bar>基于 uni-app 开发，仅适配 App（Android、iOS、鸿蒙）及微信小程序，其余平台请自行测试。</sar-notice-bar>
 			<!-- title卡片 -->
 			<sar-card>
 			    <sar-space size="large">
@@ -28,7 +28,6 @@
 						  🧩 基于「狸花猫后台管理系统」的业务扩展方案，适配 App 与微信小程序，与 Web 端能力保持一致。
 						</text>
 						<text>✨ 功能概览</text>
-						<text>🔐 注册登录：App / 小程序密码加解密，Web 端统一控制注册开关</text>
 						<text>🧠 验证码：集成 tianai验证码，Web 端统一配置启用状态</text>
 						<text>👤 个人中心：头像、昵称等基础信息与后端保持一致</text>
 						<text>🛡️ 权限体系：支持角色、权限、部门标识，user store 可获取</text>
@@ -95,12 +94,20 @@ const showVersion = ref<boolean>(false)
 
 
 const versionInfo = [
-  {
-	version: '1.0.0',
-	updateDate: '2025-12-13',
-    updateContent: [
-		'🎉🎉狸花猫APP正式上线啦',
-	]
-  }
+	{
+		version: '2.0.0',
+		updateDate: '2026-03-xx',
+		updateContent: [
+			'🎉🎉2.0系统版本更新',
+			'1. 与后端版本保持同步',
+			'2. 适配兼容鸿蒙APP'
+		]
+	}, {
+		version: '1.0.0',
+		updateDate: '2025-12-13',
+		updateContent: [
+			'🎉🎉狸花猫APP正式上线啦',
+		]
+	}
 ]
 </script>

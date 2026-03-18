@@ -8,7 +8,7 @@ import { logout } from "@/api/system/login/Login";
 import { removeToken } from "@/utils/Token";
 import { queryAuthInfo } from "@/api/system/auth/Auth";
 import {ResponseError, type ResponseType} from "@/api/global/Type";
-import {attachmentUrl} from "@/utils/attachment/AttachmentUrl";
+import {attachmentUrl, getFileTempPath} from "@/utils/attachment/AttachmentUtils";
 import { setDefaultDept } from "@/api/system/profile/Profile";
 import { websocket } from '@/utils/WebSocket'
 
@@ -177,12 +177,12 @@ export const useUserStore = defineStore('user', {
 		/**
 		 * 处理头像
 		 */
-		handleAvatar() {
+		async handleAvatar() {
 			const avatar = this.$state.avatar
 			if (avatar.type === 'image') {
 				// 当头像类型为 image 但 image不存在时，赋值默认头像
 				if (avatar.value) {
-					avatar.url = attachmentUrl(avatar.value)
+					avatar.url = await getFileTempPath(attachmentUrl(avatar.value))
 				} else {
 					this.$state.avatar = this.getDefaultAvatar()
 				}

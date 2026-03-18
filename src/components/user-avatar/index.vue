@@ -19,7 +19,7 @@ import {onMounted, ref, withDefaults, watch} from "vue"
 import type {AvatarType} from "@/api/system/profile/type/AvatarType"
 import {useUserStore} from "@/stores/user"
 import { onPageShow } from "@dcloudio/uni-app"
-import {attachmentUrl} from "@/utils/attachment/AttachmentUrl";
+import {attachmentUrl} from "@/utils/attachment/AttachmentUtils";
 
 // 接收参数
 const {size, shape, customAvatar} = withDefaults(defineProps<{
