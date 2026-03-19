@@ -26,7 +26,7 @@
 - 技术交流群：850464676
 
 ## 下载体验（apk）
-- [狸花猫APP](https://gitee.com/yukino_git/lihua-app/releases/download/1.0.0/%E7%8B%B8%E8%8A%B1%E7%8C%ABAPP.apk)
+- [狸花猫APP](https://gitee.com/yukino_git/lihua-app/releases/download/2.0.0/%E7%8B%B8%E8%8A%B1%E7%8C%ABAPP.apk)
 
 <div style="display:flex; flex-wrap:wrap; gap:8px;">
 	<img src="static-image/qrcode.png" width="32%" />
