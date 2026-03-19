@@ -96,7 +96,7 @@ const showVersion = ref<boolean>(false)
 const versionInfo = [
 	{
 		version: '2.0.0',
-		updateDate: '2026-03-xx',
+		updateDate: '2026-03-19',
 		updateContent: [
 			'🎉🎉2.0系统版本更新',
 			'1. 与后端版本保持同步',

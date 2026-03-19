@@ -35,11 +35,11 @@ service.interceptors.response.use(
 	(response: Response) => {
 		const data = response.data as ResponseType<any>
 		console.info("接收响应===>", data);
-		// 登录信息失效，调用store中的登录失效逻辑
+		// 登录信息失效｜账号密码错误，调用store中的登录失效逻辑
 		if (data.code === 401 || response.statusCode === 403) {
 			const userStore = useUserStore()
 			userStore.authenticationFailure()
-			toast("身份验证过期，请重新登陆")
+			toast(data.msg)
 			throw new ResponseError(data.code, data.msg)
 		}
 		
