@@ -13,7 +13,7 @@ export const useThemeStore = defineStore('theme', {
 	actions: {
 		// 设置主题模式（仅app支持）
 		setMode(modeValue?: 'auto' | 'dark' | 'light') {
-			// #ifdef APP-PLUS
+			// #ifdef APP
 			// 没传入具体值使用mode默认值
 			if (!modeValue) {
 				plus.nativeUI.setUIStyle(this.mode)

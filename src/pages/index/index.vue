@@ -95,6 +95,16 @@ const showVersion = ref<boolean>(false)
 
 const versionInfo = [
 	{
+		version: '2.0.1',
+		updateDate: '2026-04-07',
+		updateContent: [
+			'1. 修复鸿蒙APP无法切换暗色｜亮色模式的bug',
+			'2. 更新uniapp版本到 3.0.0-5000520260324001',
+			'3. 更新sard-uniapp版本到 1.29.0',
+			'4. 更新vue版本到 3.5.31',
+		]
+	},
+	{
 		version: '2.0.0',
 		updateDate: '2026-03-19',
 		updateContent: [
