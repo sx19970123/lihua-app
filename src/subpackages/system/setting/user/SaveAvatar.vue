@@ -45,17 +45,18 @@ import { ref } from 'vue'
 import { cropImage } from 'sard-uniapp'
 import UserAvatar from '@/components/user-avatar/index.vue'
 import ColorSelect from '@/components/color-select/index.vue'
-import type { AvatarType } from '@/api/system/profile/type/AvatarType'
-import { saveBasics } from '@/api/system/profile/Profile'
-import { publicUpload } from '@/api/system/attachment/AttachmentStorage'
+import type { AvatarType } from '@/api/system/profile/type/avatar-type'
+import { saveBasics } from '@/api/system/profile/profile'
+import { publicUpload } from '@/api/system/attachment/attachment-storage'
 import { useUserStore } from '@/stores/user'
-import router from '@/router/Router'
-import { toast } from '@/utils/Toast'
+import router from '@/router/router'
+import { toast } from '@/utils/toast'
 import { cloneDeep } from 'lodash-es'
 import IconSelect from '@/components/icon-select/index.vue'
-import {getFileInfo} from '@/utils/attachment/AttachmentUtils'
+import {getFileInfo} from '@/utils/attachment/attachment-utils'
 
 const userStore = useUserStore()
+type EditableAvatarType = AvatarType & { value: string }
 
 // 头像背景颜色
 const colorSource = [
@@ -102,7 +103,10 @@ const colorSource = [
 ]
 
 // 头像数据
-const avatarData = ref<AvatarType>(cloneDeep(userStore.avatar))
+const avatarData = ref<EditableAvatarType>({
+	...cloneDeep(userStore.avatar),
+	value: userStore.avatar.value || ''
+})
 
 // 执行保存
 const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {

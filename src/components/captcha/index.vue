@@ -86,8 +86,8 @@
 <script setup lang="ts">
 	import { onMounted, computed, ref, nextTick, getCurrentInstance } from "vue"
 	import type { ComponentInternalInstance } from 'vue'
-	import { getCaptchaData, check } from "@/api/system/captcha/Captcha"
-	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/CaptchaType"
+	import { getCaptchaData, check } from "@/api/system/captcha/captcha"
+	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/captcha-type"
 	// 抛出方法
 	const emits = defineEmits(['success'])
 
@@ -430,13 +430,18 @@
 			})
 		}
 		// 点选
-		const recordClickItem = (e : TouchEvent) => {
+		const recordClickItem = (e : TouchEvent | PointerEvent) => {
 			if (!sliderImg.value.left || !sliderImg.value.top) {
 				return
 			}
 
-			const x = e.touches[0].pageX
-			const y = e.touches[0].pageY
+			const point = 'touches' in e ? (e.touches[0] || e.changedTouches[0]) : e
+			if (!point) {
+				return
+			}
+
+			const x = point.pageX
+			const y = point.pageY
 
 			const relativeX = sliderImg.value.left - x
 			const relativeY = sliderImg.value.top - y

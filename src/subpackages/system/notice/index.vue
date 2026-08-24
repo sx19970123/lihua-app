@@ -14,7 +14,7 @@
 				</sar-list-item>
 			</sar-list>
 			<!-- 消息列表 -->
-			<notice-list :notice-data="noticeDataList" :load-status="status" @clickItem="handleClickItem" @clickStar="handleStar" ref="noticeListRef"/>
+			<notice-list :notice-data="noticeDataList" :load-status="status" @clickItem="handleClickItem" @clickStar="handleStar"/>
 			<!-- 加载更多 -->
 			<sar-load-more v-if="(status === 'loading' || noticeDataList.length > 0) && !isReload" :status="status" @load-more="loadMore" @reload="reload"/>
 		</sar-space>
@@ -24,18 +24,17 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import NoticeList from '@/subpackages/system/notice/components/NoticeList.vue';
-import {userMessageList, star} from '@/api/system/notice/Notice';
-import type {SysUserNoticeVO} from "@/api/system/notice/type/SysUserNotice"
-import type { SysNoticeDTO } from '@/api/system/notice/type/SysNotice';
+import {userMessageList, star} from '@/api/system/notice/notice';
+import type {SysUserNoticeVO} from "@/api/system/notice/type/sys-user-notice"
+import type { SysNoticeDTO } from '@/api/system/notice/type/sys-notice';
 import { onLoad, onReachBottom, onPullDownRefresh } from '@dcloudio/uni-app';
-import { toast } from '@/utils/Toast';
+import { toast } from '@/utils/toast';
 import type { LoadMoreStatus } from 'sard-uniapp';
-import { ResponseError } from '@/api/global/Type';
-import router from "@/router/Router";
+import { ResponseError } from '@/api/global/type';
+import router from "@/router/router";
 import {useNoticeStore} from "@/stores/notice"
 
 const noticeStore = useNoticeStore()
-const noticeListRef = ref<InstanceType<typeof NoticeList>>()
 // 是否为star页面
 const isStarList = ref<boolean>(false)
 // 是否为刷新
@@ -114,8 +113,6 @@ const handleStar = async (data: SysUserNoticeVO, index: number, hide: () => {}) 
     const resp = await star(data.noticeId, data.starFlag)
     if (resp.code === 200) {
       hide()
-      // 处理关闭Swipe
-      noticeListRef.value?.closeSwipe(index)
       // star页面记录操作数据
       if (isStarList) {
         uni.$emit("changeNoticeMeta", data)

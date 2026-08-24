@@ -95,6 +95,26 @@ const showVersion = ref<boolean>(false)
 
 const versionInfo = [
 	{
+		version: '2.2.0',
+		updateDate: '2026-06-25',
+		updateContent: [
+			'1. 统一 App 与后端、Web 版本为 2.2.0',
+			'2. 更新 UniApp/DCloud 到 5.07（3.0.0-5000720260410001）',
+			'3. 更新 sard-uniapp 到 1.30.3',
+			'4. Sass 保持 1.69.7 以兼容组件库',
+		]
+	},
+	{
+		version: '2.1.0',
+		updateDate: '2026-05-01',
+		updateContent: [
+			'1. 针对后台controller接口调整进行适配',
+			'2. 将utils包拆分出helpers用于存放业务相关工具代码',
+			'3. 项目中ts文件修改为全小写命名',
+			'4. 更新sard-uniapp版本到 1.29.3',
+		]
+	},
+	{
 		version: '2.0.1',
 		updateDate: '2026-04-07',
 		updateContent: [

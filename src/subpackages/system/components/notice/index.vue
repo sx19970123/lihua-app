@@ -12,7 +12,7 @@
 			
 			<sar-space direction="vertical">
 				<view class="title">自定义消失时间(10s)</view>
-				<sar-button @click="show('测试通知', '测试内容', undefind, 10000)"> 显示通知</sar-button>
+				<sar-button @click="show('测试通知', '测试内容', undefined, 10000)"> 显示通知</sar-button>
 			</sar-space>
 			
 			<sar-space direction="vertical">
@@ -36,8 +36,8 @@
 </template>
 
 <script setup lang="ts">
-import MessageNotify from '@/utils/MessageNotify'
-import {toast} from '@/utils/Toast'
+import MessageNotify from '@/utils/message-notify'
+import {toast} from '@/utils/toast'
 
 const show = (title: string, content: string, image?: string, duration?: number) => {
 	MessageNotify.show({title: title, content: content, duration: duration, image: image})
