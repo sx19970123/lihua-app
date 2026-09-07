@@ -8,17 +8,9 @@ export interface RegisterType {
 	 */
 	password: string
 	/**
-	 * 密码请求key
-	 */
-	passwordRequestKey: string
-	/**
 	 * 确认密码
 	 */
 	confirmPassword: string
-	/**
-	 * 确认密码请求key
-	 */
-	confirmPasswordRequestKey: string
 	/**
 	 * 验证码信息
 	 */

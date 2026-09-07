@@ -84,7 +84,7 @@ const toLogin = () => {
  */
 const initRegister = () => {
 	// 用户注册数据
-	const registerData = ref<RegisterType>({username: '', password: '', passwordRequestKey: '', confirmPassword: '', confirmPasswordRequestKey: ''})
+	const registerData = ref<RegisterType>({username: '', password: '', confirmPassword: ''})
 	// 用户名是否已存在
 	const usernameExists = ref<boolean>(false)
 	// 用户注册loading
