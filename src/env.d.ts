@@ -20,8 +20,6 @@ declare module 'uuid';
 
 declare module 'lodash-es';
 
-declare module 'wxmp-rsa';
-
 declare module 'crypto-js';
 
 
