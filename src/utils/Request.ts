@@ -44,7 +44,7 @@ service.interceptors.response.use(
 		}
 		
 		// 非法ip访问
-		if (data.code === 407) {
+		if (data.code === 451) {
 			// todo 等待系统开发完善
 			throw new ResponseError(data.code, data.msg)
 		}
