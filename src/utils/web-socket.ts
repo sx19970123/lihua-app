@@ -34,13 +34,16 @@ class WebSocketManager {
      */
     public connect = async () => {
         if (!this.webSocket) {
+            // 每次显式连接重置重连开关，避免上次主动关闭（如登出）后的关闭态延续到本次连接
+            this.enableRetry = true
 			try {
-			    const { code, data } = await getOnceToken()
-			
-			    if (code !== 200 || !data) {
-			        console.error("WebSocket获取连接token失败")
-			        return;
-			    }
+				const { code, data } = await getOnceToken()
+
+				if (code !== 200 || !data) {
+					console.error("WebSocket获取连接token失败")
+					this.reconnect()
+					return;
+				}
 			
 				// 拼接连接地址
 				const url = import.meta.env.VITE_APP_WS_API + '?token=' + data + '&clientId=' + await getUUID() + '&clientType=' + getClientType()
@@ -64,20 +67,19 @@ class WebSocketManager {
 					this.startHeartbeat()
 				})
 				
-				// 连接错误
+				// 连接错误：只记录，异常关闭的重连统一由 onClose 判定，避免 error+close 双触发导致重复重连
 				this.webSocket.onError((err) => {
 					this.isConnected = false
-					this.reconnect()
 					console.error('WebSocket连接错误:', err)
 				})
-				
-				// 连接关闭
+
+				// 连接关闭：非 1000 关闭码视为异常断开（部分平台 event 无 code 字段，undefined 按异常处理倾向重连；主动关闭由 enableRetry=false 拦截）
 				this.webSocket.onClose((event) => {
 					console.info('WebSocket连接关闭:', event)
 					this.isConnected = false
 					this.webSocket = undefined
 					this.closeHeartbeat()
-					if (this.enableRetry) {
+					if (event?.code !== 1000 && this.enableRetry) {
 						this.reconnect()
 					}
 				})
@@ -87,7 +89,8 @@ class WebSocketManager {
 					this.receiveMessage(res)
 				})
 			} catch (e) {
-			    console.error("websocket连接失败",e)
+				console.error("websocket连接失败",e)
+				this.reconnect()
 			}
 		} else {
 			console.log("当前websocket实例已存在")
@@ -131,26 +134,42 @@ class WebSocketManager {
 		})
 	}
 	
+	// 手动重连：清零重试计数重启新一轮自动重连（连接存续时忽略）；自动重连耗尽停止后的外部恢复通道，由 UI 层显式调用
+	public manualReconnect = () => {
+		if (this.webSocket) {
+			return
+		}
+		this.enableRetry = true
+		this.retryNumber = 0
+		this.connect()
+	}
+
 	// 主动关闭连接
 	public closeConnect = () => {
 		console.log("WebSocket主动关闭")
 	    this.enableRetry = false
+	    // 主动关闭后清零重试计数，下次连接从满额度开始
+	    this.retryNumber = 0
 		this.webSocket?.close({code: 1000})
 		this.webSocket = undefined
 	}
 
-    // 重试连接
+    // 重试连接：固定间隔；累计 maxRetryNumber 次仍未连上则停止自动重连，等待下次登录触发
     private reconnect = () => {
         if (this.retryNumber >= this.maxRetryNumber) {
-            console.error("websocket 超过重试次数")
+            console.warn("WebSocket 重连失败已达上限，停止自动重连")
             return
         }
 		this.webSocket = undefined
         this.retryNumber ++
         setTimeout(() => {
-            console.log("websocket 执行第" + this.retryNumber + "次重试")
+            // 等待期间被主动关闭（如登出）则不再重连
+            if (!this.enableRetry) {
+                return
+            }
+            console.log("websocket 执行第" + this.retryNumber + "次重连")
             this.connect()
-        }, this.retryNumber * this.retryInterval)
+        }, this.retryInterval)
     }
 
     // 接收数据

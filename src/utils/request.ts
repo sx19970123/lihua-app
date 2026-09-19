@@ -43,9 +43,9 @@ service.interceptors.response.use(
 			throw new ResponseError(data.code, data.msg)
 		}
 		
-		// 非法ip访问
+		// 非法ip访问：App 端无专用错误页，直接透出后端提示
 		if (data.code === 451) {
-			// todo 等待系统开发完善
+			toast(data.msg)
 			throw new ResponseError(data.code, data.msg)
 		}
 		
@@ -82,6 +82,9 @@ export default <T> (config: RequestConfig) => {
     });
 };
 
+// 上传大文件耗时远超普通请求，独立超时对齐 uni.uploadFile 平台默认 60s
+const UPLOAD_TIMEOUT = 60 * 1000
+
 export const attachmentUpload = <T> (config: RequestConfig) => {
 	return new Promise<ResponseType<T>>((resolve, reject) => {
 		if (!config.url) {
@@ -89,12 +92,12 @@ export const attachmentUpload = <T> (config: RequestConfig) => {
 			return
 		}
 		service
-		.upload<ResponseType<T> & ArrayBuffer>(config.url, config)
-		.then((response: Response<ResponseType<T> & ArrayBuffer>) => {
-		    resolve(response.data)
-		})
-		.catch((err: ResponseErrorType) => {
-		    reject(err);
-		});
+			.upload<ResponseType<T>>(config.url, {...config, timeout: config.timeout ?? UPLOAD_TIMEOUT})
+			.then((response: Response<ResponseType<T>>) => {
+			    resolve(response.data)
+			})
+			.catch((err: ResponseErrorType) => {
+				reject(err);
+			});
 	})
 }
