@@ -7,7 +7,7 @@ export interface SysAttachment {
     originalName?: string;
     /** 文件扩展名 */
     extensionName?: string;
-    /** 文件保存路径 */
+    /** info 场景与 url 同值为访问链，其余场景为对象键 */
     path?: string;
     /** 分片上传id */
     uploadId?: string;
@@ -31,36 +31,23 @@ export interface SysAttachment {
     createId?: string;
     /** 上传时间 */
     createTime?: Date;
-    /** 删除标识 */
-    delFlag?: string;
     /** 上传失败原因 */
     errorMsg?: string;
-    /** 原url（通过url上传有该字段） */
+    /** 访问链（公开附件为 download?fullPath= 链，私密附件为 download?key= 签名链） */
     url?: string;
 }
 
-export interface SysAttachmentDTO extends SysAttachment {
-
-    /**
-     * 创建时间集合
-     */
-    createTimeList?: Date[];
-
-    /**
-     * 当前页数
-     */
-    pageNum: number;
-
-    /**
-     * 每页记录数
-     */
-    pageSize: number;
-
+/** 上传/秒传接口响应：id 供 v-model 持久化，path 为对象键，url 为首次访问链 */
+export interface AttachmentUploadVO {
+    id?: string;
+    path?: string;
+    isPublic?: boolean;
+    url?: string;
+    originalName?: string;
+    type?: string;
 }
 
-export interface SysAttachmentVO extends SysAttachment {
-    /**
-     * 上传用户昵称
-     */
-    uploadName?: string;
+/** 秒传响应：uploaded 为 false 表示 md5 未命中需走普通上传 */
+export interface FastUploadResultVO extends AttachmentUploadVO {
+    uploaded?: boolean;
 }

@@ -47,7 +47,7 @@ import UserAvatar from '@/components/user-avatar/index.vue'
 import ColorSelect from '@/components/color-select/index.vue'
 import type { AvatarType } from '@/api/system/profile/type/avatar-type'
 import { saveBasics } from '@/api/system/profile/profile'
-import { publicUpload } from '@/api/system/attachment/attachment-storage'
+import { upload } from '@/api/system/attachment/attachment-storage'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/router'
 import { toast } from '@/utils/toast'
@@ -162,13 +162,13 @@ const chooseImage = async () => {
   // 上传图片
   uni.showLoading({ title: "正在上传", mask: true });
   try {
-    const resp = await publicUpload(croppedFilePath, "UserAvatar");
-    if (resp.code === 200) {
+    const resp = await upload(croppedFilePath, {businessCode: "UserAvatar", public: true});
+    if (resp.code === 200 && resp.data?.path) {
       avatarData.value.type = "image";
-      avatarData.value.value = resp.data;
+      avatarData.value.value = resp.data.path;
       handleSave("confirm");
     } else {
-      toast(resp.msg);
+      toast(resp.code === 200 ? "上传失败" : resp.msg);
     }
   } catch (err) {
     console.error(err);

@@ -89,8 +89,10 @@ import { dialog } from 'sard-uniapp'
 import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue'
 import {toast} from '@/utils/toast'
 import {getFileInfo} from '@/utils/attachment/attachment-utils'
-import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, deleteFromBusiness} from '@/api/system/attachment/attachment-storage'
+import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, deleteFromBusiness, resolveAttachmentEntryUrl} from '@/api/system/attachment/attachment-storage'
 import { ResponseError } from '@/api/global/type'
+import type {ResponseType} from '@/api/global/type'
+import type {FastUploadResultVO} from '@/api/system/attachment/type/sys-attachment'
 // 记录双向绑定回显是否已经完成
 let modelValueInitComplete = false
 // 删除的id
@@ -168,11 +170,10 @@ const initModelValue = async () => {
 		try {
 			const resp = await queryAttachmentInfoByIds(modelValue.split(","))
 			if (resp.code === 200) {
-				// 组合数据
+				// 组合数据（info 下发的 path 已是访问链形态，经统一解析器补网关前缀）
 				fileList.value = resp.data.map(item => {
 					return {
-						// 返回路径以http开头，则直接回显，否则拼接路径访问后台获取附件
-						url: item.path?.startsWith("http") ? item.path : import.meta.env.VITE_APP_BASE_API + '/app' + item.path,
+						url: item.path ? resolveAttachmentEntryUrl(item.path) : item.path,
 						name: item.originalName,
 						status: item.status === 'error' ? "failed" : "done",
 						message: item.errorMsg,
@@ -223,25 +224,27 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 		}
 		const resp = await existsAttachmentByMd5(md5)
 		if (resp.code === 200) {
-			let uploadResp
+			// 秒传响应是上传响应的扩展（多 uploaded 字段），统一按宽类型接收
+			let uploadResp: ResponseType<FastUploadResultVO>
 			// 附件存在，进行文件秒传
 			if (resp.data) {
-				uploadResp = await handleFastUpload(fileName, size, md5)
+				uploadResp = await handleFastUpload(fileName, md5)
 			} else {
 				// 附件上传
-				uploadResp = await handleFileUpload(filePath, md5)
+				uploadResp = await handleFileUpload(filePath)
 			}
-			// 上传完成
-			if (uploadResp.code === 200) {
+			// 上传完成（秒传响应 uploaded 为 false 表示未命中竞态，按失败处理）
+			if (uploadResp.code === 200 && uploadResp.data.uploaded !== false) {
 				// 将服务器id记录到 fileItem 对象
-				fileItem.id = uploadResp.data
+				fileItem.id = uploadResp.data.id
 				// 修改状态
 				fileItem.status = 'done'
 				emits('uploadSuccess', fileItem, fileList.value)
 			} else {
+				const message = uploadResp.code === 200 ? "附件秒传未命中，请重新上传" : uploadResp.msg
 				fileItem.status = 'failed'
-				fileItem.message = uploadResp.msg
-				emits('uploadError', fileItem, uploadResp.msg)
+				fileItem.message = message
+				emits('uploadError', fileItem, message)
 			}
 		} else {
 			fileItem.status = 'failed'
@@ -267,13 +270,13 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 }
 
 // 处理文件秒传
-const handleFastUpload = async (fileName: string, size: number, md5: string) => {
-	return await fastUpload(fileName, props.businessCode, props.businessName, size, md5)
+const handleFastUpload = async (fileName: string, md5: string) => {
+	return await fastUpload({originalName: fileName, md5, businessCode: props.businessCode, businessName: props.businessName})
 }
 
 // 处理附件上传
-const handleFileUpload = async (filePath: string, md5: string) => {
-	return await upload(filePath, props.businessCode, props.businessName, md5)
+const handleFileUpload = async (filePath: string) => {
+	return await upload(filePath, {businessCode: props.businessCode, businessName: props.businessName})
 }
 
 // 处理超出指定大小

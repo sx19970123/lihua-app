@@ -8,7 +8,8 @@ import { logout } from "@/api/system/authentication/authentication";
 import { removeToken } from "@/helpers/token";
 import { queryAuthInfo } from "@/api/system/profile/profile";
 import {ResponseError, type ResponseType} from "@/api/global/type";
-import {attachmentUrl, getFileTempPath} from "@/utils/attachment/attachment-utils";
+import {getFileTempPath} from "@/utils/attachment/attachment-utils";
+import {resolveAttachmentEntryUrl} from "@/api/system/attachment/attachment-storage";
 import { setDefaultDept } from "@/api/system/profile/profile";
 import { webSocket } from '@/utils/web-socket'
 
@@ -182,7 +183,8 @@ export const useUserStore = defineStore('user', {
 			if (avatar.type === 'image') {
 				// 当头像类型为 image 但 image不存在时，赋值默认头像
 				if (avatar.value) {
-					avatar.url = await getFileTempPath(attachmentUrl(avatar.value))
+					// 后端下发前已把头像 value 换算为完整访问链，这里仅补网关前缀并下载临时文件
+					avatar.url = await getFileTempPath(resolveAttachmentEntryUrl(avatar.value))
 				} else {
 					this.$state.avatar = this.getDefaultAvatar()
 				}

@@ -1,5 +1,11 @@
 import request, {attachmentUpload} from "@/utils/request";
-import type {SysAttachment} from "@/api/system/attachment/type/sys-attachment";
+import type {AttachmentUploadVO, FastUploadResultVO, SysAttachment} from "@/api/system/attachment/type/sys-attachment";
+
+// 后端下发的附件访问链为相对链（如 /system/attachment/storage/download?fullPath=...），
+// App 端经 /app 网关前缀访问；已是完整地址（OSS 直链等）则原样使用
+export const resolveAttachmentEntryUrl = (entryUrl: string) => {
+    return /^https?:\/\//i.test(entryUrl) ? entryUrl : `${import.meta.env.VITE_APP_BASE_API}/app${entryUrl}`
+}
 
 // 根据路径查询文件信息，用于附件组件数据回显
 export const queryAttachmentInfoByIds = (ids: string[]) => {
@@ -10,60 +16,39 @@ export const queryAttachmentInfoByIds = (ids: string[]) => {
     })
 }
 
-//  附件上传，返回路径
-export const publicUpload = (filePath: string, businessCode: string) => {
-    return attachmentUpload<string>({
-        url: "app/system/attachment/storage/public/upload",
-        filePath: filePath,
-        name: 'file',
-        formData: {
-            businessCode
-        },
-        header: {'Content-Type': 'multipart/form-data'}
-    })
-}
-
-//  附件上传，返回附件表id
-export const upload = (filePath: string, businessCode: string, businessName: string, md5?: string) => {
-	return attachmentUpload<string>({
+//  附件上传，返回 AttachmentUploadVO（id 供 v-model 持久化，path 为对象键，url 为首次访问链）
+export const upload = (filePath: string, options: {businessCode: string, businessName?: string, public?: boolean}) => {
+	// formData 值必须为字符串（undefined 会被序列化为 "undefined"），可选字段按需拼入
+	const formData: Record<string, string> = {businessCode: options.businessCode}
+	if (options.businessName) {
+		formData.businessName = options.businessName
+	}
+	if (options.public) {
+		formData.public = "true"
+	}
+	return attachmentUpload<AttachmentUploadVO>({
 		url: "app/system/attachment/storage/upload",
 		filePath: filePath,
 		name: 'file',
-		formData: {
-			md5,
-			businessCode,
-			businessName,
-			uploadMode: "0"
-		},
+		formData,
 		header: {'Content-Type': 'multipart/form-data'}
 	})
 }
 
-// 文件秒传
-export const fastUpload = (originalName: string, businessCode: string, businessName: string, size: number, md5?: string) => {
-    return request<string>({
+// 文件秒传；uploaded 为 false 表示未命中（附件在 exists 与秒传之间被移除的竞态）
+export const fastUpload = (data: {originalName: string, md5: string, businessCode: string, businessName?: string, public?: boolean}) => {
+    return request<FastUploadResultVO>({
         url: "app/system/attachment/storage/fast/upload",
         method: "POST",
-        data: {
-			originalName,
-			md5,
-			size,
-			businessCode,
-			businessName,
-			uploadMode: "2"
-		}
+        data
     })
 }
 
 // 根据md5查询附件是否存在
-export const existsAttachmentByMd5 = (md5: string, originFileName?: string) => {
+export const existsAttachmentByMd5 = (md5: string) => {
     return request<boolean>({
-        url: `app/system/attachment/storage/exists`,
-        method: "POST",
-        data: {
-            md5,
-            originFileName,
-        }
+        url: `app/system/attachment/storage/exists/${md5}`,
+        method: "GET"
     })
 }
 
