@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults, watch, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import type { UploadFileItem } from 'sard-uniapp'
 import { dialog } from 'sard-uniapp'
 import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue'

@@ -15,23 +15,20 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, withDefaults, watch} from "vue"
+import {onMounted, ref, watch} from "vue"
 import type {AvatarType} from "@/api/system/profile/type/avatar-type"
 import {useUserStore} from "@/stores/user"
 import { onPageShow } from "@dcloudio/uni-app"
 
 // 接收参数
-const {size, shape, customAvatar} = withDefaults(defineProps<{
+const {size = 128, shape = "circle", customAvatar} = defineProps<{
 	// 头像大小（rpx）
 	size?: number,
 	// 图标形状
 	shape?: "square" | "circle",
 	// 头像
 	customAvatar?: AvatarType
-}>(), {
-	size: 128,
-	shape: "circle"
-})
+}>()
 
 const avatarData = ref<AvatarType>()
 const fontSize = ref<number>(0)
