@@ -4,23 +4,8 @@ import { useUserStore } from '@/stores/user'
 import { useNoticeStore } from '@/stores/notice'
 import { webSocket } from '@/utils/web-socket'
 import { initDict } from '@/helpers/dict'
+import { isPublicRoute } from '@/constants/public-routes'
 const router = new Router()
-
-/**
- * 无需登录即可访问的路由列表
- */
-const publicRoutesList = [
-	// 首屏页
-	"/pages/splash/index",
-	// 登录
-	"/pages/login/Login",
-	// 注册
-	"/pages/login/Register",
-	// 隐私政策
-	"/subpackages/system/protocol/PrivacyPolicy",
-	// 用户协议
-	"/subpackages/system/protocol/UserAgreement"
-	]
 
 /**
  * 路由守卫
@@ -28,17 +13,18 @@ const publicRoutesList = [
  * 返回false阻止跳转
  * 返回Route跳转到指定页面
  */
-router.beforeEach((to, from) => {	
+router.beforeEach((to, from) => {
 	const userStore = useUserStore()
 	const noticeStore = useNoticeStore()
-	
+
 	if (getToken()) {
 		// 用户信息不存在，获取用户信息
 		if (!userStore.userId) {
-			userStore.initUserInfo()
+			// 预热用户信息：失败不阻断导航（乐观放行，登录态异常由 401 拦截器兜底登出）
+			userStore.initUserInfo().catch(err => console.error("用户信息预热失败", err))
 			// 连接到websocket
 			webSocket.connect()
-			// 获取最新的未读消息
+			// 获取最新的未读消息（内部已容错，失败不抛错）
 			noticeStore.getUnreadCount()
 			// 缓存通知类型字典
 			initDict("sys_notice_type")
@@ -49,10 +35,10 @@ router.beforeEach((to, from) => {
 		// 没有token断开websocket连接
 		webSocket.closeConnect()
 		// 访问的页面是公开页面，可直接访问
-		if (publicRoutesList.includes(to.url)) {
+		if (isPublicRoute(to.url)) {
 			return true
 		}
-		
+
 		// 退回登录页
 		uni.reLaunch({
 			url: "/pages/login/Login"

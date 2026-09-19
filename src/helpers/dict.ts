@@ -40,6 +40,9 @@ export const initDict = (...dictTypeCodes: string[]) => {
         } else {
 			toast(resp.msg)
         }
+      }).catch(err => {
+        // 字典拉取失败不阻断页面，控制台留痕（store 未缓存，下次调用会重试）
+        console.error("字典初始化失败", dictCodeList, err)
       })
     }
 

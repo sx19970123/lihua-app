@@ -13,6 +13,9 @@ import {resolveAttachmentEntryUrl} from "@/api/system/attachment/attachment-stor
 import { setDefaultDept } from "@/api/system/profile/profile";
 import { webSocket } from '@/utils/web-socket'
 
+// 用户信息初始化在途请求（非响应式）：路由守卫每次导航都可能触发，去重防止冷启动连续导航并发重复请求
+let initUserInfoPromise: Promise<ResponseType<AuthInfoType>> | null = null
+
 export const useUserStore = defineStore('user', {
 	state: () => {
 		// 用户相关数据
@@ -77,10 +80,13 @@ export const useUserStore = defineStore('user', {
 			})
 		},
 		/**
-		 * 初始化用户信息
+		 * 初始化用户信息（在途去重：并发调用复用同一请求，终态后清除允许重试）
 		 */
 		initUserInfo(): Promise<ResponseType<AuthInfoType>> {
-			return new Promise((resolve, reject) => {
+			if (initUserInfoPromise) {
+				return initUserInfoPromise
+			}
+			const request = new Promise<ResponseType<AuthInfoType>>((resolve, reject) => {
 				queryAuthInfo().then((resp) => {
 					if (resp.code === 200) {
 						const data = resp.data
@@ -91,18 +97,23 @@ export const useUserStore = defineStore('user', {
 						state.userId = data.userInfo.id ? data.userInfo.id : ''
 						state.nickname = data.userInfo.nickname ? data.userInfo.nickname : ''
 						state.username = data.userInfo.username ? data.userInfo.username : ''
-						state.avatar = data.userInfo.avatar ? JSON.parse(data.userInfo.avatar) : this.getDefaultAvatar()
+						// avatar 为 JSON 字符串，脏数据降级默认头像，不阻断整个初始化
+						try {
+							state.avatar = data.userInfo.avatar ? JSON.parse(data.userInfo.avatar) : this.getDefaultAvatar()
+						} catch {
+							state.avatar = this.getDefaultAvatar()
+						}
 
 						// 角色权限相关赋值
 						state.roles = data.roles
-						state.roleCodes = data.roles.filter(role => role.code).map(role => role.code) as string[]
+						state.roleCodes = data.roles.map(role => role.code).filter((code): code is string => !!code)
 						state.permissions = data.permissions
 
 						// 部门相关赋值
 						state.deptTrees = data.depts
 						state.defaultDept = data.defaultDept
-						state.defaultDeptName = data.defaultDept.name ? data.defaultDept.name : ''
-						state.defaultDeptCode = data.defaultDept.code ? data.defaultDept.code : ''
+						state.defaultDeptName = data.defaultDept?.name || ''
+						state.defaultDeptCode = data.defaultDept?.code || ''
 
 						// 岗位相关赋值
 						state.posts = data.posts
@@ -118,6 +129,12 @@ export const useUserStore = defineStore('user', {
 					reject(err)
 				})
 			})
+			initUserInfoPromise = request
+			// 终态清除在途标记（失败后下次导航可重试）；本链吞掉 rejection，失败由调用方处理
+			request.finally(() => {
+				initUserInfoPromise = null
+			}).catch(() => undefined)
+			return request
 		},
 		/**
 		 * 更新默认部门

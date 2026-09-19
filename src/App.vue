@@ -33,9 +33,9 @@ const addNoticeEventListener = () => {
 		// 全局通知推送（仅原生app）
 		showNotify(data)
 		// #endif
-		
-		// 重新获取未读消息数量，尝试更新红点
-		noticeStore.getUnreadCount().finally(() => noticeStore.setTabbarRedDot())
+
+		// 重新获取未读消息数量（unreadCount 变化经下方 watch 驱动红点更新）
+		noticeStore.getUnreadCount()
 	})
 }
 

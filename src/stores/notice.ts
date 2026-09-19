@@ -6,6 +6,9 @@ import { preview } from '@/api/system/notice/notice'
 import type {ResponseType} from '@/api/global/type'
 import dayjs from 'dayjs'
 
+// 通知红点所在的 tabBar 索引（个人中心 tab）
+const NOTICE_TAB_INDEX = 1
+
 
 /**
  * 消息通知
@@ -22,20 +25,19 @@ export const useNoticeStore = defineStore('notice', {
 		}
 	},
 	actions: {
-		// 获取未读数量
-		getUnreadCount(): Promise<number> {
-			return new Promise((resolve, reject) => {
-				queryUnReadCount().then(resp => {
-					if (resp.code === 200) {
-						this.unreadCount = resp.data
-						resolve(resp.data)
-					} else {
-						reject(resp.msg)
-					}
-				}).catch(err => {
-					reject(err)
-				})
-			})
+		// 获取未读数量（红点数据尽力更新：失败保持现值不向调用方抛错；unreadCount 变化由 App 级 watch 驱动红点）
+		async getUnreadCount(): Promise<number> {
+			try {
+				const resp = await queryUnReadCount()
+				if (resp.code === 200) {
+					this.unreadCount = resp.data
+				} else {
+					console.error("获取未读数量失败", resp.msg)
+				}
+			} catch (err) {
+				console.error("获取未读数量失败", err)
+			}
+			return this.unreadCount
 		},
 		// 预览
 		previewNotice(noticeId: string): Promise<PreviewNotice> {
@@ -54,11 +56,11 @@ export const useNoticeStore = defineStore('notice', {
 				}
 			})
 		},
-		// 标记为已读，并重新查询未读数量，设置未读红点
+		// 标记为已读，并重新查询未读数量（红点更新由 unreadCount 变化驱动）
 		markAsRead(noticeId: string): Promise<ResponseType<string>> {
 			return new Promise((resolve, reject) => {
 				read(noticeId).then((resp) => {
-					this.getUnreadCount().then(() => this.setTabbarRedDot())
+					this.getUnreadCount()
 					resolve(resp)
 				}).catch(err => reject(err))
 			})
@@ -73,15 +75,15 @@ export const useNoticeStore = defineStore('notice', {
 			if (this.isShowTabBarRedDot && this.unreadCount > 0) {
 				return
 			}
-			// 设置红点（此api只有tabbar页面中才可设置生效，其余页面会进fail回调，切换页面时会触发根节点的onShow回调，所以处于tabbar页面总能看到新消息）
+			// 设置红点（此api只有tabbar页面中才可设置生效，其余页面会进fail回调；AppRoot 的 onShow 会在切回页面时重设，故处于tabbar页面总能看到新消息）
 			if (this.unreadCount > 0) {
 				uni.showTabBarRedDot({
-					index: 1, 
+					index: NOTICE_TAB_INDEX,
 					success: () => this.isShowTabBarRedDot = true,
 				})
 			} else {
 				uni.hideTabBarRedDot({
-					index: 1, 
+					index: NOTICE_TAB_INDEX,
 					success: () => this.isShowTabBarRedDot = false,
 				})
 			}
