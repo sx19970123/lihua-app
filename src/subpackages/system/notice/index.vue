@@ -6,7 +6,7 @@
 					<template #title>
 						<sar-space align="center">
 							<sar-avatar size="96rpx" background="var(--sar-warning)">
-								<sar-icon name="StarOutlined" family="outlined" size="64rpx" color="#fff"/>
+								<sar-icon name="star" size="64rpx" color="#fff"/>
 							</sar-avatar>
 							<view>标星通知</view>
 						</sar-space>

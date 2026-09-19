@@ -17,7 +17,7 @@
 			
 			<sar-space direction="vertical">
 				<view class="title">自定义图片</view>
-				<sar-button @click="show('测试通知', '测试内容', '_www/static/logo.png')"> 显示通知</sar-button>
+				<sar-button @click="show('测试通知', '测试内容', '_www/static/logo-miao.png')"> 显示通知</sar-button>
 			</sar-space>
 			
 			<sar-space direction="vertical">

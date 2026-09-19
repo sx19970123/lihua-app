@@ -24,7 +24,7 @@
 						    <sar-popover-reference>
 								<!-- 上传失败提示-->
 								<sar-button type="text" v-if="item.status === 'failed'">
-									<sar-icon name="InfoCircleOutlined" family="outlined" color="var(--sar-danger)"></sar-icon>
+									<sar-icon name="info" color="var(--sar-danger)"></sar-icon>
 								</sar-button>
 						    </sar-popover-reference>
 								<template #content>
@@ -35,11 +35,11 @@
 						</sar-popover>
 						<!-- 上传成功提示 -->
 						<sar-button type="pale-text" v-if="item.status === 'done'">
-							<sar-icon name="CheckCircleOutlined" family="outlined" color="var(--sar-success)"></sar-icon>
+							<sar-icon name="success" color="var(--sar-success)"></sar-icon>
 						</sar-button>
 						<!-- 删除按钮 -->
 						<sar-button type="text" :loading="item.status === 'uploading'" @click="handleDelete(index, item)" :disabled="props.disabled" v-if="props.removable" v-show="!readonly">
-							<sar-icon name="DeleteOutlined" family="outlined" color="var(--sar-danger)" v-if="item.status !== 'uploading'"></sar-icon>
+							<sar-icon name="trash" color="var(--sar-danger)" v-if="item.status !== 'uploading'"></sar-icon>
 						</sar-button>
 					</sar-space>
 				</template>

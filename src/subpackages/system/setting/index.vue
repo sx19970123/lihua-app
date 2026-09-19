@@ -2,17 +2,17 @@
 	<view class="content">
 		<sar-space direction="vertical" size="large">
 			<sar-list card>
-				<sar-list-item title="用户设置" icon-family="outlined" icon="UserOutlined" arrow hover @click="toSettingPage('user/index')"></sar-list-item>		
+				<sar-list-item title="用户设置" arrow hover @click="toSettingPage('user/index')"></sar-list-item>		
 			</sar-list>
 			<!-- #ifdef APP -->
 			<!-- 仅app支持手动切换主题 -->
 			<sar-list card>	
-				<sar-list-item title="系统主题" icon-family="outlined" icon="BgColorsOutlined" arrow hover @click="toSettingPage('theme/index')"></sar-list-item>
+				<sar-list-item title="系统主题" arrow hover @click="toSettingPage('theme/index')"></sar-list-item>
 			</sar-list>
 			<!-- #endif -->	
 			<sar-list card>
-				<sar-list-item title="用户协议" icon-family="outlined" icon="ExceptionOutlined" arrow hover @click="goProtocol('UserAgreement')"></sar-list-item>
-				<sar-list-item title="隐私政策" icon-family="outlined" icon="FileProtectOutlined" arrow hover @click="goProtocol('PrivacyPolicy')"></sar-list-item>
+				<sar-list-item title="用户协议" arrow hover @click="goProtocol('UserAgreement')"></sar-list-item>
+				<sar-list-item title="隐私政策" arrow hover @click="goProtocol('PrivacyPolicy')"></sar-list-item>
 			</sar-list>
 		</sar-space>
 		<view class="logout-btn">

@@ -3,7 +3,7 @@
 		<view v-for="item in data.dataSource" :key="item.key || item.color" class="color-item"
 			:style="{ backgroundColor: item.color }" @click="selectedColor(item)">
 			<!-- 选中图标 -->
-			<sar-icon family="outlined" name="CheckOutlined" v-if="isSelected(item)" class="check-icon" size="var(--sar-text-xl)" color="#fff"/>
+			<sar-icon name="check" v-if="isSelected(item)" class="check-icon" size="var(--sar-text-xl)" color="#fff"/>
 		</view>
 	</sar-space>
 </template>

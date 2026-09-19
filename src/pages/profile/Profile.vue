@@ -17,7 +17,7 @@
 								{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
 							</view>
 							<sar-tag plain theme="primary" :root-style="{paddingTop: 0, paddingBottom: 0}" @click="toChangeDept()">
-								<sar-icon family="outlined" name="SwapOutlined"/>
+								<sar-icon name="rotate-left"/>
 							</sar-tag>
 						</sar-space>
 					</sar-space>
@@ -25,7 +25,7 @@
 				<!-- 通知 -->
 				<view style="margin-right: 16rpx;" @click="toNotice">
 					<sar-badge :value="noticeStore.unreadCount">
-						<sar-icon name="BellOutlined" family="outlined" size="42rpx"></sar-icon>
+						<sar-icon name="volume-up" size="42rpx"></sar-icon>
 					</sar-badge>
 				</view>
 			</sar-space>
@@ -33,9 +33,9 @@
 		<!--操作列表-->
 		<view class="setting-content">
 			<sar-list card>
-				<sar-list-item title="设置" @click="toSetting" icon-family="outlined" icon="SettingOutlined" hover arrow/>
-				<sar-list-item title="组件" @click="toComponentList" icon-family="outlined" icon="SkinOutlined" hover arrow/>
-				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
+				<sar-list-item title="设置" @click="toSetting" hover arrow/>
+				<sar-list-item title="组件" @click="toComponentList" hover arrow/>
+				<sar-list-item title="仓库" @click="toGitee" hover arrow/>
 			</sar-list>
 		</view>
 	</view>

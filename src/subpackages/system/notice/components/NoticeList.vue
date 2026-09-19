@@ -9,7 +9,7 @@
 								<!-- 图标｜未读红点 -->
 								<sar-badge :dot="notice.readFlag === '0'">
 									<sar-avatar size="96rpx" background="var(--sar-primary)">
-										<sar-icon :name="notice.icon" family="outlined" size="64rpx" color="#fff"/>
+										<sar-icon :name="notice.type === '0' ? 'volume-up' : 'info'" size="64rpx" color="#fff"/>
 									</sar-avatar>
 								</sar-badge>
 								<sar-space direction="vertical" size="small">

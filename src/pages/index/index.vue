@@ -6,8 +6,9 @@
 			<sar-notice-bar>基于 uni-app 开发，仅适配 App（Android、iOS、鸿蒙）及微信小程序，其余平台请自行测试。</sar-notice-bar>
 			<!-- title卡片 -->
 			<sar-card>
-			    <sar-space size="large">
-					<sar-avatar src="/static/logo.png" shape="square"></sar-avatar>
+					<sar-space size="large">
+						<!-- 系统徽章：亮色 miao / 暗色 hei，跟随实际生效主题动态切换 -->
+						<sar-avatar :src="logoSrc" shape="square"></sar-avatar>
 					<sar-space direction="vertical">
 						<h4>Hello 狸花猫 APP</h4>
 						<text @click="showVersion = true" style="color: var(--sar-primary); font-size: var(--sar-text-base);">当前版本 {{versionInfo[0].version}}</text>
@@ -89,8 +90,18 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import {ref, computed, onUnmounted} from 'vue'
 const showVersion = ref<boolean>(false)
+
+// 当前实际生效主题（auto 偏好下取系统值；未开启 darkmode 的平台无 theme 字段，按亮色处理）
+const theme = ref(uni.getSystemInfoSync().theme || 'light')
+const onThemeChange = (res: UniApp.OnThemeChangeCallbackResult) => {
+	theme.value = res.theme
+}
+uni.onThemeChange(onThemeChange)
+onUnmounted(() => uni.offThemeChange(onThemeChange))
+// 系统徽章：亮色 miao / 暗色 hei
+const logoSrc = computed(() => theme.value === 'dark' ? '/static/logo-hei.png' : '/static/logo-miao.png')
 
 
 const versionInfo = [

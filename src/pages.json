@@ -164,11 +164,6 @@
 				"navigationBarTitleText": "字典标签"
 			}
 		},{
-			"path": "components/icon-select/index",
-			"style": {
-				"navigationBarTitleText": "图标选择"
-			}
-		},{
 			"path": "components/notice/index",
 			"style": {
 				"navigationBarTitleText": "消息通知（原生）"

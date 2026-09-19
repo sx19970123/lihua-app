@@ -6,7 +6,6 @@
 			<!-- 操作菜单 -->
 			<sar-list card>
 				<sar-list-item title="选择照片" arrow hover @click="chooseImage"></sar-list-item>
-				<sar-list-item title="选择图标" arrow hover @click="handleIconAvatar"></sar-list-item>
 				<sar-list-item title="编辑文本" arrow hover @click="handleTextAvatar"></sar-list-item>
 			</sar-list>
 		</sar-space>
@@ -21,18 +20,6 @@
 					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input"
 						placeholder="请输入文本" v-model="avatarData.value"
 						@keyboardheightchange="handleKeyboardChange"></sar-input>
-				</sar-space>
-			</view>
-		</sar-popout>
-		<!-- 图标抽屉 -->
-		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false"
-			:before-close="handleSave">
-			<view class="popout-content">
-				<sar-space direction="vertical" size="large">
-					<!-- 头像背景颜色 -->
-					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
-					<!-- 头像图标 -->
-					<IconSelect v-model:value="avatarData.value" width="686rpx"></IconSelect>
 				</sar-space>
 			</view>
 		</sar-popout>
@@ -52,7 +39,6 @@ import { useUserStore } from '@/stores/user'
 import router from '@/router/router'
 import { toast } from '@/utils/toast'
 import { cloneDeep } from 'lodash-es'
-import IconSelect from '@/components/icon-select/index.vue'
 import {getFileInfo} from '@/utils/attachment/attachment-utils'
 
 const userStore = useUserStore()
@@ -177,27 +163,6 @@ const chooseImage = async () => {
     uni.hideLoading();
   }
 }
-
-/**
- * 初始化图标头像
- */
-const initIconAvatar = () => {
-	// 图标抽屉开关
-	const iconPopout = ref<boolean>(false)
-	// 处理图标头像
-	const handleIconAvatar = () => {
-		if (avatarData.value.type !== 'icon') {
-			avatarData.value.type = 'icon'
-			avatarData.value.value = ''
-		}
-		iconPopout.value = true
-	}
-	return {
-		iconPopout,
-		handleIconAvatar
-	}
-}
-const { iconPopout, handleIconAvatar } = initIconAvatar()
 
 /**
  * 初始化文本头像

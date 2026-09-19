@@ -3,9 +3,7 @@
 		<!-- 输入框 -->
 		<!-- 微信小程序下 插槽使用v-if禁用也会出现样式变化，所以对整个组件进行v-if -->
 		<sar-input v-if="props.showPrepend" :placeholder="props.placeholder" root-class="rounded-input" :class="clazz" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus>
-			<template #prepend v-if="props.showPrepend">
-				<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="LockOutlined" />
-			</template>
+			
 		</sar-input>
 		<sar-input v-else :placeholder="props.placeholder" root-class="rounded-input" :class="clazz" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus />
 		<!-- 密码强度指示条 -->
