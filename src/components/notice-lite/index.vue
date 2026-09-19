@@ -59,11 +59,16 @@ const loading = ref<boolean>(false)
 // 预览通知公告
 const handlePreview = async () => {
 	loading.value = true
-	noticeStore.previewNotice(props.noticeId).then((resp) => {
+	try {
+		const resp = await noticeStore.previewNotice(props.noticeId)
 		noticeData.value = resp
+		// 抽屉仅在收到新推送时打开，此处必为未读，标记已读
 		noticeStore.markAsRead(props.noticeId)
+	} catch (err) {
+		console.error("通知预览失败", err)
+	} finally {
 		loading.value = false
-	})
+	}
 }
 
 // 双向绑定

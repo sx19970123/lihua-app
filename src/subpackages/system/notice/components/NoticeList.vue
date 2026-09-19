@@ -32,8 +32,8 @@
 					<template #right="{ hide }">
 						<sar-button root-style="height: 100%" theme="primary" square inline @click="handleClickStar(notice, index, hide)">
 							<sar-space>
-								<sar-rate :model-value="notice.starFlag == '0' ? 0 : 1" :count="1" void-color="var(--sar-warning)"/>
-								{{notice.starFlag == '0' ? '标星' : '取消标星'}}
+								<sar-rate :model-value="notice.starFlag === '0' ? 0 : 1" :count="1" void-color="var(--sar-warning)"/>
+								{{notice.starFlag === '0' ? '标星' : '取消标星'}}
 							</sar-space>
 						</sar-button>
 					</template>

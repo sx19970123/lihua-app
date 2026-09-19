@@ -69,6 +69,8 @@ const initList = () => {
 	// 数据查询
 	const queryList = async () => {
 		status.value = "loading"
+		// 请求失败时回退本次页码，保证重试不跳页
+		const pageNumBefore = query.value.pageNum
 		try {
 			// star 页面增加查询条件
 			if (isStarList.value) {
@@ -77,16 +79,28 @@ const initList = () => {
 			const resp = await userMessageList(query.value)
 			if (resp.code === 200) {
 				const records = resp.data.records
-				
+
 				// 向数组中添加元素
 				noticeDataList.value.push(...records)
-				
+
 				// 判断是否全部加载完成
 				if (noticeDataList.value.length >= resp.data.total) {
 					status.value = "complete"
 				} else {
 					status.value = "incomplete"
 				}
+			} else {
+				query.value.pageNum = pageNumBefore
+				status.value = "incomplete"
+				toast(resp.msg)
+			}
+		} catch (err) {
+			query.value.pageNum = pageNumBefore
+			status.value = "incomplete"
+			if (err instanceof ResponseError) {
+				toast(err.msg)
+			} else {
+				toast("加载失败")
 			}
 		} finally {
 			uni.stopPullDownRefresh()
@@ -109,16 +123,28 @@ const {status, noticeDataList, reload, loadMore} = initList()
  */
 const handleStar = async (data: SysUserNoticeVO, index: number, hide: () => {}) => {
 	if (data.noticeId && data.starFlag) {
+		// 乐观更新：先翻转本地状态，请求失败时回滚
+		const prevStarFlag = data.starFlag
     data.starFlag = data.starFlag === '0' ? '1' : '0'
-    const resp = await star(data.noticeId, data.starFlag)
-    if (resp.code === 200) {
-      hide()
-      // star页面记录操作数据
-      if (isStarList) {
-        uni.$emit("changeNoticeMeta", data)
+    try {
+      const resp = await star(data.noticeId, data.starFlag)
+      if (resp.code === 200) {
+        hide()
+        // star页面记录操作数据
+        if (isStarList.value) {
+          uni.$emit("changeNoticeMeta", data)
+        }
+      } else {
+        data.starFlag = prevStarFlag
+        toast(resp.msg)
       }
-    } else {
-      toast(resp.msg)
+    } catch (err) {
+      data.starFlag = prevStarFlag
+      if (err instanceof ResponseError) {
+        toast(err.msg)
+      } else {
+        toast("标星失败")
+      }
     }
 	}
 }
@@ -137,7 +163,7 @@ const handleRead = (noticeId: string, readFlag?: string) => {
 				  item.readFlag = "1"
 				}
 				// star页面记录操作数据
-				if (isStarList) {
+				if (isStarList.value && item) {
 					uni.$emit("changeNoticeMeta", item)
 				}
 			} else {
@@ -243,7 +269,7 @@ onMounted(() => {
  * 退出通知公告后关闭监听
  */
 onUnmounted(() => {
-	if (!isStarList) {
+	if (!isStarList.value) {
 		uni.$off('changeNoticeMeta', handelChangeNoticeMeta)
 	}
 })
