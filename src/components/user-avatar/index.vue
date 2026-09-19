@@ -34,16 +34,20 @@ const fontSize = ref<number>(0)
  * 加载头像
  */
 const initAvatar = () => {
+	const userStore = useUserStore()
 	// 传入type表示自定义显示
 	if (customAvatar && customAvatar.type) {
 		avatarData.value = customAvatar
 	} else {
 		// type不存在，加载当前用户头像
-		const userStore = useUserStore()
 		avatarData.value = userStore.avatar
 		if (avatarData.value.backgroundColor?.includes('conic-gradient')) {
 			avatarData.value.backgroundColor = 'rgb(22, 119, 255)'
 		}
+	}
+	// App 端不提供图标头像（内置图标字体仅静态业务使用）：Web 端设置的 icon 头像退化为默认头像展示
+	if (avatarData.value?.type === 'icon') {
+		avatarData.value = userStore.getDefaultAvatar()
 	}
 	// 自适应文本尺寸
 	autoFontSize()
