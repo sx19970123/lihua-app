@@ -80,6 +80,9 @@ watch(() => noticeStore.unreadCount, () => noticeStore.setTabbarRedDot())
 @import 'sard-uniapp/index.scss';
 /* sard-uniapp组件库暗色模式 */
 @import 'sard-uniapp/dark.scss';
+/* 业务图标字体（iconfont 平台维护导出，新增图标整体替换 icon.css） */
+@import '@/static/icons/icon.css';
+@import '@/static/icons/custom.css';
 
 page {
 	background-color: var(--sar-body-bg);

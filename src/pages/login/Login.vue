@@ -12,11 +12,17 @@
 				<text class="text-font err-msg" v-if="serverConnectionFailed" @click="reload">连接服务器失败，点击重试</text>
 				<sar-input placeholder="用户名" v-model="loginData.username" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					clearable show-clear-only-focus>
+					<template #prepend>
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="UserOutlined" />
+					</template>
 					
 				</sar-input>
 
 				<sar-input placeholder="密码" v-model="loginData.password" type="password" root-class="auth-item" :class="{ 'show-caret': openKeyboard }"
 					clearable show-clear-only-focus>
+					<template #prepend>
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="LockOutlined" />
+					</template>
 					
 				</sar-input>
 

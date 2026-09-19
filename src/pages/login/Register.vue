@@ -19,6 +19,9 @@
 					v-model="registerData.username"
 					@blur="handleCheckUsername"
 				>
+					<template #prepend>
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="UserOutlined" />
+					</template>
 					
 				</sar-input>
 				
@@ -39,7 +42,9 @@
 					show-eye
 					v-model="registerData.confirmPassword"
 				>
-					
+					<template #prepend>
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="LockOutlined" />
+					</template>
 				</sar-input>
 				
 				<sar-button 
