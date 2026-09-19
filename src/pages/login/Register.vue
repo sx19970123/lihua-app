@@ -50,23 +50,24 @@
 				<sar-button 
 					root-class="auth-item auth-item-btn" 
 					:loading="registerLoading"
-					@click="enableCaptcha? openCaptcha(): handleRegister()">注 册</sar-button>
+					@click="isEnableCaptcha? openCaptcha(): handleRegister()">注 册</sar-button>
 			</sar-space>
 		</view>
 		
 		<!-- 验证码 -->
-		<Captcha @success="handleRegister" ref="captchaRef" v-if="enableCaptcha"/>
+		<Captcha @success="handleRegister" ref="captchaRef" v-if="isEnableCaptcha"/>
 	</view>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { RegisterType } from '@/api/system/authentication/type/register-type'
 import {register, checkUserName} from '@/api/system/authentication/authentication'
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
 import {toast} from '@/utils/toast'
 import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
+import { useSettingStore } from '@/stores/setting'
 import {cloneDeep} from "lodash-es"
 import PasswordInput from '@/components/password-input/index.vue'
 
@@ -132,7 +133,7 @@ const initRegister = () => {
 			toast("两次密码不一致")
 			return false
 		}
-		
+
 		return true
 	}
 	
@@ -199,9 +200,11 @@ const {registerData, registerLoading, checkRegisterData, handleCheckUsername, ha
 /**
  * 初始化验证码相关
  */
+const settingStore = useSettingStore()
+
 const initCaptcha = () => {
-	// 是否启用验证码
-	const enableCaptcha = ref<boolean>(false)
+	// 是否启用验证码（取自设置 store，与登录页同源）
+	const isEnableCaptcha = computed(() => settingStore.enableCaptcha)
 	
 	// 打开验证码
 	const openCaptcha = async () => {
@@ -217,12 +220,12 @@ const initCaptcha = () => {
 	}
 	
 	return {
-		enableCaptcha,
+		isEnableCaptcha,
 		openCaptcha
 	}
 }
 
-const {enableCaptcha, openCaptcha} = initCaptcha()
+const {isEnableCaptcha, openCaptcha} = initCaptcha()
 
 /**
  * 初始化键盘监听
@@ -243,10 +246,8 @@ const initKeyboardStatus = () => {
 
 const {openKeyboard, handleChangeKeyboardHeight} = initKeyboardStatus()
 
-onLoad((option) => {
-	if (option) {
-		enableCaptcha.value = option.enableCaptcha
-	}
+onMounted(() => {
+	settingStore.initBaseSetting()
 })
 
 onShow(() => {

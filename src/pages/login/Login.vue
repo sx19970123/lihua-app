@@ -49,13 +49,15 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
-import { enableCaptcha, enableSignUp } from '@/api/system/setting/setting'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { useSettingStore } from '@/stores/setting'
 import type { LoginType } from '@/api/system/authentication/type/login-type'
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
 import {toast} from '@/utils/toast'
 import {onShow, onHide} from '@dcloudio/uni-app'
+
+const settingStore = useSettingStore()
 import {rememberMe, getRememberedInfo} from '@/helpers/remember'
 import {setToken} from '@/helpers/token'
 import {login} from "@/api/system/authentication/authentication";
@@ -134,18 +136,13 @@ const {loginData, loginLoading, checkLoginData, handleLogin} = initLogin()
  * 初始化验证码相关
  */
 const initCaptcha = () => {
-	// 是否启用验证码
-	const isEnableCaptcha = ref<boolean>(false)
-	
-	// 是否启用验证码
+	// 是否启用验证码（取自设置 store）
+	const isEnableCaptcha = computed(() => settingStore.enableCaptcha)
+
+	// 拉取基础设置（验证码/注册开关），失败置连接失败态供重试
 	const captcha = async () => {
 		try {
-			const resp = await enableCaptcha()
-			if (resp.code === 200) {
-				isEnableCaptcha.value = resp.data
-			} else {
-				toast(resp.msg)
-			}
+			await settingStore.initBaseSetting()
 			serverConnectionFailed.value = false
 		} catch(err) {
 			serverConnectionFailed.value = true
@@ -243,25 +240,8 @@ const {checkProtocol, cacheProtocol, initProtocolStatus} = initProtocol()
 /**
  * 用户注册相关
  */
-const initRegister = () => {
-	// 是否启用用户注册
-	const isRegistrationEnable = ref<boolean>(false)
-	
-	// 获取用户注册状态
-	const getRegisterStatus = async () => {
-		const resp = await enableSignUp()
-		if (resp.code === 200) {
-			isRegistrationEnable.value = resp.data
-		}
-	}
-	
-	return {
-		isRegistrationEnable,
-		getRegisterStatus
-	}
-}
-
-const {isRegistrationEnable, getRegisterStatus} = initRegister()
+// 是否启用用户注册（取自设置 store）
+const isRegistrationEnable = computed(() => settingStore.enableSignUp)
 
 /**
  * 初始化键盘监听
@@ -323,7 +303,6 @@ const onRegisterSuccess = (username: string) => {
 const reload = () => {
 	uni.$off('registerSuccess', onRegisterSuccess)
 	captcha()
-	getRegisterStatus()
 	initRememberMeInfo()
 	initProtocolStatus()
 	uni.$on('registerSuccess', onRegisterSuccess)
