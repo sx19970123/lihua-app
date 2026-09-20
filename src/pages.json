@@ -168,6 +168,16 @@
 			"style": {
 				"navigationBarTitleText": "消息通知（原生）"
 			}
+		},{
+			"path": "components/pull-refresh/index",
+			"style": {
+				"navigationBarTitleText": "下拉刷新"
+			}
+		},{
+			"path": "components/app-loading/index",
+			"style": {
+				"navigationBarTitleText": "加载动画"
+			}
 		}
 		// -----组件展示页面结束-----
 		]
@@ -202,7 +212,8 @@
 	"uniIdRouter": {},
 	"easycom": {
 		"custom": {
-		  "^sar-(.*)": "sard-uniapp/components/$1/$1.vue"
+		  "^sar-(.*)": "sard-uniapp/components/$1/$1.vue",
+		  "^app-loading$": "@/components/app-loading/index.vue"
 		}
 	}
 }

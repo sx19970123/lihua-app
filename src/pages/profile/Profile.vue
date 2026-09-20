@@ -150,10 +150,16 @@ const toNotice = () => {
 		z-index: 2;
 	}
 
-	/* 铃铛：hero 右上；半透明圆底在亮暗两套背景上均可读 */
+	/* 铃铛：hero 右上；小程序端下移 80rpx 避开原生胶囊按钮（其余平台无胶囊保持靠上）；
+	   半透明圆底在亮暗两套背景上均可读 */
 	.notice-btn {
 		position: absolute;
+		/* #ifdef MP */
+		top: calc(10vh + 80rpx);
+		/* #endif */
+		/* #ifndef MP */
 		top: 10vh;
+		/* #endif */
 		right: 16px;
 		z-index: 2;
 		display: flex;
