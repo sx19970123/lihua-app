@@ -42,6 +42,8 @@ const handleSaveData = async () => {
 				// 改密成功后同步记住的密码，避免下次自动填充旧密码（与向导改密步一致）
 				updateRememberedPassword(password.newPassword)
 				router.navigateBack({})
+			} else {
+				toast(resp.msg)
 			}
 		} finally {
 			saveLoading.value = false

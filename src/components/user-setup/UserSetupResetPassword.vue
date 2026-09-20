@@ -48,6 +48,8 @@ const handleNext = async () => {
 			// 改密成功后同步记住的密码，避免下次自动填充旧密码
 			updateRememberedPassword(password.newPassword)
 			emit('next')
+		} else {
+			toast(resp.msg)
 		}
 	} catch (err) {
 		console.error(err)

@@ -99,8 +99,15 @@ const chooseImage = async () => {
     return
   }
 
-  // 获取图片信息
-  const {size} = await getFileInfo(croppedFilePath)
+  // 获取图片信息（获取失败按放弃上传处理，避免未处理 Promise 异常）
+  let size: number | undefined
+  try {
+    ({ size } = await getFileInfo(croppedFilePath))
+  } catch (err) {
+    console.error(err)
+    toast("上传失败")
+    return
+  }
 
   // 限制 2MB
   if (!size || (size / 1024 / 1024 > 2)) {
