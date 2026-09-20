@@ -19,7 +19,7 @@
 				<view class="title">页面滚动前提</view>
 				<view class="description">· 列表不套 scroll-view、不写死页面高度（依赖页面级滚动）</view>
 				<view class="description">· 不开启 enablePullDownRefresh（原生下拉与手势冲突）</view>
-				<view class="description">· 页面根节点 min-height:100vh 作文档地板，吸收下拉指示器溢出</view>
+				<view class="description">· 页面根节点 height:100vh 文档地板（勿用 min-height：组件根 min-height:100% 需父级确定高度才解析，否则列表不满屏时下方空白区域无下拉手势）</view>
 				<view class="description">· onPageScroll/onReachBottom 注册在组件内，每页仅可放一个实例</view>
 				<view class="description">· 自定义导航栏页面需传 :top（状态栏 + 导航栏高的 rpx 值）</view>
 				<view class="title">API 要点</view>
@@ -84,9 +84,10 @@ onUnmounted(() => clearTimeout(timer))
 </script>
 
 <style scoped lang="scss">
-/* 文档地板：吸收 absolute 定位下拉指示器的溢出（组件样式契约） */
+/* 文档地板：吸收 absolute 定位下拉指示器的溢出；height 而非 min-height——
+   组件根 min-height:100% 需父级确定高度才解析（组件样式契约） */
 .page {
-	min-height: 100vh;
+	height: 100vh;
 	background: var(--sar-body-bg);
 }
 

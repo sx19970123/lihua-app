@@ -128,7 +128,6 @@
 		},{
 			"path": "notice/index",
 			"style": {
-				"enablePullDownRefresh": true,
 				"navigationBarTitleText": "消息通知"
 			}
 		},{

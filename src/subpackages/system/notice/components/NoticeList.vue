@@ -1,5 +1,6 @@
 <template>
-	<sar-swipe-action-group>
+	<!-- root-class ptr-swipe-lock：renderjs 侧滑锁定契约，横滑列表项时锁定页面纵向滚动，防与下拉刷新手势冲突 -->
+	<sar-swipe-action-group root-class="ptr-swipe-lock">
 		<sar-list card v-if="props.noticeData && props.noticeData.length > 0">
 			<sar-list-item v-for="(notice, index) in props.noticeData" :key="notice.noticeId" :root-style="{padding: index === 0 ? '0 0 0 0' :'1px 0 0 0'}" @click="handleClickItem(notice, index)">
 				<sar-swipe-action>
@@ -41,7 +42,6 @@
 			</sar-list-item>
 		</sar-list>
 	</sar-swipe-action-group>
-	<sar-empty root-class="empty" v-if="(!props.noticeData || props.noticeData.length === 0) && props.loadStatus !== 'loading'"/>
 </template>
 
 <script setup lang="ts">
@@ -53,10 +53,9 @@ import {handleTime} from "@/utils/handle-date"
 // 加载字典
 const {sys_notice_priority} = initDict('sys_notice_priority')
 
-// 传入数据
+// 传入数据（空态由父级 RefreshContent 的 #empty 插槽统一提供）
 const props = defineProps<{
-	noticeData?: Array<SysUserNoticeVO>,
-	loadStatus: string
+	noticeData?: Array<SysUserNoticeVO>
 }>()
 
 const emits = defineEmits(["clickItem", "clickStar"])
@@ -84,10 +83,7 @@ const handleClickStar = (item: SysUserNoticeVO, index: number, hide: () => {}) =
 	max-width: 50vw;
 }
 .release-info {
-	font-size: var(--sar-text-sm); 
+	font-size: var(--sar-text-sm);
 	color: var(--sar-secondary);
-}
-.empty {
-	margin-top: 25vh;
 }
 </style>

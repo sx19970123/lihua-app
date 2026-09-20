@@ -1,3 +1,19 @@
+<!--
+  refresh-content：页面级下拉刷新 + 上拉加载一体组件（自绘触摸 + renderjs + mescroll 兼容 API）。
+  使用契约（生成组件文档时须完整保留以下坑点）：
+  1. 父级必须确定高度：页面根用 height:100vh，勿用 min-height——组件根 min-height:100% 在父链
+     无确定 height 时退化为 0，列表不满屏时下方空白区域在组件根之外、touchstart 不触发（空白区无法下拉）；
+  2. 页面级滚动：列表不套 scroll-view、不写死列表容器高度；不开 enablePullDownRefresh（原生下拉与手势冲突）；
+  3. 每页仅一个实例：onPageScroll/onReachBottom 在组件 setup 内注册、挂到当前页面实例；
+  4. 自定义导航栏（navigationStyle:custom）页面传 :top（状态栏+导航栏高的 rpx 值）；原生导航栏不传；
+  5. 带 sar-swipe-action-group 的列表容器加 root-class="ptr-swipe-lock"（renderjs 侧滑锁定契约，
+     防横滑列表项与下拉手势冲突）；
+  6. 请求结束必须回调 mescroll.endSuccess(本页条数, 是否有下一页) / endErr()（内部自动回退页码），
+     漏调会一直停在加载态；
+  7. renderjs 仅 APP/H5 编译；小程序端逻辑层手势照常，微信端自绘下拉与页面回弹可能轻微叠加（已知限制）；
+  8. 越阈值震动仅 APP 端生效（utils/haptic 为 APP-PLUS 条件编译），H5/小程序无感。
+  用法样板：subpackages/system/components/pull-refresh/index.vue（组件演示页）。
+-->
 <template>
 	<view
 		class="refresh-content ptr-render-touch"
@@ -438,6 +454,9 @@ export default renderBiz
  * 沿用 mescroll-body 机制：padding 在内容盒内部，不会在页面 min-height:100vh 之外额外累加高度，
  * 避免内容多出一个 navbar 高度（之前 margin-top 叠加 min-height:100vh 导致溢出）。
  * min-height:100% 相对父容器，保证列表不满屏仍可下拉。
+ * 坑：百分比 min-height 需父链有确定 height 才能解析——父级只写 min-height:100vh 时本值退化为 0，
+ * 组件根只剩内容高，下方空白区域不在组件根内、无法下拉；消费页面根节点必须 height:100vh
+ * （内容超出时本根随内容撑开、页面照常滚动，行为不受影响）。机理详见文件头部使用契约第 1 条。
  */
 .refresh-content {
 	box-sizing: border-box;
