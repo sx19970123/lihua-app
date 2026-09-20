@@ -1,6 +1,6 @@
 <template>
 	<sar-space>
-		<view v-for="item in data.dataSource" :key="item.key || item.color" class="color-item"
+		<view v-for="item in props.dataSource" :key="item.key || item.color" class="color-item"
 			:style="{ backgroundColor: item.color }" @click="selectedColor(item)">
 			<!-- 选中图标 -->
 			<sar-icon name="check" v-if="isSelected(item)" class="check-icon" size="var(--sar-text-xl)" color="#fff"/>
@@ -15,7 +15,7 @@ type ColorSelectItem = {
 	key ?: string
 }
 
-const data = defineProps<{
+const props = defineProps<{
 	dataSource : Array<ColorSelectItem>,
 	color ?: string,
 	value ?: string,
@@ -25,11 +25,11 @@ const emits = defineEmits(['update:color', 'update:value', 'click'])
 
 /** 判断是否选中 */
 const isSelected = (item : ColorSelectItem) => {
-	if (data.color) {
-		return item.color === data.color
+	if (props.color) {
+		return item.color === props.color
 	}
-	if (data.value) {
-		return item.key === data.value
+	if (props.value) {
+		return item.key === props.value
 	}
 	return false
 }

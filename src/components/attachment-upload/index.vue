@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
 import type { UploadFileItem } from 'sard-uniapp'
 import { dialog } from 'sard-uniapp'
 import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue'
@@ -93,10 +93,13 @@ import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, del
 import { ResponseError } from '@/api/global/type'
 import type {ResponseType} from '@/api/global/type'
 import type {FastUploadResultVO} from '@/api/system/attachment/type/sys-attachment'
+import { ATTACHMENT_STATUS } from '@/api/system/attachment/type/sys-attachment'
 // 记录双向绑定回显是否已经完成
 let modelValueInitComplete = false
 // 删除的id
 const removeIds: string[] = []
+// 上传状态落定后的重渲染定时器（组件卸载时统一清理，避免卸载后仍向父组件 emit）
+const refreshTimers: ReturnType<typeof setTimeout>[] = []
 
 // 传入参数
 const props = withDefaults(defineProps<{
@@ -161,7 +164,7 @@ const props = withDefaults(defineProps<{
 })
 
 // 抛出方法
-const emits = defineEmits(['update:model-value', 'uploadSuccess', 'uploadError', 'exceedMaxCount'])
+const emits = defineEmits(['update:model-value', 'uploadSuccess', 'uploadError', 'exceedMaxSize'])
 
 // 初始化双向绑定
 const initModelValue = async () => {
@@ -175,7 +178,7 @@ const initModelValue = async () => {
 					return {
 						url: item.path ? resolveAttachmentEntryUrl(item.path) : item.path,
 						name: item.originalName,
-						status: item.status === 'error' ? "failed" : "done",
+						status: item.status === ATTACHMENT_STATUS.FAIL ? "failed" : "done",
 						message: item.errorMsg,
 						id: item.id,
 						type: item.type?.includes("image") ? 'image' : item.type?.includes("video") ? 'video' : 'file',
@@ -239,6 +242,10 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 				fileItem.id = uploadResp.data.id
 				// 修改状态
 				fileItem.status = 'done'
+				// 用服务器访问链替换本地临时路径（预览/展示消费）
+				if (uploadResp.data.url) {
+					fileItem.url = resolveAttachmentEntryUrl(uploadResp.data.url)
+				}
 				emits('uploadSuccess', fileItem, fileList.value)
 			} else {
 				const message = uploadResp.code === 200 ? "附件秒传未命中，请重新上传" : uploadResp.msg
@@ -258,14 +265,14 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 			fileItem.message = "上传失败"
 		}
 	} finally {
-		setTimeout(() => {
+		refreshTimers.push(setTimeout(() => {
 			nextTick(() => {
 				// 重新赋值
 				fileList.value = [...fileList.value]
 				// 处理双向绑定
 				handleModelValue()
 			})
-		}, 100)
+		}, 100))
 	}
 }
 
@@ -281,7 +288,7 @@ const handleFileUpload = async (filePath: string) => {
 
 // 处理超出指定大小
 const handleOverSize = (fileItemList: UploadFileItem[]) => {
-	emits('exceedMaxCount', fileItemList)
+	emits('exceedMaxSize', fileItemList)
 	// 根据附件大小转换 mb 和 kb 提示
 	const maxSize = props.maxSize / 1024 / 1024
 	toast(fileItemList.length + "个附件上传失败，单个附件不能超过" + (maxSize < 1 ? maxSize * 1024 + 'KB' : maxSize + 'MB'))
@@ -348,7 +355,8 @@ const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
 const businessRemove = async () => {
 	return new Promise((resolve, reject) => {
 		if (removeIds.length === 0) {
-			reject({msg: '附件id不存在'})
+			// 无待删除附件按成功空操作处理，避免调用方未 catch 产生 unhandled rejection
+			resolve({})
 			return
 		}
 		deleteFromBusiness(removeIds)
@@ -375,11 +383,11 @@ const handleMessageChoose = () => {
 				
 				tempFiles.forEach(file => {
 					const {size, path, name, type} = file
-					const fileItem = {url: path, name: name, type: type}
+					const fileItem: UploadFileItem = {url: path, name: name, type: type, status: 'uploading', message: '正在上传'}
 					if (size <= props.maxSize) {
-						// 大小范围内的附件进行上传
-						handleUpload(fileItem)
+						// 大小范围内的附件先入列表再上传（状态由 handleUpload 更新）
 						fileList.value.push(fileItem)
+						handleUpload(fileItem)
 					} else {
 						// 超出大小的附件进行收集
 						overSizeFiles.push(fileItem)
@@ -395,7 +403,6 @@ const handleMessageChoose = () => {
 	// #endif
 	// #ifdef APP-PLUS
 		toast("仅微信小程序支持此配置")
-		throw new Error("APP 不支持传入uploadType为 file 和 all")
 	// #endif
 }
 
@@ -409,10 +416,20 @@ const handleWechatImgPreview = (_index: number, item: UploadFileItem) => {
 
 }
 
-// 处理回显
+// 处理回显（清空时重置列表与回显标记，父组件后续换绑可重新回显）
 watch(() => props.modelValue, (value) => {
-    if (value) initModelValue()
-  },{ immediate: true })
+	if (!value) {
+		fileList.value = []
+		modelValueInitComplete = false
+		return
+	}
+	initModelValue()
+},{ immediate: true })
+
+// 组件卸载时清理在途的重渲染定时器
+onUnmounted(() => {
+	refreshTimers.forEach(timer => clearTimeout(timer))
+})
 
 // 抛出函数
 defineExpose({
