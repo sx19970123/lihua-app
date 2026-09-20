@@ -21,6 +21,8 @@ const rootRefStore = useRootRefStore()
 onLaunch(() => {
 	// 设置当前主题
 	themeStore.setMode()
+	// 跟随系统主题变化同步 systemTheme（isDark 的 auto 模式数据源）
+	uni.onThemeChange((res) => themeStore.setSystemTheme(res.theme))
 	// 处理通知初始化
 	addNoticeEventListener()
 })

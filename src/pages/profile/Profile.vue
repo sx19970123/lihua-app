@@ -1,5 +1,5 @@
 <template>
-	<view>
+	<view class="profile" :class="{ 'theme-dark': themeStore.isDark }">
 		<!--头像-->
 		<view class="title">
 			<sar-space justify="between" align="center">
@@ -43,17 +43,19 @@
 <script setup lang="ts">
 import {useUserStore} from '@/stores/user'
 import {useNoticeStore} from "@/stores/notice"
+import {useThemeStore} from "@/stores/theme"
 import router from '@/router/router'
 import UserAvatar from '@/components/user-avatar/index.vue'
-import { watch } from 'vue'
+import { GITEE_REPO_URL } from '@/constants/repo'
 
 const userStore = useUserStore()
 const noticeStore = useNoticeStore()
+const themeStore = useThemeStore()
 
 // 前往gitee
 const toGitee = () => {
 	router.navigateTo({
-		url: "/pages/webview/index?url=" + encodeURIComponent('https://gitee.com/yukino_git/lihua-app')
+		url: "/pages/webview/index?url=" + encodeURIComponent(GITEE_REPO_URL)
 	})
 }
 
@@ -91,35 +93,41 @@ const toNotice = () => {
 		url: "/subpackages/system/notice/index"
 	})
 }
-
-// 监听tabbar红点
-watch(() => noticeStore.unreadCount, (newVal: number) => {
-	if (newVal > 0) { 
-		uni.showTabBarRedDot({ index: 1 }) 
-	} else { 
-		uni.hideTabBarRedDot({ index: 1 })
-	}
-}, {immediate: true})
 </script>
 
 <style scoped lang="scss">
+/* 页头渐变主题变量：亮色为默认值，暗色由根节点 theme-dark class 覆写（themeStore.isDark 驱动，App 内切换与系统跟随均即时生效） */
+.profile {
+	--hero-bg:
+		linear-gradient(to top, #f7f7f8 0%, #f0faff 5%, #99caf9 100%),
+		repeating-linear-gradient(90deg, rgba(247,247,248,0.15) 0 20px, rgba(247,247,248,0) 20px 40px),
+		repeating-linear-gradient(45deg, rgba(247,247,248,0.08) 0 10px, rgba(247,247,248,0) 10px 20px),
+		repeating-linear-gradient(-45deg, rgba(247,247,248,0.08) 0 10px, rgba(247,247,248,0) 10px 20px);
+	--hero-mask: linear-gradient(to top, #f7f7f8 0%, rgba(247,247,248,0) 100%);
+}
+
+.profile.theme-dark {
+	--hero-bg:
+		linear-gradient(to top, #000000 0%, #121529 5%, #3a557f 100%),
+		repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0 20px, rgba(0,0,0,0) 20px 40px),
+		repeating-linear-gradient(45deg, rgba(0,0,0,0.08) 0 10px, rgba(0,0,0,0) 10px 20px),
+		repeating-linear-gradient(-45deg, rgba(0,0,0,0.08) 0 10px, rgba(0,0,0,0) 10px 20px);
+	--hero-mask: linear-gradient(to top, #000000 0%, rgba(0,0,0,0) 100%);
+}
+
 .title {
 	position: relative;
 	overflow: hidden;
 	padding: 10vh 16px 16px 16px;
 	/* 主背景渐变 + 线条纹理 */
-	background-image:
-		linear-gradient(to top, #f7f7f8 0%, #f0faff 5%, #99caf9 100%),
-		repeating-linear-gradient(90deg, rgba(247,247,248,0.15) 0 20px, rgba(247,247,248,0) 20px 40px),
-		repeating-linear-gradient(45deg, rgba(247,247,248,0.08) 0 10px, rgba(247,247,248,0) 10px 20px),
-		repeating-linear-gradient(-45deg, rgba(247,247,248,0.08) 0 10px, rgba(247,247,248,0) 10px 20px);
+	background-image: var(--hero-bg);
 
 	background-blend-mode: overlay;
 
 	.nickname {
 		font-weight: var(--sar-font-bold);
 	}
-	
+
 	.dept {
 		font-size: var(--sar-text-base);
 		color:var(--sar-secondary-text);
@@ -135,9 +143,9 @@ watch(() => noticeStore.unreadCount, (newVal: number) => {
 		height: 80rpx;
 		pointer-events: none;
 		z-index: 1;
-		background: linear-gradient(to top, #f7f7f8 0%, rgba(247,247,248,0) 100%);
+		background: var(--hero-mask);
 	}
-	
+
 	.unobstructed {
 		position: relative;
 		z-index: 2;
@@ -146,20 +154,5 @@ watch(() => noticeStore.unreadCount, (newVal: number) => {
 
 .setting-content {
 	padding: 0 16rpx 16rpx 16rpx;
-}
-
-/* 深色模式 */
-@media (prefers-color-scheme: dark) {
-	.title {
-		background-image:
-			linear-gradient(to top, #000000 0%, #121529 5%, #3a557f 100%),
-			repeating-linear-gradient(90deg, rgba(0,0,0,0.15) 0 20px, rgba(0,0,0,0) 20px 40px),
-			repeating-linear-gradient(45deg, rgba(0,0,0,0.08) 0 10px, rgba(0,0,0,0) 10px 20px),
-			repeating-linear-gradient(-45deg, rgba(0,0,0,0.08) 0 10px, rgba(0,0,0,0) 10px 20px);
-    /* 深色模式底部遮罩 */
-    &::after {
-		background: linear-gradient(to top, #000000 0%, rgba(0,0,0,0) 100%);
-    }
-  }
 }
 </style>

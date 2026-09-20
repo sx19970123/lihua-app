@@ -34,6 +34,8 @@ export interface UserInfoType {
     theme?: string,
     email?: string,
     phoneNumber?: string,
-    passwordUpdateTime?: Date
+    remark?: string,
+    passwordUpdateTime?: string,
+    registerType?: string
 }
 

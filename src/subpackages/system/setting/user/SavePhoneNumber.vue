@@ -1,7 +1,7 @@
 <template>
 	<view class="content">
 		<sar-space direction="vertical" size="large">
-			<sar-input placeholder="请输入手机号码" v-model="phoneNumber" :focus="autoFocus" root-class="rounded-input" clearable show-clear-only-focus :maxlength="20"></sar-input>
+			<sar-input placeholder="请输入手机号码" v-model="phoneNumber" :focus="autoFocus" root-class="rounded-input" clearable show-clear-only-focus :maxlength="11"></sar-input>
 			<sar-button round :loading="saveLoading" @click="handleSaveData">保 存</sar-button>
 		</sar-space>
 	</view>

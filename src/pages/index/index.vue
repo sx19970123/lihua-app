@@ -106,6 +106,17 @@ const logoSrc = computed(() => theme.value === 'dark' ? '/static/logo-hei.png' :
 
 const versionInfo = [
 	{
+		version: '3.0.0',
+		updateDate: '2026-09-20',
+		updateContent: [
+			'1. 统一 App 与后端、Web 版本为 3.0.0',
+			'2. 更新 UniApp 到 3.0.0-5020620260917001，Vue 3.5.43、Pinia 3.0.4、TypeScript 6.0.3',
+			'3. 更新 sard-uniapp 到 1.30.6',
+			'4. 网络层、WebSocket、附件链路、路由守卫、图标体系全面体检优化',
+			'5. 修复通知域与登录注册域缺陷',
+		]
+	},
+	{
 		version: '2.2.0',
 		updateDate: '2026-06-25',
 		updateContent: [

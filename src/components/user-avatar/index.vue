@@ -16,6 +16,7 @@ import {onMounted, ref, watch} from "vue"
 import type {AvatarType} from "@/api/system/profile/type/avatar-type"
 import {useUserStore} from "@/stores/user"
 import { onPageShow } from "@dcloudio/uni-app"
+import { AVATAR_DEFAULT_COLOR } from "@/constants/avatar-colors"
 
 // 接收参数
 const {size = 128, shape = "circle", customAvatar} = defineProps<{
@@ -38,13 +39,14 @@ const initAvatar = () => {
 	// 传入type表示自定义显示
 	if (customAvatar && customAvatar.type) {
 		avatarData.value = customAvatar
-	} else {
-		// type不存在，加载当前用户头像
-		avatarData.value = userStore.avatar
-		if (avatarData.value.backgroundColor?.includes('conic-gradient')) {
-			avatarData.value.backgroundColor = 'rgb(22, 119, 255)'
+		} else {
+			// type不存在，加载当前用户头像
+			avatarData.value = userStore.avatar
+			// Web 端存量头像的 conic-gradient 渐变背景在 App 端降级为色板首色
+			if (avatarData.value.backgroundColor?.includes('conic-gradient')) {
+				avatarData.value.backgroundColor = AVATAR_DEFAULT_COLOR
+			}
 		}
-	}
 	// App 端不提供图标头像（内置图标字体仅静态业务使用）：Web 端设置的 icon 头像退化为默认头像展示
 	if (avatarData.value?.type === 'icon') {
 		avatarData.value = userStore.getDefaultAvatar()

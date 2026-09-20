@@ -22,7 +22,7 @@ const autoFocus = ref<boolean>(false)
 const handleSaveData = async () => {
 	// 输入校验
 	if (!nickName.value) {
-		toast("请输入用户名")
+		toast("请输入昵称")
 		return
 	}
 	// 值未修改

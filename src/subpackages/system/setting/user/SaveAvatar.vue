@@ -15,7 +15,7 @@
 			<view class="popout-content">
 				<sar-space direction="vertical" size="large">
 					<!-- 头像背景颜色 -->
-					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
+					<color-select :dataSource="AVATAR_COLOR_SOURCE" v-model:color="avatarData.backgroundColor"></color-select>
 					<!-- 头像文本 -->
 					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input"
 						placeholder="请输入文本" v-model="avatarData.value"
@@ -40,53 +40,10 @@ import router from '@/router/router'
 import { toast } from '@/utils/toast'
 import { cloneDeep } from 'lodash-es'
 import {getFileInfo} from '@/utils/attachment/attachment-utils'
+import { AVATAR_COLOR_SOURCE } from '@/constants/avatar-colors'
 
 const userStore = useUserStore()
 type EditableAvatarType = AvatarType & { value: string }
-
-// 头像背景颜色
-const colorSource = [
-	{
-		name: '拂晓蓝',
-		color: 'rgb(22, 119, 255)',
-		key: '1'
-	},
-	{
-		name: '薄暮',
-		color: 'rgb(245, 34, 45)',
-		key: '2'
-	},
-	{
-		name: '火山',
-		color: 'rgb(250, 84, 28)',
-		key: '3'
-	},
-	{
-		name: '日暮',
-		color: 'rgb(250, 173, 20)',
-		key: '4'
-	},
-	{
-		name: '明青',
-		color: 'rgb(19, 194, 194)',
-		key: '5'
-	},
-	{
-		name: '极光绿',
-		color: 'rgb(82, 196, 26)',
-		key: '6'
-	},
-	{
-		name: '极客蓝',
-		color: 'rgb(47, 84, 235)',
-		key: '7'
-	},
-	{
-		name: '酱紫',
-		color: 'rgb(114, 46, 209)',
-		key: '8'
-	}
-]
 
 // 头像数据
 const avatarData = ref<EditableAvatarType>({
@@ -94,7 +51,7 @@ const avatarData = ref<EditableAvatarType>({
 	value: userStore.avatar.value || ''
 })
 
-// 执行保存
+// 执行保存（作为 popout 的 before-close：promise 在途时确认按钮自动 loading，reject 阻止抽屉关闭）
 const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 	if (type === 'confirm') {
 		// url 字段无需保存
@@ -106,35 +63,41 @@ const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 			router.navigateBack({})
 		} else {
 			toast(resp.msg)
+			// 保存失败保持抽屉打开，允许调整后重试
+			return Promise.reject()
 		}
 	}
 }
-/**
- * 初始化图片头像
- */
-    // 选择头像
+// 选择照片
 const chooseImage = async () => {
-  // 选择照片｜拍照
-  const filePath = await new Promise<string>((resolve, reject) => {
-    uni.chooseImage({
-      count: 1,
-      sizeType: ['original', 'compressed'],
-      sourceType: ['album', 'camera'],
-      success: (resp) => resolve(resp.tempFilePaths[0]),
-      fail: reject,
+  let filePath: string
+  let croppedFilePath: string
+  try {
+    // 选择照片｜拍照（用户取消走 fail 回调，errMsg 各平台不一致，统一按放弃处理）
+    filePath = await new Promise<string>((resolve, reject) => {
+      uni.chooseImage({
+        count: 1,
+        sizeType: ['original', 'compressed'],
+        sourceType: ['album', 'camera'],
+        success: (resp) => resolve(resp.tempFilePaths[0]),
+        fail: reject,
+      });
     });
-  });
 
-  // 裁剪图片
-  const croppedFilePath = await new Promise<string>((resolve, reject) => {
-    cropImage({
-      // 图片压缩到一半的清晰度
-      beforeCrop: () => 0.5,
-      src: filePath,
-      success: resolve,
-      fail: reject,
+    // 裁剪图片（用户取消裁剪同样走 fail）
+    croppedFilePath = await new Promise<string>((resolve, reject) => {
+      cropImage({
+        // 图片压缩到一半的清晰度
+        beforeCrop: () => 0.5,
+        src: filePath,
+        success: resolve,
+        fail: reject,
+      });
     });
-  });
+  } catch {
+    // 用户取消选图/裁剪，放弃本次上传
+    return
+  }
 
   // 获取图片信息
   const {size} = await getFileInfo(croppedFilePath)
@@ -152,7 +115,8 @@ const chooseImage = async () => {
     if (resp.code === 200 && resp.data?.path) {
       avatarData.value.type = "image";
       avatarData.value.value = resp.data.path;
-      handleSave("confirm");
+      // 失败提示已在 handleSave 内 toast，这里吞掉 reject 防止未处理 Promise 异常
+      await handleSave("confirm")?.catch(() => undefined);
     } else {
       toast(resp.code === 200 ? "上传失败" : resp.msg);
     }
@@ -207,11 +171,6 @@ const { textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardCha
 
 <style scoped lang="scss">
 @import "@/static/style/input.scss";
-
-.avatar-title {
-	font-size: var(--sar-text-lg);
-	font-weight: var(--sar-font-bold);
-}
 
 .popout-content {
 	padding-left: 32rpx;

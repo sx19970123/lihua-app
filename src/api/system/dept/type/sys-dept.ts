@@ -42,6 +42,10 @@ export interface SysDept {
    */
   fax?: string;
   /**
+   * 默认部门标记（"0" 表示默认部门）
+   */
+  defaultDept?: string;
+  /**
    * 备注
    */
   remark?: string;

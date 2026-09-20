@@ -104,19 +104,19 @@ export const useUserStore = defineStore('user', {
 							state.avatar = this.getDefaultAvatar()
 						}
 
-						// 角色权限相关赋值
-						state.roles = data.roles
-						state.roleCodes = data.roles.map(role => role.code).filter((code): code is string => !!code)
-						state.permissions = data.permissions
+						// 角色权限相关赋值（后端集合字段无空值兜底，null 时降级空集合防止初始化抛错）
+						state.roles = data.roles ?? []
+						state.roleCodes = state.roles.map(role => role.code).filter((code): code is string => !!code)
+						state.permissions = data.permissions ?? []
 
 						// 部门相关赋值
-						state.deptTrees = data.depts
+						state.deptTrees = data.depts ?? []
 						state.defaultDept = data.defaultDept
 						state.defaultDeptName = data.defaultDept?.name || ''
 						state.defaultDeptCode = data.defaultDept?.code || ''
 
 						// 岗位相关赋值
-						state.posts = data.posts
+						state.posts = data.posts ?? []
 						state.defaultDeptPosts = data.posts.filter(post => post.deptCode === state.defaultDeptCode)
 
 						// 处理头像
