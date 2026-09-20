@@ -77,12 +77,14 @@ import { useSettingStore } from '@/stores/setting'
 import type { LoginType } from '@/api/system/authentication/type/login-type'
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
-import {toast} from '@/utils/toast'
+import {toast, toastRequestError} from '@/utils/toast'
 import { useKeyboardStatus } from '@/composables/use-keyboard-status'
 
 const settingStore = useSettingStore()
 import {rememberMe, getRememberedInfo} from '@/helpers/remember'
-import {setToken} from '@/helpers/token'
+import {setToken, removeToken} from '@/helpers/token'
+import {setData as setUserSetupData, clearData as clearUserSetupData} from '@/helpers/user-setup'
+import {queryPostLoginCheckData} from '@/api/system/profile/profile'
 import {login} from "@/api/system/authentication/authentication";
 const captchaRef = ref<InstanceType<typeof Captcha>>()
 const serverConnectionFailed = ref<boolean>(false)
@@ -119,13 +121,41 @@ const initLogin = () => {
 		return true
 	}
 	
+	// 登录后校验待补全项：null 表示校验失败（超时/异常），与空数组（无需补全）区分
+	const getPostLoginCheckItems = async (): Promise<string[] | null> => {
+		try {
+			const resp = await queryPostLoginCheckData()
+			return resp.code === 200 ? (resp.data ?? []) : null
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
+			return null
+		}
+	}
+
+	// 进入初始设置向导：APP 端底部滑入（登录页留在栈底被覆盖）；微信端 reLaunch 清栈
+	// （页面栈唯一，安卓物理返回=退出小程序而非退回登录页绕过）
+	const goUserSetup = () => {
+		// #ifdef APP-PLUS
+		router.navigateTo({
+			url: "/pages/user-setup/UserSetup",
+			animationType: "slide-in-bottom"
+		})
+		// #endif
+		// #ifndef APP-PLUS
+		router.reLaunch({
+			url: "/pages/user-setup/UserSetup"
+		})
+		// #endif
+	}
+
 	// 用户登录
 	const handleLogin = async (captchaVerification?: string) => {
 		// 检查表单是否填写完整
 		if (!checkLoginData(() => handleLogin(captchaVerification))) {
 			return
 		}
-		
+
 		try {
 			loginLoading.value = true
       loginData.value.captchaVerification = captchaVerification
@@ -135,13 +165,29 @@ const initLogin = () => {
 				setToken(resp.data)
 				// 处理记住账号
 				handleRememberMe()
-				// 跳转至首页
-				router.reLaunch({
-					url: "/pages/index/index"
-				})
+				// 登录后校验：失败回滚登录态留在登录页（登录流程原子性，防止跳过信息补全进首页），
+				// 有待补全项进入初始设置向导，无则清历史残留进首页
+				const checkItems = await getPostLoginCheckItems()
+				if (checkItems === null) {
+					removeToken()
+					return
+				}
+				if (checkItems.length > 0) {
+					setUserSetupData(checkItems)
+					goUserSetup()
+				} else {
+					clearUserSetupData()
+					router.reLaunch({
+						url: "/pages/index/index"
+					})
+				}
 			} else {
 				toast(resp.msg)
 			}
+		} catch (err) {
+			// 凭据错误(401)请求层已 toast 且不再跳转，此处兜底提示其余失败（网络异常等）并保留表单已输入内容
+			console.error(err)
+			toastRequestError(err)
 		} finally {
 			loginLoading.value = false
 		}

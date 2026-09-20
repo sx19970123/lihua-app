@@ -65,3 +65,13 @@ export const checkPassword = (password: string) => {
 		}
 	})
 }
+
+/**
+ * 登录后校验（返回待补全项，空数组表示无需补全）
+ */
+export const queryPostLoginCheckData = () => {
+	return request<string[]>({
+		url: 'app/system/profile/postLoginCheck',
+		method: 'GET'
+	})
+}

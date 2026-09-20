@@ -35,10 +35,14 @@ service.interceptors.response.use(
 	(response: Response) => {
 		const data = response.data as ResponseType<any>
 		console.info("接收响应===>", data);
-		// 登录信息失效｜账号密码错误，调用store中的登录失效逻辑
+		// 登录信息失效｜账号密码错误，非登录页调用 store 中的登录失效逻辑（重登跳转）；
+		// 登录页上的 401 是凭据错误：重登跳转会重建登录页、记住账号回填冲掉用户已输入的账号密码，仅提示即可
 		if (data.code === 401 || response.statusCode === 403) {
-			const userStore = useUserStore()
-			userStore.authenticationFailure()
+			const currentRoute = getCurrentPages().pop()?.route
+			if (currentRoute !== "pages/login/Login") {
+				const userStore = useUserStore()
+				userStore.authenticationFailure()
+			}
 			toast(data.msg)
 			throw new ResponseError(data.code, data.msg)
 		}

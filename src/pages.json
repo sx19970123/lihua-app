@@ -28,6 +28,14 @@
 				}
 			}
 		},
+		// 登录后初始设置向导页
+		{
+			"path": "pages/user-setup/UserSetup",
+			"style": {
+				"navigationStyle": "custom",
+				"disableSwipeBack": true
+			}
+		},
 		// 首页
 		{
 			"path": "pages/index/index",
