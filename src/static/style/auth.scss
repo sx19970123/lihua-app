@@ -54,5 +54,9 @@ page {
 	  caret-color: transparent;
 	  transition: caret-color 0.3s linear;
   }
+  .auth-item.show-caret {
+	  /* 延迟须与 .auth-content 的上移动画时长一致（0.3s）：移动完成后光标才开始淡入；收起方向走上面的即时淡出 */
+	  transition: caret-color 0.3s linear 0.3s;
+  }
   /* #endif */
 }

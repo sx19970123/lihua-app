@@ -74,6 +74,8 @@
 					</view>
 				</view>
 			</view>
+			<!-- 校验期间透明阻断层：提交后到刷新前禁止拖动/点击，不遮底部操作图标 -->
+			<view class="verify-freeze" v-if="verifying" @touchmove.stop.prevent @touchMove.stop.prevent></view>
 			<!-- 刷新，关闭 操作区 -->
 			<view class="verify-opts">
 				<image class="opts-icon" @click="refresh(false)" :src="refreshIcon" mode="aspectFill" />
@@ -84,7 +86,7 @@
 	</view>
 </template>
 <script setup lang="ts">
-	import { onMounted, computed, ref, nextTick, getCurrentInstance } from "vue"
+	import { onMounted, onUnmounted, computed, ref, nextTick, getCurrentInstance } from "vue"
 	import type { ComponentInternalInstance } from 'vue'
 	import { getCaptchaData, check } from "@/api/system/captcha/captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/captcha-type"
@@ -150,9 +152,9 @@
 	// 背景图片尺寸
 	const bgImg = ref<BaseImgType>({})
 	const sliderImg = ref<BaseImgType>({})
-	// 验证码执行需要的参数
-	const defaultCaptchaProcess = { startTime: new Date(), backgroundImageWidth: 0, backgroundImageHeight: 0, trackArr: [], end: 206 }
-	const captchaProcess = ref<CaptchaProcessType>(defaultCaptchaProcess)
+	// 验证码执行需要的参数（每次重置须取新对象，勿共享可变默认值）
+	const createDefaultCaptchaProcess = () : CaptchaProcessType => ({ startTime: new Date(), backgroundImageWidth: 0, backgroundImageHeight: 0, trackArr: [], end: 206 })
+	const captchaProcess = ref<CaptchaProcessType>(createDefaultCaptchaProcess())
 	// 验证结果
 	const verifyResult = ref<VeriftResultType>({ isSuccess: false, isError: false })
 	// 滑块初始位置
@@ -172,6 +174,10 @@
 	const instanceScope = ref<ComponentInternalInstance>();
 	// 连接失败
 	const loadingError = ref<string>()
+	// 成功/失败后的延时任务句柄（刷新、关闭、卸载时须清理）
+	let verifyTimer: ReturnType<typeof setTimeout> | undefined
+	// 校验进行中（提交后到下次刷新前），期间透明阻断层盖住游戏区
+	const verifying = ref<boolean>(false)
 	// 刷新 关闭图标
 	const refreshIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAJFBMVEVHcEyfn59xcXFgYGBbW1tYWFhYWFhXV1dYWFhXV1dXV1dXV1eOJtjUAAAAC3RSTlMAAgkQMUd0iKbR8IVomssAAABwSURBVHjapdFBDsMgDAXR7ya2MXP/+1ZNvUCwzNsxEkjY+vNRc9Zwk5p50aarBVTc13VHQUohKSGs7wRkIDm42nMCWRFaDECbADjbGT8PvTR/cosAqTMOLWKWCfZvukTuA5GU2+hCzYtWy0vW6+j0BSLdBQYxmJeMAAAAAElFTkSuQmCC"
 	const closeIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAHlBMVEVHcExiYmJeXl5YWFhYWFhZWVlYWFhYWFhXV1dXV1dh3LwmAAAACXRSTlMADRxPbYyl1/NFQhX5AAAAd0lEQVR42m2R0QoDMQgEx+hl3f//4dLmeqXgPIQwIOrKIbe6tZMfKd/o0ZetWhGrZF9f18VN9bHpTh6ynYBcQHA/ZUFawKUFSxcgJ9sFIWstWQHljbyAt5D1+Vq0g2OPI9yjHMvHRuNI4/DzmnMgc3RzyBD/53gBSd8FOjnClmAAAAAASUVORK5CYII="
@@ -190,7 +196,7 @@
 	const close = () => {
 		verifyShow.value = false
 		nextTick(() => {
-			captchaProcess.value = defaultCaptchaProcess
+			captchaProcess.value = createDefaultCaptchaProcess()
 			refresh(true)
 		})
 	}
@@ -242,6 +248,11 @@
 					captchaTransition.value = 'slide-in'
 					await new Promise(r => setTimeout(r, 300))
 					captchaLoading.value = false
+				} else {
+					// 非 200 也要结束加载态并提示，否则永久停在 loading
+					captchaTransition.value = ''
+					captchaLoading.value = false
+					loadingError.value = '验证码加载失败'
 				}
 			} catch (err) {
 				console.error(err);
@@ -260,7 +271,7 @@
 				query
 					.select("#bg")
 					.boundingClientRect((data) => {
-						if (!Array.isArray(data)) {
+						if (data && !Array.isArray(data)) {
 							bgImg.value.width = data.width
 							bgImg.value.height = data.height
 							resolve()
@@ -280,7 +291,7 @@
 				query
 					.select("#slider-img")
 					.boundingClientRect((data) => {
-						if (!Array.isArray(data)) {
+						if (data && !Array.isArray(data)) {
 							sliderImg.value.width = data.width
 							sliderImg.value.height = data.height
 							resolve()
@@ -299,8 +310,9 @@
 				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#verify-concat-bg")
-					.boundingClientRect((data) => {
-						if (!Array.isArray(data) && captchaData && captchaData.backgroundImageHeight && captchaData.data?.randomY) {
+						.boundingClientRect((data) => {
+							// randomY 可为合法的 0，只做空值判断
+							if (data && !Array.isArray(data) && captchaData && captchaData.backgroundImageHeight && captchaData.data?.randomY != null) {
 							const height = ((captchaData.backgroundImageHeight - captchaData.data.randomY) / captchaData.backgroundImageHeight) * uni.upx2px(captchaData.backgroundImageHeight);
 							sliderImg.value.height = height
 							resolve()
@@ -321,7 +333,7 @@
 				query
 					.select("#image-click-mask")
 					.boundingClientRect((data) => {
-						if (!Array.isArray(data)) {
+						if (data && !Array.isArray(data)) {
 							sliderImg.value.left = data.left
 							sliderImg.value.top = data.top
 							resolve()
@@ -340,7 +352,8 @@
 			captchaProcess.value.backgroundImageHeight = Math.round(bgImg.value.height || 0)
 			captchaProcess.value.sliderImageWidth = Math.round(sliderImg.value.width || 0)
 			captchaProcess.value.sliderImageHeight = Math.round(sliderImg.value.height || 0)
-			captchaProcess.value.end = Math.round(bgImg.value.width || 0 - uni.upx2px(40))
+			// 先对宽度兜底再减滑块预留宽度并限制最小值（|| 优先级低于 -，原写法宽度正常时不会减）
+			captchaProcess.value.end = Math.max(0, Math.round((bgImg.value.width || 0) - uni.upx2px(40)))
 		}
 
 		return {
@@ -431,7 +444,8 @@
 		}
 		// 点选
 		const recordClickItem = (e : TouchEvent | PointerEvent) => {
-			if (!sliderImg.value.left || !sliderImg.value.top) {
+			// left/top 为 0 是合法坐标（点在左上角），仅空值视为未初始化
+			if (sliderImg.value.left == null || sliderImg.value.top == null) {
 				return
 			}
 
@@ -483,6 +497,13 @@
 	 * 刷新
 	 */
 	const refresh = (isClose : boolean) => {
+		// 清理成功/失败后的延时任务，防止关闭后旧任务对隐藏组件刷新/关闭
+		if (verifyTimer !== undefined) {
+			clearTimeout(verifyTimer)
+			verifyTimer = undefined
+		}
+		// 解除游戏区交互阻断
+		verifying.value = false
 		isActive.value = false
 		colorWidth.value = 0
 		x.value = xpos.value
@@ -512,6 +533,8 @@
 		if (!id || !stopTime) {
 			return
 		}
+		// 提交即阻断游戏区交互，直至下次刷新（失败自动刷新/成功展示后关闭均经过 refresh 解除）
+		verifying.value = true
 		const captchaData : CaptchaRequestData = {
 			id: id,
 			data: {
@@ -531,7 +554,8 @@
 			if (resp.code === 200 && resp.success) {
 				verifyResult.value.isSuccess = true
 				verifyResult.value.successMsg = `验证成功，耗时${(stopTime.getTime() - startTime.getTime()) / 1000}秒`
-				setTimeout(() => {
+				verifyTimer = setTimeout(() => {
+					verifyTimer = undefined
 					close()
 					emits('success', resp.data.id)
 				}, 1000)
@@ -548,7 +572,8 @@
 					default:
 						verifyResult.value.errorMsg = resp.msg
 				}
-				setTimeout(() => {
+				verifyTimer = setTimeout(() => {
+					verifyTimer = undefined
 					refresh(false)
 				}, 750)
 			}
@@ -582,6 +607,12 @@
 
 	onMounted(() => {
 		instanceScope.value = getCurrentInstance() || undefined
+	})
+
+	onUnmounted(() => {
+		if (verifyTimer !== undefined) {
+			clearTimeout(verifyTimer)
+		}
 	})
 
 	// 向外部抛出方法
@@ -906,6 +937,16 @@
 						background: #f56c6c;
 					}
 				}
+			}
+
+			/* 校验期间透明阻断层：盖住拼图与滑块区，不遮底部刷新/关闭 */
+			.verify-freeze {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 90rpx;
+				z-index: 1001;
 			}
 
 			.verify-opts {

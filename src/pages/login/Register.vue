@@ -66,7 +66,7 @@ import {register, checkUserName} from '@/api/system/authentication/authenticatio
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
 import {toast} from '@/utils/toast'
-import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
+import { useKeyboardStatus } from '@/composables/use-keyboard-status'
 import { useSettingStore } from '@/stores/setting'
 import {cloneDeep} from "lodash-es"
 import PasswordInput from '@/components/password-input/index.vue'
@@ -228,34 +228,12 @@ const initCaptcha = () => {
 const {isEnableCaptcha, openCaptcha} = initCaptcha()
 
 /**
- * 初始化键盘监听
+ * 初始化键盘监听（公共 composable，onShow/onHide 注册在其内）
  */
-const initKeyboardStatus = () => {
-	// 控制键盘弹起状态
-	const openKeyboard = ref<boolean>(false)
-	// 键盘高度变化监听
-	const handleChangeKeyboardHeight = (data : UniNamespace.OnKeyboardHeightChangeResult) => {
-		openKeyboard.value = data.height > 0
-	}
-		
-	return {
-		openKeyboard,
-		handleChangeKeyboardHeight
-	}
-}
-
-const {openKeyboard, handleChangeKeyboardHeight} = initKeyboardStatus()
+const {openKeyboard} = useKeyboardStatus()
 
 onMounted(() => {
 	settingStore.initBaseSetting()
-})
-
-onShow(() => {
-	uni.onKeyboardHeightChange(handleChangeKeyboardHeight)
-})
-
-onHide(() => {
-	uni.offKeyboardHeightChange(handleChangeKeyboardHeight)
 })
 </script>
 
