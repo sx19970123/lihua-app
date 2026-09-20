@@ -1,6 +1,12 @@
+import { ref } from 'vue'
 import {getOnceToken} from "@/api/system/authentication/authentication";
 import {getUUID} from "@/utils/uuid/uuid"
 import {getClientType} from '@/utils/client'
+
+// WebSocket 连接状态（断连重连入口的状态源）：connected=已连接；reconnecting=连接建立中/自动重连中；
+// disconnected=自动重连额度耗尽已断链（仅 reconnect 耗尽分支写入），等待手动重连或重新登录
+export type WsStatus = 'connected' | 'reconnecting' | 'disconnected'
+export const wsStatus = ref<WsStatus>('reconnecting')
 
 /**
  * webSocket连接具体实现逻辑
@@ -36,6 +42,7 @@ class WebSocketManager {
         if (!this.webSocket) {
             // 每次显式连接重置重连开关，避免上次主动关闭（如登出）后的关闭态延续到本次连接
             this.enableRetry = true
+            wsStatus.value = 'reconnecting'
 			try {
 				const { code, data } = await getOnceToken()
 
@@ -64,6 +71,7 @@ class WebSocketManager {
 					this.retryNumber = 0
 					this.enableRetry = true
 					this.isConnected = true
+					wsStatus.value = 'connected'
 					this.startHeartbeat()
 				})
 				
@@ -157,6 +165,7 @@ class WebSocketManager {
     // 重试连接：固定间隔；累计 maxRetryNumber 次仍未连上则停止自动重连，等待下次登录触发
     private reconnect = () => {
         if (this.retryNumber >= this.maxRetryNumber) {
+            wsStatus.value = 'disconnected'
             console.warn("WebSocket 重连失败已达上限，停止自动重连")
             return
         }

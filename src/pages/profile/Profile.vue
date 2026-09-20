@@ -8,6 +8,11 @@
 					<sar-icon name="BellOutlined" family="icon" size="42rpx" color="#fff"></sar-icon>
 				</sar-badge>
 			</view>
+			<!-- WS 断连重连：非连接态渲染（断链=断链图标可点重连，重连中=loading 旋转），连接成功后自动隐藏 -->
+			<view v-if="wsStatus !== 'connected'" class="reconnect-btn" @click="handleReconnect">
+				<sar-icon v-if="wsStatus === 'disconnected'" name="DisconnectOutlined" family="icon" size="42rpx" color="#fff"></sar-icon>
+				<sar-icon v-else name="LoadingOutlined" family="icon" size="42rpx" color="#fff" root-class="ws-spin"></sar-icon>
+			</view>
 			<!-- 头像行：bottom 锚定 hero 底部 -->
 			<view class="hero-row">
 				<sar-space align="center" size="large">
@@ -42,12 +47,15 @@
 	</view>
 </template>
 <script setup lang="ts">
+import { watch } from 'vue'
 import {useUserStore} from '@/stores/user'
 import {useNoticeStore} from "@/stores/notice"
 import {useThemeStore} from "@/stores/theme"
 import router from '@/router/router'
 import UserAvatar from '@/components/user-avatar/index.vue'
 import { GITEE_REPO_URL } from '@/constants/repo'
+import { webSocket, wsStatus } from '@/utils/web-socket'
+import { toast } from '@/utils/toast'
 
 const userStore = useUserStore()
 const noticeStore = useNoticeStore()
@@ -94,6 +102,21 @@ const toNotice = () => {
 		url: "/subpackages/system/notice/index"
 	})
 }
+
+// WS 断连手动重连：仅断链态响应点击（重连中图标已旋转示意进行中，点击忽略），重启新一轮自动重连
+const handleReconnect = () => {
+	if (wsStatus.value === 'disconnected') {
+		toast('正在重连')
+		webSocket.manualReconnect()
+	}
+}
+
+// 连上即提示；按钮随 wsStatus 转 connected 由 v-if 自动隐藏（冷启动首连也会短暂经历重连中，属预期）
+watch(wsStatus, (status) => {
+	if (status === 'connected') {
+		toast('连接成功')
+	}
+})
 </script>
 
 <style scoped lang="scss">
@@ -150,9 +173,10 @@ const toNotice = () => {
 		z-index: 2;
 	}
 
-	/* 铃铛：hero 右上；小程序端下移 80rpx 避开原生胶囊按钮（其余平台无胶囊保持靠上）；
+	/* 铃铛/断连重连钮：hero 右上；小程序端下移 80rpx 避开原生胶囊按钮（其余平台无胶囊保持靠上）；
 	   半透明圆底在亮暗两套背景上均可读 */
-	.notice-btn {
+	.notice-btn,
+	.reconnect-btn {
 		position: absolute;
 		/* #ifdef MP */
 		top: calc(10vh + 80rpx);
@@ -160,7 +184,6 @@ const toNotice = () => {
 		/* #ifndef MP */
 		top: 10vh;
 		/* #endif */
-		right: 16px;
 		z-index: 2;
 		display: flex;
 		align-items: center;
@@ -171,6 +194,26 @@ const toNotice = () => {
 		background: rgba(10, 12, 16, 0.24);
 		border: 1rpx solid rgba(255, 255, 255, 0.18);
 	}
+
+	.notice-btn {
+		right: 16px;
+	}
+
+	/* 断连重连钮：紧贴铃铛左侧（铃铛 right 16px + 宽 68rpx + 间距 16rpx） */
+	.reconnect-btn {
+		right: calc(16px + 68rpx + 16rpx);
+
+		/* 重连中 loading 旋转 */
+		.ws-spin {
+			animation: ws-spin 1s linear infinite;
+		}
+	}
+
+@keyframes ws-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
 
 	/* 底部遮罩 */
 	&::after {
