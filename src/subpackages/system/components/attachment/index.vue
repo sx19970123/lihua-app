@@ -17,9 +17,9 @@
 			</sar-space>
 			<sar-divider></sar-divider>
 			<sar-space direction="vertical">
-				<view class="title">从聊天框选择（仅微信小程序，仅按钮模式）</view>
+				<view class="title">文件选择（微信从聊天记录、H5 本地文件，仅按钮模式）</view>
 				<view class="description">
-					从微信聊天中选取附件，设置uploadType为all或file时生效
+					设置uploadType为all或file时生效；微信小程序从聊天记录中选取附件，H5打开本地文件选择器（extension过滤生效），App暂无对应能力
 				</view>
 				<view class="model-val">双向绑定：{{attachmentValue3}}</view>
 				<attachment-upload v-model="attachmentValue3" businessCode="app-basic" businessName="基础使用示例" uploadType="file" :extension="['pdf']"/>
