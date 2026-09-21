@@ -91,6 +91,12 @@ watch(() => noticeStore.unreadCount, () => noticeStore.setTabbarRedDot())
 
 page {
 	background-color: var(--sar-body-bg);
+	/* 全局基础文字色跟随主题（输入框值文字/依赖继承的文字与图标无组件级变量，
+	   未设置时默认黑——暗色下全黑，见 sard body-color 体系） */
+	color: var(--sar-body-color);
+	/* H5 端 page（uni-page-body）高度随内容自适应，短内容页背景盖不满视口露出白底
+	   （父级 uni-page-wrapper 为定高 flex 子项，100% 可解析）；APP/小程序 page 原生全屏，此声明无害 */
+	min-height: 100%;
 }
 text {
 	color: var(--sar-secondary-color);
@@ -99,4 +105,20 @@ text {
 .content {
 	padding: 16rpx;
 }
+
+/* #ifdef H5 */
+/* 页面下层画布（html/body，overscroll 回弹区与页面渲染前白屏期可见）跟随主题：
+   sard 的主题变量作用域在 page 上、html/body 取不到，按 theme.json 的
+   bgColorTop/Bottom 基线色双值写死（改 theme.json 基线色须同步此处） */
+html,
+body {
+	background-color: #f7f7f8;
+}
+@media (prefers-color-scheme: dark) {
+	html,
+	body {
+		background-color: #000000;
+	}
+}
+/* #endif */
 </style>

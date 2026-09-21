@@ -149,6 +149,12 @@
     "mp-toutiao" : {
         "usingComponents" : true
     },
+    /* H5特有相关：darkmode 开启后 uni-h5 运行时按系统主题解析 theme.json 的 @变量
+       （navbar/tabBar/页面背景自动切换，uni.onThemeChange 生效） */
+    "h5" : {
+        "darkmode" : true,
+        "themeLocation" : "theme.json"
+    },
     "uniStatistics" : {
         "enable" : false
     },
