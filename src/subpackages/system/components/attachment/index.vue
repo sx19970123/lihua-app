@@ -13,7 +13,7 @@
 					可通过属性指定按钮样式
 				</view>
 				<view class="model-val">双向绑定：{{attachmentValue2}}</view>
-				<attachment-upload v-model="attachmentValue2" businessCode="app-basic" businessName="基础使用示例" mode="button" button-type="outline" buttonText="上传聊天文件" buttonIsRound buttonIcon="CloudUploadOutlined" buttonIconFamily="icon"/>
+				<attachment-upload v-model="attachmentValue2" businessCode="app-basic" businessName="基础使用示例" mode="button" button-type="outline" buttonText="上传" buttonIsRound buttonIcon="CloudUploadOutlined" buttonIconFamily="icon"/>
 			</sar-space>
 			<sar-divider></sar-divider>
 			<sar-space direction="vertical">
