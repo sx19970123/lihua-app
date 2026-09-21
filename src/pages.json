@@ -53,6 +53,13 @@
 		// 第三方连接跳转组件
 		{
 			"path": "pages/webview/index"
+		},
+		// 错误兜底页（403 无权限 / 404 页面不存在 / 451 IP 限制，type 参数区分）
+		{
+			"path": "pages/error/Error",
+			"style": {
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	// 分包

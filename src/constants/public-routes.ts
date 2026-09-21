@@ -11,7 +11,9 @@ const PUBLIC_ROUTES = [
 	// 隐私政策
 	"/subpackages/system/protocol/PrivacyPolicy",
 	// 用户协议
-	"/subpackages/system/protocol/UserAgreement"
+	"/subpackages/system/protocol/UserAgreement",
+	// 错误兜底页（403/404/451，未登录直达也要能展示）
+	"/pages/error/Error"
 ]
 
 /**

@@ -39,7 +39,7 @@ service.interceptors.response.use(
 		console.info("接收响应===>", data);
 		// 登录信息失效｜账号密码错误，非登录页调用 store 中的登录失效逻辑（重登跳转）；
 		// 登录页上的 401 是凭据错误：重登跳转会重建登录页、记住账号回填冲掉用户已输入的账号密码，仅提示即可
-		if (data.code === 401 || response.statusCode === 403) {
+		if (data.code === 401) {
 			const currentRoute = getCurrentPages().pop()?.route
 			if (currentRoute !== "pages/login/Login") {
 				const userStore = useUserStore()
@@ -48,23 +48,31 @@ service.interceptors.response.use(
 			toast(data.msg)
 			throw new ResponseError(data.code, data.msg)
 		}
-		
-		// 非法ip访问：App 端无专用错误页，直接透出后端提示
+
+		// 权限不足（后端为 HTTP 200 + 业务码 403，statusCode 判断为网关/代理层直返 403 的防御）：
+		// 登录态有效仅权限不够，不按 401 登出，跳错误兜底页——与 lihua-web 端 /403 同语义
+		// （web 为路由级触发，App 无角色路由故挂请求层）
+		if (data.code === 403 || response.statusCode === 403) {
+			toErrorPage("403")
+			throw new ResponseError(403, data.msg)
+		}
+
+		// 非法ip访问：跳错误兜底页（对齐 lihua-web 端请求层跳 /451 页）
 		if (data.code === 451) {
-			toast(data.msg)
+			toErrorPage("451")
 			throw new ResponseError(data.code, data.msg)
 		}
-		
+
 		// 服务器处理文件异常，提示异常信息
 		if (data.code === 505) {
 			throw new ResponseError(data.code, data.msg)
 		}
-		
-		// statusCode 不为200、403 直接提示异常码
+
+		// statusCode 不为200 直接提示异常码
 		if (response.statusCode !== 200) {
 			throw new ResponseError(500, response.statusCode + '异常')
 		}
-		
+
 		return response
 	},
 	(error) => {
@@ -72,6 +80,19 @@ service.interceptors.response.use(
 		throw new ResponseError(500, error.errMsg);
 	}
 )
+
+// 跳转错误兜底页（403 无权限 / 404 页面不存在 / 451 IP 限制，type 参数驱动文案与插画）。
+// reLaunch 清栈后无返回路径，页面自带「回到首页」出口；并发请求可能同时失败，
+// 已在错误页则跳过防重复 reLaunch
+const toErrorPage = (type: '403' | '404' | '451') => {
+	const currentRoute = getCurrentPages().pop()?.route
+	if (currentRoute === "pages/error/Error") {
+		return
+	}
+	uni.reLaunch({
+		url: `/pages/error/Error?type=${type}`
+	})
+}
 
 
 // 数据返回统一封装样式
