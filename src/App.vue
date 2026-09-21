@@ -7,6 +7,7 @@ import {useRootRefStore} from "@/stores/root"
 import {webSocket} from '@/utils/web-socket'
 import type {NoticeMessage} from '@/api/system/notice/type/notice-message'
 import router from "@/router/router"
+import { setupH5Guard } from "@/router/router"
 import { initDict, getDictLabel } from '@/helpers/dict'
 
 // #ifdef APP-PLUS
@@ -25,6 +26,8 @@ onLaunch(() => {
 	uni.onThemeChange((res) => themeStore.setSystemTheme(res.theme))
 	// 处理通知初始化
 	addNoticeEventListener()
+	// H5 地址栏直达/前进后退补验（非 H5 平台为空操作）
+	setupH5Guard()
 })
 
 // 处理websocket消息通知监听
