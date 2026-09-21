@@ -17,6 +17,9 @@ export const useKeyboardStatus = () => {
 	}
 
 	// uni 的键盘监听是全局的，页面隐藏时必须注销
+	// #ifndef H5
+	// H5 无 uni.on/offKeyboardHeightChange（调用即 TypeError），且桌面无虚拟键盘、
+	// 监听本就永不触发（H-8 预期行为）——整个监听对仅原生/小程序有意义
 	onShow(() => {
 		uni.onKeyboardHeightChange(handleChangeKeyboardHeight)
 	})
@@ -24,6 +27,7 @@ export const useKeyboardStatus = () => {
 	onHide(() => {
 		uni.offKeyboardHeightChange(handleChangeKeyboardHeight)
 	})
+	// #endif
 
 	return {
 		openKeyboard
