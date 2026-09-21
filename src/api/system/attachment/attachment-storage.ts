@@ -1,4 +1,5 @@
 import request, {attachmentUpload} from "@/utils/request";
+import {getUploadHeader} from "@/utils/attachment/attachment-utils";
 import type {AttachmentUploadVO, FastUploadResultVO, SysAttachment} from "@/api/system/attachment/type/sys-attachment";
 
 // 后端下发的附件访问链为相对链（如 /system/attachment/storage/download?fullPath=...），
@@ -26,13 +27,13 @@ export const upload = (filePath: string, options: {businessCode: string, busines
 	if (options.public) {
 		formData.public = "true"
 	}
-	return attachmentUpload<AttachmentUploadVO>({
-		url: "app/system/attachment/storage/upload",
-		filePath: filePath,
-		name: 'file',
-		formData,
-		header: {'Content-Type': 'multipart/form-data'}
-	})
+    return attachmentUpload<AttachmentUploadVO>({
+        url: "app/system/attachment/storage/upload",
+        filePath: filePath,
+        name: 'file',
+        formData,
+        header: getUploadHeader()
+    })
 }
 
 // 文件秒传；uploaded 为 false 表示未命中（附件在 exists 与秒传之间被移除的竞态）

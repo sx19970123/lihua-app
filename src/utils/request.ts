@@ -14,8 +14,10 @@ const service = new Request({
 // 请求拦截器
 service.interceptors.request.use(
 	(config: RequestConfig) => {
-		// 默认请求头
-		config.header['Content-Type'] = "application/json;charset=utf-8"
+		// 默认请求头（上传请求除外：multipart 的 Content-Type 须由原生实现/浏览器自动组装，手动指定会丢 boundary）
+		if (config.method !== 'UPLOAD') {
+			config.header['Content-Type'] = "application/json;charset=utf-8"
+		}
 		config.header['Client-Type'] = getClientType()
 		// 验证token
 		const token = getToken()

@@ -121,10 +121,10 @@ const props = withDefaults(defineProps<{
 	readonly?: boolean,
 	// 可否删除
 	removable?: boolean,
-	// 业务编码（自定义，用于后台附件管理区分附件对应的业务）
-	businessCode: string,
-	// 业务名称（自定义，用于后台附件管理区分附件对应的业务）
-	businessName: string,
+		// 业务编码（自定义，用于后台附件管理区分附件对应的业务；缺省取当前页面路由路径兜底）
+		businessCode?: string,
+		// 业务名称（自定义，用于后台附件管理区分附件对应的业务；缺省后端回显 businessCode）
+		businessName?: string,
 	// 自动删除（点击删除按钮是否自动进行业务删除）
 	autoRemove?: boolean,
 	// 删除描述（自动删除开启后，点击删除弹框提示文本）
@@ -220,7 +220,10 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 	
 	// 获取附件md5
 	try {
-		const { md5, fileName, filePath, size } = await getFileInfo(fileItem.url)
+		const fileInfo = await getFileInfo(fileItem.url)
+		// H5 临时路径（blob URL）截取的文件名是无后缀 UUID，优先用选择回调携带的真实 file.name（其余平台 file.name 为空时回退截取名）
+		const fileName = fileItem.file?.name || fileInfo.fileName
+		const {md5, filePath, size} = fileInfo
 		if (!md5 || !fileName || !filePath || !size) {
 			toast("附件信息获取异常")
 			return
@@ -276,14 +279,25 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 	}
 }
 
+// 兜底业务编码：未显式传入时取当前页面路由末两段以 _ 连接（uni 无路由 name 体系，与 lihua-web 端
+// businessCode ?? route.name 兜底同语义；末两段区分 index 同名页面，且满足后端
+// ^[A-Za-z0-9_-]{1,32}$ 校验——完整路径含 / 会直接被拒）
+const resolveBusinessCode = () => {
+	if (props.businessCode) {
+		return props.businessCode
+	}
+	const route = getCurrentPages().pop()?.route || ""
+	return route.split('/').slice(-2).join('_').slice(0, 32)
+}
+
 // 处理文件秒传
 const handleFastUpload = async (fileName: string, md5: string) => {
-	return await fastUpload({originalName: fileName, md5, businessCode: props.businessCode, businessName: props.businessName})
+	return await fastUpload({originalName: fileName, md5, businessCode: resolveBusinessCode(), businessName: props.businessName})
 }
 
 // 处理附件上传
 const handleFileUpload = async (filePath: string) => {
-	return await upload(filePath, {businessCode: props.businessCode, businessName: props.businessName})
+	return await upload(filePath, {businessCode: resolveBusinessCode(), businessName: props.businessName})
 }
 
 // 处理超出指定大小
