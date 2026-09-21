@@ -55,7 +55,7 @@
 			@remove="handleModelValue"
 			v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.mode === 'picture'"/>
 		
-		<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（仅微信小程序支持） -->
+		<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（微信小程序从聊天记录选取、H5 本地文件选择、App 暂无对应能力） -->
 		<sar-space direction="vertical" v-if="props.uploadType === 'file' || props.uploadType === 'all'">
 			<sar-button 
 				v-if="!props.readonly && fileList.length < props.maxCount" 
@@ -67,7 +67,7 @@
 				:size="props.buttonSize"
 				:icon="props.buttonIcon"
 				:icon-family="props.buttonIconFamily" 
-				@click="handleMessageChoose"
+				@click="handleFileChoose"
 				>{{props.buttonText}}</sar-button>
 			<attachment-card-list
 				fileType="file" 
@@ -221,8 +221,9 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 	// 获取附件md5
 	try {
 		const fileInfo = await getFileInfo(fileItem.url)
-		// H5 临时路径（blob URL）截取的文件名是无后缀 UUID，优先用选择回调携带的真实 file.name（其余平台 file.name 为空时回退截取名）
-		const fileName = fileItem.file?.name || fileInfo.fileName
+		// H5 临时路径（blob URL）截取的文件名是无后缀 UUID：优先选择回调的真实 file.name；
+		// file/all 类型手动入列的项无 file 属性、取 name（微信/H5 文件选择均携带真实名）；末级回退路径截取名
+		const fileName = fileItem.file?.name || fileItem.name || fileInfo.fileName
 		const {md5, filePath, size} = fileInfo
 		if (!md5 || !fileName || !filePath || !size) {
 			toast("附件信息获取异常")
@@ -384,34 +385,58 @@ const businessRemove = async () => {
 	})
 }
 
-// 微信消息文件选择
+// 文件入列并上传（file/all 类型手动管理列表；H5 chooseFile 与微信 chooseMessageFile 的选择结果共用）
+const pushAndUploadFiles = (tempFiles: {path: string; name: string; size: number, type: string}[]) => {
+	// 超出大小的附件
+	const overSizeFiles: UploadFileItem[] = []
+
+	tempFiles.forEach(file => {
+		const {size, path, name, type} = file
+		const fileItem: UploadFileItem = {url: path, name: name, type: type, status: 'uploading', message: '正在上传'}
+		if (size <= props.maxSize) {
+			// 大小范围内的附件先入列表再上传（状态由 handleUpload 更新）
+			fileList.value.push(fileItem)
+			handleUpload(fileItem)
+		} else {
+			// 超出大小的附件进行收集
+			overSizeFiles.push(fileItem)
+		}
+	})
+
+	// 同一处理超出大小的附件
+	if (overSizeFiles.length > 0) {
+		handleOverSize(overSizeFiles)
+	}
+}
+
+// #ifdef MP-WEIXIN
+// 微信从聊天记录选取文件（chooseMessageFile 仅微信小程序提供）
 const handleMessageChoose = () => {
+	uni.chooseMessageFile({
+		count: props.maxCount - fileList.value.length,
+		type: props.uploadType,
+		extension: props.extension,
+		success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
+			pushAndUploadFiles(tempFiles)
+		}
+	})
+}
+// #endif
+
+// 文件选择入口（file/all 类型上传按钮）：微信从聊天记录选取、H5 本地文件选择、App 暂无对应能力提示
+const handleFileChoose = () => {
 	// #ifdef MP-WEIXIN
-		uni.chooseMessageFile({
+		handleMessageChoose()
+	// #endif
+	// #ifdef H5
+		uni.chooseFile({
 			count: props.maxCount - fileList.value.length,
-			type: props.uploadType,
-			extension: props.extension,
-			success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
-				// 超出大小的附件
-				const overSizeFiles: UploadFileItem[] = []
-				
-				tempFiles.forEach(file => {
-					const {size, path, name, type} = file
-					const fileItem: UploadFileItem = {url: path, name: name, type: type, status: 'uploading', message: '正在上传'}
-					if (size <= props.maxSize) {
-						// 大小范围内的附件先入列表再上传（状态由 handleUpload 更新）
-						fileList.value.push(fileItem)
-						handleUpload(fileItem)
-					} else {
-						// 超出大小的附件进行收集
-						overSizeFiles.push(fileItem)
-					}
-				})
-				
-				// 同一处理超出大小的附件
-				if (overSizeFiles.length > 0) {
-					handleOverSize(overSizeFiles)
-				}
+			type: 'all',
+			// uni-h5 的 _createInput 无条件调用 extension.map，缺省必须传空数组（空 accept 即不限类型）
+			extension: props.extension ?? [],
+			success: ({ tempFiles }) => {
+				// tempFiles 为带 path（blob URL getter）的真实 File 对象，name/size/type 结构满足共用入列签名
+				pushAndUploadFiles(tempFiles as unknown as {path: string; name: string; size: number, type: string}[])
 			}
 		})
 	// #endif
