@@ -441,7 +441,7 @@ const handleFileChoose = () => {
 		})
 	// #endif
 	// #ifdef APP-PLUS
-		toast("仅微信小程序支持此配置")
+		toast("仅H5和微信小程序支持此配置")
 	// #endif
 }
 
