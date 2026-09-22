@@ -2,8 +2,8 @@
 	<view class="profile" :class="{ 'theme-dark': themeStore.isDark }">
 		<!--头像-->
 		<view class="title">
-			<!-- 铃铛：hero 右上（top 与头像行状态栏让位同高）；hover-class 按压反馈——分包跳转有加载间隙，无反馈会被误读为没点中 -->
-			<view class="notice-btn" hover-class="notice-btn-hover" :hover-stay-time="80" @click="toNotice">
+			<!-- 铃铛：hero 右上（top 与头像行状态栏让位同高） -->
+			<view class="notice-btn" @click="toNotice">
 				<sar-badge :value="noticeStore.unreadCount">
 					<sar-icon name="BellOutlined" family="icon" size="42rpx" color="#fff"></sar-icon>
 				</sar-badge>
@@ -175,7 +175,9 @@ watch(wsStatus, (status) => {
 	}
 
 	/* 铃铛/断连重连钮：hero 右上；小程序端下移 80rpx 避开原生胶囊按钮（其余平台无胶囊保持靠上）；
-	   半透明圆底在亮暗两套背景上均可读 */
+	   半透明圆底在亮暗两套背景上均可读。
+	   层级须高于 hero-row（z-index:2）：头像昵称行是小屏上移的全宽盒子，与铃铛下部区域重叠，
+	   同级时 hero-row 按 DOM 顺序绘制在上、拦截点击（铃铛点不中的硬根因），压过它才行 */
 	.notice-btn,
 	.reconnect-btn {
 		position: absolute;
@@ -185,7 +187,7 @@ watch(wsStatus, (status) => {
 		/* #ifndef MP */
 		top: 10vh;
 		/* #endif */
-		z-index: 2;
+		z-index: 3;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -210,12 +212,6 @@ watch(wsStatus, (status) => {
 			left: -10rpx;
 			border-radius: 50%;
 		}
-	}
-
-	/* 铃铛按压态：缩放 + 加深圆底（hover-class 指定，需与 .notice-btn 同层级避免 scoped 属性选择器差异） */
-	.notice-btn-hover {
-		transform: scale(0.9);
-		background: rgba(10, 12, 16, 0.45);
 	}
 
 	/* 断连重连钮：紧贴铃铛左侧（铃铛 right 16px + 宽 68rpx + 间距 16rpx） */
