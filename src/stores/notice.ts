@@ -3,7 +3,7 @@ import { queryUnReadCount } from '@/api/system/notice/notice'
 import {read} from '@/api/system/notice/notice'
 import type {PreviewNotice} from '@/api/system/notice/type/preview-notice'
 import { preview } from '@/api/system/notice/notice'
-import type {ResponseType} from '@/api/global/type'
+import {ResponseError, type ResponseType} from '@/api/global/type'
 import dayjs from 'dayjs'
 import { setNoticeRedDotSource } from '@/helpers/tabbar-red-dot'
 
@@ -39,19 +39,21 @@ export const useNoticeStore = defineStore('notice', {
 		},
 		// 预览
 		previewNotice(noticeId: string): Promise<PreviewNotice> {
-			return new Promise(async (resolve, reject) => {
-				const resp = await preview(noticeId)
-				if (resp.code === 200) {
-					const data = resp.data
-					resolve({
-						title: data.title,
-						content: data.content,
-						releaseUser: data.releaseUser,
-						releaseTime: dayjs(data.releaseTime).format('YYYY-MM-DD HH:mm')
-					})
-				} else {
-					reject(resp.msg)
-				}
+			return new Promise((resolve, reject) => {
+				preview(noticeId).then((resp) => {
+					if (resp.code === 200) {
+						const data = resp.data
+						resolve({
+							title: data.title,
+							content: data.content,
+							releaseUser: data.releaseUser,
+							releaseTime: dayjs(data.releaseTime).format('YYYY-MM-DD HH:mm')
+						})
+					} else {
+						// 统一 reject ResponseError，消费方可经 instanceof / toastRequestError 取真实 msg
+						reject(new ResponseError(resp.code, resp.msg))
+					}
+				}).catch(err => reject(err))
 			})
 		},
 		// 标记为已读，并重新查询未读数量（红点更新由 unreadCount 变化驱动）

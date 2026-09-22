@@ -4,22 +4,14 @@ import {onLaunch} from "@dcloudio/uni-app"
 import {useThemeStore} from "@/stores/theme"
 import {useNoticeStore} from "@/stores/notice"
 import {useUserStore} from "@/stores/user"
-import {useRootRefStore} from "@/stores/root"
 import {webSocket} from '@/utils/web-socket'
 import { setPermissionRedDotSource } from '@/helpers/tabbar-red-dot'
+import { showNoticePush } from '@/helpers/notice-notify'
 import type {NoticeMessage} from '@/api/system/notice/type/notice-message'
-import router from "@/router/router"
 import { setupH5Guard } from "@/router/router"
-import { initDict, getDictLabel } from '@/helpers/dict'
-
-// #ifdef APP-PLUS
-// 仅app支持原生消息通知
-import MessageNotify from '@/utils/message-notify'
-// #endif
 
 const themeStore = useThemeStore()
 const noticeStore = useNoticeStore()
-const rootRefStore = useRootRefStore()
 
 onLaunch(() => {
 	// 设置当前主题
@@ -36,10 +28,8 @@ onLaunch(() => {
 const addNoticeEventListener = () => {
 	// 订阅notice通知消息
 	webSocket.addEventListener("WS_NOTICE", (data: NoticeMessage) => {
-		// #ifdef APP-PLUS
-		// 全局通知推送（仅原生app）
-		showNotify(data)
-		// #endif
+		// 原生通知横幅（平台分叉在 helper 内部，非 APP 平台为空实现）
+		showNoticePush(data)
 
 		// 重新获取未读消息数量（unreadCount 变化经下方 watch 驱动红点更新）
 		noticeStore.getUnreadCount()
@@ -48,36 +38,6 @@ const addNoticeEventListener = () => {
 	// 权限数据更新提示：角色/菜单变更后服务端定向推送——置红点（tabBar + 个人中心头像），点击头像静默刷新生效
 	webSocket.addEventListener("WS_REFRESH_PERMISSION", () => {
 		useUserStore().$state.permissionUpdate = true
-	})
-}
-
-// 全局通知推送（仅原生app）
-const showNotify = (data: NoticeMessage) => {
-	// 消息/公告标识
-	const pngName = data.type === '0' ? 'MessageOutlined.png' : 'NotificationOutlined.png'
-	// 获取字典
-	const {sys_notice_type} = initDict("sys_notice_type")
-	// 全局消息提醒
-	MessageNotify.show({title: '收到一条新' + getDictLabel(sys_notice_type.value, data.type), content: data.title, image: '_www/static/notice/' + pngName}, () => {
-		// 跳转到详情页
-		router.navigateTo({
-			url: "/subpackages/system/notice/Detail",
-			query: {
-				id: data.id,
-				title: data.title
-			},
-			success: () => noticeStore.markAsRead(data.id)
-		})
-	}, (direction) => {
-		// 向下拖动打开抽屉预览，以根节点为媒介，拿到保存到rootStore中的根节点实例，调用通知方法
-		if (direction === 'bottom') {
-			const ref = rootRefStore.getRootRef()
-			if (ref && ref.showNoticeLite) {
-				ref.showNoticeLite(data.id)
-			}
-			// 向下拖动需要手动关闭通知
-			MessageNotify.hide()
-		}
 	})
 }
 

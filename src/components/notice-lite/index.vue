@@ -9,6 +9,9 @@
 				    text="努力加载中"
 				  />
 			</view>
+			<view class="content" v-else-if="loadFailed">
+				<sar-empty description="加载失败，请稍后重试"/>
+			</view>
 			<view class="content" v-else>
 				<view class="notice-meta">
 					<text>
@@ -55,16 +58,20 @@ const noticeData = ref<PreviewNotice>({})
 
 // 加载中
 const loading = ref<boolean>(false)
+// 加载失败标记：失败态与「正文为空」空态分开展示，避免误导
+const loadFailed = ref<boolean>(false)
 
 // 预览通知公告
 const handlePreview = async () => {
 	loading.value = true
+	loadFailed.value = false
 	try {
 		const resp = await noticeStore.previewNotice(props.noticeId)
 		noticeData.value = resp
 		// 抽屉仅在收到新推送时打开，此处必为未读，标记已读
-		noticeStore.markAsRead(props.noticeId)
+		noticeStore.markAsRead(props.noticeId).catch((err) => console.error("标记已读失败", err))
 	} catch (err) {
+		loadFailed.value = true
 		console.error("通知预览失败", err)
 	} finally {
 		loading.value = false
