@@ -36,7 +36,7 @@ import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 import UserAvatar from '@/components/user-avatar/index.vue'
 import router from '@/router/router'
-import {toast} from '@/utils/toast'
+import {toast, toastRequestError} from '@/utils/toast'
 import { reloadData } from '@/api/system/authentication/authentication'
 import {getDictLabel, initDict} from '@/helpers/dict'
 import type {SysPost} from "@/api/system/post/type/sys-post";
@@ -60,6 +60,7 @@ const goSaveDataPage = (pageName: string) => {
  * 刷新用户信息
  */
 const reloadUserInfo = async () => {
+	// loading/toast 共用原生槽位，hideLoading 须先于任何 toast，故不收在 finally
 	try {
 		uni.showLoading({title: '加载中', mask: true})
 		await reloadData()
@@ -68,9 +69,11 @@ const reloadUserInfo = async () => {
 		if (userAvatarRef.value) {
 			userAvatarRef.value.initAvatar()
 		}
-		toast("更新完成")
-	} finally {
 		uni.hideLoading()
+		toast("更新完成")
+	} catch (err) {
+		uni.hideLoading()
+		toastRequestError(err)
 	}
 }
 </script>

@@ -37,7 +37,7 @@ import { saveBasics } from '@/api/system/profile/profile'
 import { upload } from '@/api/system/attachment/attachment-storage'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/router'
-import { toast } from '@/utils/toast'
+import { toast, toastRequestError } from '@/utils/toast'
 import { cloneDeep } from 'lodash-es'
 import {getFileInfo} from '@/utils/attachment/attachment-utils'
 import { AVATAR_COLOR_SOURCE } from '@/constants/avatar-colors'
@@ -56,14 +56,20 @@ const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 	if (type === 'confirm') {
 		// url 字段无需保存
 		avatarData.value.url = undefined
-		const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
-		if (resp.code === 200) {
-			// 刷新store
-			await userStore.initUserInfo()
-			router.navigateBack({})
-		} else {
-			toast(resp.msg)
-			// 保存失败保持抽屉打开，允许调整后重试
+		try {
+			const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
+			if (resp.code === 200) {
+				// 刷新store
+				await userStore.initUserInfo()
+				router.navigateBack({})
+			} else {
+				toast(resp.msg)
+				// 保存失败保持抽屉打开，允许调整后重试
+				return Promise.reject()
+			}
+		} catch (err) {
+			toastRequestError(err)
+			// 网络异常同样保持抽屉打开，允许调整后重试
 			return Promise.reject()
 		}
 	}

@@ -65,7 +65,7 @@ import type { RegisterType } from '@/api/system/authentication/type/register-typ
 import {register, checkUserName} from '@/api/system/authentication/authentication'
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
-import {toast} from '@/utils/toast'
+import {toast, toastRequestError} from '@/utils/toast'
 import { useKeyboardStatus } from '@/composables/use-keyboard-status'
 import { useSettingStore } from '@/stores/setting'
 import {cloneDeep} from "lodash-es"
@@ -181,6 +181,9 @@ const initRegister = () => {
 			} else {
 				toast(resp.msg)
 			}
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
 		} finally {
 			registerLoading.value = false
 		}
@@ -233,7 +236,8 @@ const {isEnableCaptcha, openCaptcha} = initCaptcha()
 const {openKeyboard} = useKeyboardStatus()
 
 onMounted(() => {
-	settingStore.initBaseSetting()
+	// 断网进注册页探测失败仅吞错（页面停留在默认配置，恢复后重试）
+	settingStore.initBaseSetting().catch(() => undefined)
 })
 </script>
 

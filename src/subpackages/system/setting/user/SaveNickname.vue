@@ -12,7 +12,7 @@ import { ref, nextTick, onMounted} from 'vue';
 import { useUserStore } from '@/stores/user';
 import router from '@/router/router';
 import {saveBasics} from '@/api/system/profile/profile';
-import {toast} from '@/utils/toast';
+import {toast, toastRequestError} from '@/utils/toast';
 
 const userStore = useUserStore()
 const nickName = ref<string>(userStore.$state.nickname)
@@ -41,6 +41,8 @@ const handleSaveData = async () => {
 		} else {
 			toast(resp.msg)
 		}
+	} catch (err) {
+		toastRequestError(err)
 	} finally {
 		saveLoading.value = false
 	}

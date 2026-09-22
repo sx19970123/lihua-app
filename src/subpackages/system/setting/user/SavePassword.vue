@@ -12,7 +12,7 @@
 <script setup lang="ts">
 import {reactive, ref, nextTick, onMounted} from 'vue';
 import router from '@/router/router';
-import {toast} from '@/utils/toast';
+import {toast, toastRequestError} from '@/utils/toast';
 import PasswordInput from '@/components/password-input/index.vue'
 import type {passwordType} from "@/api/system/profile/type/password-type";
 import {updatePassword} from "@/api/system/profile/profile";
@@ -45,6 +45,8 @@ const handleSaveData = async () => {
 			} else {
 				toast(resp.msg)
 			}
+		} catch (err) {
+			toastRequestError(err)
 		} finally {
 			saveLoading.value = false
 		}

@@ -67,9 +67,14 @@ export const useUserStore = defineStore('user', {
 		async handleLogout() {
 			try {
 				await logout()
-			} finally {
-				this.authenticationFailure()
+			} catch (err) {
+				// 401 已由请求拦截器完成清态+重登跳转（登录页外的 401 拦截器必处理），再调一次会双 reLaunch 竞争
+				if (err instanceof ResponseError && err.code === 401) {
+					return
+				}
+				console.error("退出登录失败，本地登出兜底", err)
 			}
+			this.authenticationFailure()
 		},
 		/**
 		 * 认证失效

@@ -48,7 +48,8 @@ const handleLogout = () => {
 		message: "是否退出登录？",
 		buttonType: 'round',
 		onConfirm: () => {
-			userStore.handleLogout()
+			// 退出请求失败时本地登出仍由 store finally 兜底，此处仅消 unhandled rejection
+			userStore.handleLogout().catch(() => undefined)
 		}
 	})
 }
