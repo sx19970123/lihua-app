@@ -18,6 +18,8 @@ export interface AuthInfoType {
     defaultDept: SysDept,
     // 岗位信息
     posts: SysPost[],
+    // 权限数据是否已变更（服务端标记比对）：tabBar/头像红点数据源
+    permissionUpdate?: boolean,
 }
 
 /**

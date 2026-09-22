@@ -3,8 +3,10 @@ import {watch} from 'vue'
 import {onLaunch} from "@dcloudio/uni-app"
 import {useThemeStore} from "@/stores/theme"
 import {useNoticeStore} from "@/stores/notice"
+import {useUserStore} from "@/stores/user"
 import {useRootRefStore} from "@/stores/root"
 import {webSocket} from '@/utils/web-socket'
+import { setPermissionRedDotSource } from '@/helpers/tabbar-red-dot'
 import type {NoticeMessage} from '@/api/system/notice/type/notice-message'
 import router from "@/router/router"
 import { setupH5Guard } from "@/router/router"
@@ -43,9 +45,9 @@ const addNoticeEventListener = () => {
 		noticeStore.getUnreadCount()
 	})
 
-	// 权限数据更新提示：角色/菜单变更后服务端定向推送；App 端无「数据更新」入口，提示重新登录生效
+	// 权限数据更新提示：角色/菜单变更后服务端定向推送——置红点（tabBar + 个人中心头像），点击头像静默刷新生效
 	webSocket.addEventListener("WS_REFRESH_PERMISSION", () => {
-		uni.showToast({ title: '您的权限已更新，重新登录后生效', icon: 'none', duration: 3000 })
+		useUserStore().$state.permissionUpdate = true
 	})
 }
 
@@ -81,6 +83,9 @@ const showNotify = (data: NoticeMessage) => {
 
 // 监听未读消息变化
 watch(() => noticeStore.unreadCount, () => noticeStore.setTabbarRedDot())
+
+// 监听权限待更新标志：驱动 tabBar 红点（与未读消息共享槽位，经 tabbar-red-dot 收敛判定）
+watch(() => useUserStore().permissionUpdate, (on) => setPermissionRedDotSource(on), { immediate: true })
 </script>
 
 <style lang="scss">

@@ -17,9 +17,11 @@
 			<!-- 头像行：bottom 锚定 hero 底部 -->
 			<view class="hero-row">
 				<sar-space align="center" size="large">
-					<!-- 头像 -->
+					<!-- 头像：红点仅为权限待更新提示（消费走重新登录），点击进用户设置 -->
 					<view @click="toUserSetting()">
-						<user-avatar/>
+						<sar-badge :dot="userStore.$state.permissionUpdate">
+							<user-avatar/>
+						</sar-badge>
 					</view>
 					<sar-space direction="vertical" size="small">
 						<!-- 昵称 -->

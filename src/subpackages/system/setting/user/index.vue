@@ -11,7 +11,12 @@
 				<sar-list-item title="邮箱" :value="userStore.userInfo.email" arrow hover @click="goSaveDataPage('SaveEmail')"></sar-list-item>
 				<sar-list-item title="性别" :value="getDictLabel(user_gender, userStore.userInfo.gender)" arrow hover @click="goSaveDataPage('SaveGender')"></sar-list-item>
 				<sar-list-item title="手机号码" :value="userStore.userInfo.phoneNumber" arrow hover @click="goSaveDataPage('SavePhoneNumber')"></sar-list-item>
-				<sar-list-item title="数据更新" hover @click="reloadUserInfo"></sar-list-item>
+				<sar-list-item title="数据更新" hover @click="reloadUserInfo">
+					<template #value>
+						<!-- 权限数据待更新红点：指路本入口，点击完成更新后红点随标志复位熄灭 -->
+						<sar-badge :dot="userStore.permissionUpdate"/>
+					</template>
+				</sar-list-item>
 			</sar-list>
 			<sar-list card title="权限信息">
 				<sar-list-item title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>

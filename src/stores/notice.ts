@@ -5,9 +5,7 @@ import type {PreviewNotice} from '@/api/system/notice/type/preview-notice'
 import { preview } from '@/api/system/notice/notice'
 import type {ResponseType} from '@/api/global/type'
 import dayjs from 'dayjs'
-
-// 通知红点所在的 tabBar 索引（个人中心 tab）
-const NOTICE_TAB_INDEX = 1
+import { setNoticeRedDotSource } from '@/helpers/tabbar-red-dot'
 
 
 /**
@@ -65,28 +63,11 @@ export const useNoticeStore = defineStore('notice', {
 				}).catch(err => reject(err))
 			})
 		},
-		// 处理底部导航栏红点
+		// 处理底部导航栏红点（通知来源；槽位与权限待更新红点共享，亮/灭统一经 tabbar-red-dot 收敛判定，
+		// 该 API 仅 tabbar 页面生效，切回页面由 AppRoot onShow 重设）
 		setTabbarRedDot() {
-			// 不存在红点，并阅读数等于0直接返回
-			if (!this.isShowTabBarRedDot && this.unreadCount === 0) {
-				return
-			}
-			// 存在红点，并未读数大于0直接返回
-			if (this.isShowTabBarRedDot && this.unreadCount > 0) {
-				return
-			}
-			// 设置红点（此api只有tabbar页面中才可设置生效，其余页面会进fail回调；AppRoot 的 onShow 会在切回页面时重设，故处于tabbar页面总能看到新消息）
-			if (this.unreadCount > 0) {
-				uni.showTabBarRedDot({
-					index: NOTICE_TAB_INDEX,
-					success: () => this.isShowTabBarRedDot = true,
-				})
-			} else {
-				uni.hideTabBarRedDot({
-					index: NOTICE_TAB_INDEX,
-					success: () => this.isShowTabBarRedDot = false,
-				})
-			}
+			setNoticeRedDotSource(this.unreadCount > 0)
+			this.isShowTabBarRedDot = this.unreadCount > 0
 		}
 	}
 })
