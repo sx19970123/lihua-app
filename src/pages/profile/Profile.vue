@@ -2,16 +2,17 @@
 	<view class="profile" :class="{ 'theme-dark': themeStore.isDark }">
 		<!--头像-->
 		<view class="title">
-			<!-- 铃铛：hero 右上（top 与头像行状态栏让位同高） -->
-			<view class="notice-btn" @click="toNotice">
+			<!-- 铃铛：hero 右上（top 与头像行状态栏让位同高）；hover-class 按压反馈——分包跳转有加载间隙，无反馈会被误读为没点中 -->
+			<view class="notice-btn" hover-class="notice-btn-hover" :hover-stay-time="80" @click="toNotice">
 				<sar-badge :value="noticeStore.unreadCount">
 					<sar-icon name="BellOutlined" family="icon" size="42rpx" color="#fff"></sar-icon>
 				</sar-badge>
 			</view>
-			<!-- WS 断连重连：非连接态渲染（断链=断链图标可点重连，重连中=loading 旋转），连接成功后自动隐藏 -->
+			<!-- WS 断连重连：非连接态渲染（断链=断链图标可点重连，重连中=loading 旋转），连接成功后自动隐藏；
+			     loading 用 sar-loading 原生旋转——原 icon+页面样式穿透方案在小程序端 keyframes 不作用于组件内节点，图标冻结 -->
 			<view v-if="wsStatus !== 'connected'" class="reconnect-btn" @click="handleReconnect">
 				<sar-icon v-if="wsStatus === 'disconnected'" name="DisconnectOutlined" family="icon" size="42rpx" color="#fff"></sar-icon>
-				<sar-icon v-else name="LoadingOutlined" family="icon" size="42rpx" color="#fff" root-class="ws-spin"></sar-icon>
+				<sar-loading v-else type="circular" size="42rpx" color="#fff"></sar-loading>
 			</view>
 			<!-- 头像行：bottom 锚定 hero 底部 -->
 			<view class="hero-row">
@@ -197,23 +198,30 @@ watch(wsStatus, (status) => {
 
 	.notice-btn {
 		right: 16px;
+
+		/* 点击热区外扩（约 88rpx 等效）：视觉圆仅 68rpx≈34px 低于最小触控标准，指尖稍偏即落空；
+		   透明伪元素仍命中宿主元素，视觉零变化（与左侧断连钮净距 16rpx，外扩后余 6rpx） */
+		&::after {
+			content: "";
+			position: absolute;
+			top: -10rpx;
+			right: -10rpx;
+			bottom: -10rpx;
+			left: -10rpx;
+			border-radius: 50%;
+		}
+	}
+
+	/* 铃铛按压态：缩放 + 加深圆底（hover-class 指定，需与 .notice-btn 同层级避免 scoped 属性选择器差异） */
+	.notice-btn-hover {
+		transform: scale(0.9);
+		background: rgba(10, 12, 16, 0.45);
 	}
 
 	/* 断连重连钮：紧贴铃铛左侧（铃铛 right 16px + 宽 68rpx + 间距 16rpx） */
 	.reconnect-btn {
 		right: calc(16px + 68rpx + 16rpx);
-
-		/* 重连中 loading 旋转 */
-		.ws-spin {
-			animation: ws-spin 1s linear infinite;
-		}
 	}
-
-@keyframes ws-spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
 
 	/* 底部遮罩 */
 	&::after {
