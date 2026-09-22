@@ -26,6 +26,8 @@ import {initDict} from '@/helpers/dict'
 const { user_gender } = initDict('user_gender')
 const userStore = useUserStore()
 const gender = ref<string | undefined>(userStore.userInfo.gender)
+// 服务端已保存的选中值：失败回滚基准（radio v-model 已先把 UI 翻转；成功即离开页面，无需更新）
+const savedGender = ref<string | undefined>(userStore.userInfo.gender)
 
 const handleSaveData = async () => {
 	// 修改逻辑（loading/toast 共用原生槽位，hideLoading 须先于任何 toast，故不收在 finally）
@@ -38,10 +40,12 @@ const handleSaveData = async () => {
 			await userStore.initUserInfo()
 			router.navigateBack({})
 		} else {
+			gender.value = savedGender.value
 			toast(resp.msg)
 		}
 	} catch (err) {
 		uni.hideLoading()
+		gender.value = savedGender.value
 		toastRequestError(err)
 	}
 }

@@ -369,7 +369,7 @@ const toRegister = () => {
 	}
 	openKeyboard.value = false
 	router.navigateTo({
-		url: "/pages/login/Register?enableCaptcha=" + isEnableCaptcha.value,
+		url: "/pages/login/Register",
 		animationType: "slide-in-bottom"
 	})
 }

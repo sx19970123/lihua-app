@@ -54,10 +54,9 @@ const avatarData = ref<EditableAvatarType>({
 // 执行保存（作为 popout 的 before-close：promise 在途时确认按钮自动 loading，reject 阻止抽屉关闭）
 const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 	if (type === 'confirm') {
-		// url 字段无需保存
-		avatarData.value.url = undefined
+		// url 字段无需保存；用局部 payload 不清响应式源——保存失败抽屉停留时 750rpx 预览仍有数据可显示
 		try {
-			const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
+			const resp = await saveBasics({ avatar: JSON.stringify({...avatarData.value, url: undefined}) })
 			if (resp.code === 200) {
 				// 刷新store
 				await userStore.initUserInfo()
@@ -121,10 +120,11 @@ const chooseImage = async () => {
     return;
   }
 
-  // 上传图片
+  // 上传图片（loading/toast 共用原生槽位，hideLoading 须先于任何 toast，故不收在 finally）
   uni.showLoading({ title: "正在上传", mask: true });
   try {
     const resp = await upload(croppedFilePath, {businessCode: "UserAvatar", public: true});
+    uni.hideLoading()
     if (resp.code === 200 && resp.data?.path) {
       avatarData.value.type = "image";
       avatarData.value.value = resp.data.path;
@@ -134,10 +134,9 @@ const chooseImage = async () => {
       toast(resp.code === 200 ? "上传失败" : resp.msg);
     }
   } catch (err) {
+    uni.hideLoading()
     console.error(err);
     toast("上传失败");
-  } finally {
-    uni.hideLoading();
   }
 }
 

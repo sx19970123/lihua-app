@@ -90,12 +90,18 @@
 			"style": {
 				"navigationBarTitleText": "设置"
 			}
-		},{
+		},
+		// #ifdef APP-PLUS
+		// 主题切换仅 APP 支持：H5/小程序不注册该页（地址栏直达可切出混色态——setMode 的持久化与 setUIStyle 均在 APP 分支）
+		// 后续 APP-only 页面（如检查更新）按此同款注册
+		{
 			"path": "setting/theme/index",
 			"style": {
 				"navigationBarTitleText": "系统主题"
 			}
-		},{
+		},
+		// #endif
+		{
 			"path": "setting/user/index",
 			"style": {
 				"navigationBarTitleText": "用户设置"
