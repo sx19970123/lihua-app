@@ -30,6 +30,9 @@ class WebSocketManager {
     private reconnectTimer?: ReturnType<typeof setTimeout>
     // 是否开启重连
     private enableRetry: boolean = true
+    // 连接在途标志：getOnceToken 网络往返窗口内实例闸门（this.webSocket）尚未建立，
+    // 守卫在 initUserInfo 返回前的连续导航会并发触发 connect（H5 冷启动守卫+splash 双跳双连接必现），在途直接忽略
+    private connecting: boolean = false
 
     constructor() {
         this.listeners = new Map()
@@ -41,23 +44,30 @@ class WebSocketManager {
      * 建立连接
      */
     public connect = async () => {
+        // 在途去重：token 往返窗口内的并发 connect 只放行首个，其余忽略
+        if (this.connecting) {
+            console.log("WebSocket连接建立中，忽略重复 connect")
+            return
+        }
         if (!this.webSocket) {
             // 每次显式连接重置重连开关，避免上次主动关闭（如登出）后的关闭态延续到本次连接
             this.enableRetry = true
+            this.connecting = true
             wsStatus.value = 'reconnecting'
 			try {
 				const { code, data } = await getOnceToken()
 
 				if (code !== 200 || !data) {
 					console.error("WebSocket获取连接token失败")
+					this.connecting = false
 					this.reconnect()
 					return;
 				}
-			
+
 				// 拼接连接地址
 				const url = import.meta.env.VITE_APP_WS_API + '?token=' + data + '&clientId=' + await getUUID() + '&clientType=' + getClientType()
-			
-	            // 建立连接
+
+	            // 建立连接（发起即交还互斥给实例闸门 this.webSocket）
 	            const task = this.webSocket = uni.connectSocket({
 	                url,
 	                success: () => console.log("WebSocket连接中"),
@@ -66,6 +76,7 @@ class WebSocketManager {
 	                    this.reconnect()
 	                }
 	            })
+	            this.connecting = false
 
 	            // 连接成功
 	            task.onOpen(() => {
@@ -107,6 +118,7 @@ class WebSocketManager {
 	            })
 			} catch (e) {
 				console.error("websocket连接失败",e)
+				this.connecting = false
 				this.reconnect()
 			}
 		} else {
