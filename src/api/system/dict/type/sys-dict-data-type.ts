@@ -54,31 +54,3 @@ export interface SysDictDataType {
    */
   children?: Array<SysDictDataType>;
 }
-
-
-export interface SysDictDataTypeDTO {
-  /**
-   * 字典类型编码
-   */
-  dictTypeCode: string;
-
-  /**
-   * 字典标签
-   */
-  label?: string;
-
-  /**
-   * 字典值
-   */
-  value?: string;
-
-  /**
-   * 状态
-   */
-  status?: string;
-
-  /**
-   * 类型
-   */
-  type?: string;
-}

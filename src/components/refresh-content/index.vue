@@ -203,7 +203,7 @@ const wxsProp = computed(() => ({
 }))
 
 /**
- * 兼容旧 mescroll 的 API 对象，作为 @init/@refresh/@load-more 的回传值。
+ * 兼容垫片：mescroll 形状的 API 对象，作为 @init/@refresh/@load-more 的回传值。
  * 页面调用 mescroll.endSuccess(count, hasNext) / endErr() 等方法，内部映射到状态机。
  */
 let apiObj: MescrollInstance = {} as MescrollInstance
@@ -452,7 +452,7 @@ export default renderBiz
 /*
  * top 偏移用 padding-top（非 margin-top）+ box-sizing:border-box + min-height:100%，
  * 沿用 mescroll-body 机制：padding 在内容盒内部，不会在页面 min-height:100vh 之外额外累加高度，
- * 避免内容多出一个 navbar 高度（之前 margin-top 叠加 min-height:100vh 导致溢出）。
+ * 避免内容多出一个 navbar 高度（margin-top 会与 min-height:100vh 叠加导致溢出）。
  * min-height:100% 相对父容器，保证列表不满屏仍可下拉。
  * 坑：百分比 min-height 需父链有确定 height 才能解析——父级只写 min-height:100vh 时本值退化为 0，
  * 组件根只剩内容高，下方空白区域不在组件根内、无法下拉；消费页面根节点必须 height:100vh

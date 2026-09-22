@@ -44,7 +44,7 @@ export interface SysAttachment {
     /** 上传人id */
     createId?: string;
     /** 上传时间 */
-    createTime?: Date;
+    createTime?: string;
     /** 上传失败原因 */
     errorMsg?: string;
     /** 访问链（公开附件为 download?fullPath= 链，私密附件为 download?key= 签名链） */

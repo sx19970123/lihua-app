@@ -26,7 +26,7 @@ export interface SysUserNoticeVO {
     /**
      * 发布时间
      */
-    releaseTime?: Date;
+    releaseTime?: string;
     /**
      * 已读标记
      */
@@ -35,9 +35,4 @@ export interface SysUserNoticeVO {
      * 标星标记
      */
     starFlag?: string;
-
-    /**
-     * 标星标记（number类型）
-     */
-    starFlagNumber?: number;
 }

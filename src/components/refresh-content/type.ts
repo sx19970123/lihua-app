@@ -1,5 +1,5 @@
 /**
- * 兼容垫片：以下类型沿用旧 mescroll-uni 的 API 形状，供调用页面继续 import 使用。
+ * 兼容垫片：以下类型沿用 mescroll-uni 的 API 形状，供调用页面继续 import 使用。
  * RefreshContent 内部为自绘触摸实现、不依赖 mescroll，
  * emit/expose 回传的 MescrollInstance 是组件内部构造的同名 API 对象，方法语义保持兼容：
  *   endSuccess(dataSize, hasNext) / endErr()         —— 请求结束

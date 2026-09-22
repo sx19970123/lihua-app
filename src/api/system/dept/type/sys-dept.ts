@@ -1,5 +1,6 @@
-import type {SysPost} from "@/api/system/post/type/sys-post";
-
+/**
+ * 部门（后端 CurrentDept 下发字段的镜像：id/parentId/name/code/sort/manager/phoneNumber/email/fax/defaultDept/children）
+ */
 export interface SysDept {
   /**
    * 主键id
@@ -17,10 +18,6 @@ export interface SysDept {
    * 部门/岗位编码
    */
   code?: string;
-  /**
-   * 数据状态
-   */
-  status?: string;
   /**
    * 数据排序
    */
@@ -46,24 +43,7 @@ export interface SysDept {
    */
   defaultDept?: string;
   /**
-   * 备注
-   */
-  remark?: string;
-  /**
    * 子节点
    */
-  children?: SysDeptVO[];
-  /**
-   * 部门信息
-   */
-  sysPostList?: SysPost[];
-
-  value?: string
-}
-
-export interface SysDeptVO extends SysDept {
-
-  statusIsNormal?: boolean
-
-  updateStatusLoading?: boolean
+  children?: SysDept[];
 }

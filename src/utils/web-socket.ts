@@ -90,7 +90,7 @@ class WebSocketManager {
 
 	            // 连接错误：与 onClose 走同一套清理+重连（handleAbnormalEnd 内以 task 引用去重，error+close 双触发只算一次）。
 	            // 小程序 SocketTask 连接建立失败时常只触发 error 不触发 close（H5/APP 则 error 后必补 close），
-	            // 原「只记录」设计在小程序端卡死：僵尸 task 残留阻塞 connect/manualReconnect，wsStatus 永停 reconnecting
+	            // 只记录不清理会令僵尸 task 残留、阻塞 connect/manualReconnect，wsStatus 永停 reconnecting
 	            task.onError((err) => {
 	                this.isConnected = false
 	                console.error('WebSocket连接错误:', err)
@@ -133,12 +133,7 @@ class WebSocketManager {
 	    }
 	    this.listeners.set(type, callback);
 	}
-	
-	// 删除事件
-	public removeEventListener = (type: string) => {
-	    this.listeners?.delete(type)
-	}
-	
+
 	// 发送数据
 	public sendMessage = (type: string, data: any): Promise<boolean> => {
 	    return new Promise((resolve, reject) => {

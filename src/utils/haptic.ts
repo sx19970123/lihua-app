@@ -1,37 +1,6 @@
 /**
  * 触觉反馈工具
  */
-// 预热标志：原生桥/class 通道只需初始化一次，后续触发真机震动时复用，避免首次进阈值卡顿。
-let hapticWarmedUp = false
-
-/**
- * 预热触觉反馈：提前做一次轻量原生调用，初始化 JS↔原生桥与底层 class 通道。
- * 应在用户交互早期调用（如页面 onMounted），把首次原生开销提前到用户无感知的时机；
- * 可选调用——不预热时 triggerLightHaptic 仍可用，仅首次触发可能轻微卡顿。
- * 重复调用幂等（模块级标志去重）；H5 / 小程序端为 no-op。
- */
-export function warmupHaptic() {
-	if (hapticWarmedUp) {
-		return
-	}
-	hapticWarmedUp = true
-	// #ifdef APP-PLUS
-	const plusApi = (globalThis as any).plus
-	const osName = String(plusApi?.os?.name || '').toLowerCase()
-	// 安卓：预先 importClass 并触发一次最低强度震动，初始化桥通道。
-	if (osName === 'android') {
-		triggerAndroidHaptic(plusApi)
-	}
-	// iOS：首次 importClass + prepare 生成器，开销极低，不实际触发 impact。
-	if (osName === 'ios' && plusApi?.ios) {
-		try {
-			plusApi.ios.importClass('UIImpactFeedbackGenerator')
-		} catch {
-			// 预热失败不影响后续触发逻辑。
-		}
-	}
-	// #endif
-}
 
 /**
  * 轻触感反馈：在需要触觉确认的时刻同步调用（如下拉越阈值、拖拽吸附到位），无参数无返回值。

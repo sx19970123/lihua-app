@@ -23,7 +23,7 @@ export interface PageResponseType<T> {
 /**
  * 接收Map类型返回值
  */
-export interface MapResponseType<String,V> {
+export interface MapResponseType<V> {
     [key: string]: V[]
 }
 

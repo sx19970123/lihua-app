@@ -37,7 +37,7 @@ export interface SysNotice {
     /**
      * 发布时间
      */
-    releaseTime?: Date;
+    releaseTime?: string;
 
     /**
      * 逻辑删除标识
@@ -52,7 +52,7 @@ export interface SysNotice {
     /**
      * 创建时间
      */
-    createTime?: Date;
+    createTime?: string;
 
     /**
      * 创建人id
