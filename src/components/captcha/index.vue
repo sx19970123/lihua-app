@@ -35,9 +35,9 @@
 							<movable-area class="move-block" :animation="true">
 								<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
 								<view class="move-shadow"></view>
-								<movable-view class="block-button" :x="x" :animation="true" direction="all"
-									@change="startMove" @touchstart="touchstart" @touchmove="touchmove"
-									@touchend="touchend">
+							<movable-view class="block-button" :x="x" :animation="true" direction="all"
+								@change="startMove" @touchstart="touchstart" @touchmove="touchmove"
+								@touchend="touchend" @mousedown="mousedown" @mousemove="mousemove">
 									<text class="arrow">
 										➜
 									</text>
@@ -372,10 +372,22 @@
 	 * 初始化验证码交互
 	 */
 	const initInteraction = () => {
+		// mouse 事件兜底坐标：uni-h5 会给 mouse 事件合成 changedTouches，原生 MouseEvent 直接取自身 pageX/pageY
+		const getEventPoint = (e : TouchEvent | MouseEvent) : { pageX : number, pageY : number } => {
+			const touch = (e as TouchEvent).changedTouches?.[0]
+			return touch ?? (e as MouseEvent)
+		}
+		// H5 桌面鼠标拖动兜底：uni-h5 movable-view 内部以 mouse 合成驱动位移（滑块跟手）但不派发 touchend，
+		// 校验唯一入口 touchend 永不触发（松手无反应且可继续拖）——补 mouse 入口复用同一组 touch handler。
+		// H5 触摸结束后浏览器还会补发合成 mousedown/mouseup（ghost mouse），会经 mouse 入口二次触发校验提交，
+		// 以最近一次真实 touchend 的时间窗抑制（人手不可能在 500ms 内完成 touch→mouse 切换）
+		let lastTouchEndTime = 0
+		const isTouchSuppressed = () => Date.now() - lastTouchEndTime < 500
 		// 滑块开始
-		const touchstart = (e : TouchEvent) => {
-			let startX = e.changedTouches[0].pageX
-			let startY = e.changedTouches[0].pageY
+		const touchstart = (e : TouchEvent | MouseEvent) => {
+			const point = getEventPoint(e)
+			let startX = point.pageX
+			let startY = point.pageY
 			captchaProcess.value.startX = startX
 			captchaProcess.value.startY = startY
 			captchaProcess.value.startTime = new Date()
@@ -392,9 +404,9 @@
 			trackArr.push(track)
 		}
 		// 滑块滑动中
-		const touchmove = (e : TouchEvent) => {
-			let pageX = Math.round(e.changedTouches[0].pageX)
-			let pageY = Math.round(e.changedTouches[0].pageY)
+		const touchmove = (e : TouchEvent | MouseEvent) => {
+			let pageX = Math.round(getEventPoint(e).pageX)
+			let pageY = Math.round(getEventPoint(e).pageY)
 
 			const startX = captchaProcess.value.startX || 0
 			const startY = captchaProcess.value.startY || 0
@@ -421,10 +433,14 @@
 			captchaProcess.value.movePercent = moveX / end
 		}
 		// 滑块结束
-		const touchend = (e : TouchEvent) => {
+		const touchend = (e : TouchEvent | MouseEvent) => {
+			if (e.type === 'touchend') {
+				lastTouchEndTime = Date.now()
+			}
 			captchaProcess.value.stopTime = new Date()
-			let pageX = Math.round(e.changedTouches[0].pageX)
-			let pageY = Math.round(e.changedTouches[0].pageY)
+			const point = getEventPoint(e)
+			let pageX = Math.round(point.pageX)
+			let pageY = Math.round(point.pageY)
 			const startX = captchaProcess.value.startX || 0
 			const startY = captchaProcess.value.startY || 0
 			const startTime = captchaProcess.value.startTime
@@ -490,12 +506,39 @@
 			}
 		}
 
+		// H5 鼠标入口（模板 @mousedown/@mousemove 绑定；MP/APP 端无 mouse 派发，绑定无效但不报错）
+		const mousedown = (e : MouseEvent) => {
+			if (isTouchSuppressed()) {
+				return
+			}
+			touchstart(e)
+			// #ifdef H5
+			// 鼠标松手可能发生在 movable-view 之外（触摸事件有目标捕获、鼠标没有），document 级一次性监听兜底
+			document.addEventListener("mouseup", onDocumentMouseup)
+			// #endif
+		}
+		// #ifdef H5
+		const onDocumentMouseup = (e : MouseEvent) => {
+			document.removeEventListener("mouseup", onDocumentMouseup)
+			if (isTouchSuppressed()) {
+				return
+			}
+			touchend(e)
+		}
+		// #endif
+		const mousemove = (e : MouseEvent) => {
+			// buttons 位掩码含左键（=1）才转发：悬停滑过不产生轨迹
+			if ((e.buttons & 1) === 1 && !isTouchSuppressed()) {
+				touchmove(e)
+			}
+		}
+
 		return {
-			touchstart, touchmove, touchend, startMove, recordClickItem
+			touchstart, touchmove, touchend, startMove, recordClickItem, mousedown, mousemove
 		}
 	}
 
-	const { touchstart, touchmove, touchend, startMove, recordClickItem } = initInteraction()
+	const { touchstart, touchmove, touchend, startMove, recordClickItem, mousedown, mousemove } = initInteraction()
 
 	/**
 	 * 刷新
@@ -870,26 +913,36 @@
 						}
 					}
 
-					.color-change {
-						height: 80rpx;
-						border-radius: 100rpx;
-						background-color: #c6a876;
-						z-index: 2;
-					}
+				.color-change {
+					height: 80rpx;
+					border-radius: 100rpx;
+					background-color: #c6a876;
+					z-index: 2;
+					/* absolute 脱流：uni-h5/app-vue 的 movable-area 是普通盒（overflow:hidden），流式子元素会把
+					   movable-view 挤出 area 可命中区（滑块只剩顶部数像素可点、其余穿透，H5 端拖不动的根因）；
+					   小程序/APP 原生端 movable-view 自身绝对定位于 area，不受影响 */
+					position: absolute;
+					top: 0;
+					left: 0;
+				}
 
-					.block-button {
-						border-radius: 100rpx;
-						background-color: #b48d4d;
-						height: 80rpx;
-						width: 80rpx;
-						margin-top: -10rpx;
-						touch-action: none;
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-						justify-content: center;
-						position: relative;
-						z-index: 10;
+				.block-button {
+					border-radius: 100rpx;
+					background-color: #b48d4d;
+					height: 80rpx;
+					width: 80rpx;
+					margin-top: -10rpx;
+					touch-action: none;
+					display: flex;
+					flex-direction: row;
+					align-items: center;
+					justify-content: center;
+					/* relative 改 absolute：锚定 movable-area 左上角（拖动位移由 transform 承担），
+					   恢复滑块整体可命中；小程序端原生 movable-view 定位由组件自管，此声明无副作用 */
+					position: absolute;
+					top: 0;
+					left: 0;
+					z-index: 10;
 
 						.arrow {
 							font-size: 32rpx;
