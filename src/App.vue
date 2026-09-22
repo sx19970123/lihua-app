@@ -42,6 +42,11 @@ const addNoticeEventListener = () => {
 		// 重新获取未读消息数量（unreadCount 变化经下方 watch 驱动红点更新）
 		noticeStore.getUnreadCount()
 	})
+
+	// 权限数据更新提示：角色/菜单变更后服务端定向推送；App 端无「数据更新」入口，提示重新登录生效
+	webSocket.addEventListener("WS_REFRESH_PERMISSION", () => {
+		uni.showToast({ title: '您的权限已更新，重新登录后生效', icon: 'none', duration: 3000 })
+	})
 }
 
 // 全局通知推送（仅原生app）
