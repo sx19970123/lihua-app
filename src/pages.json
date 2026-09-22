@@ -196,6 +196,14 @@
 		// -----组件展示页面结束-----
 		]
 	}],
+	// 分包预下载：进入个人中心即预载 system 分包——铃铛（通知中心）/设置/组件等入口全部指向该分包，
+	// 真机首次跳转需现场下载注入（秒级无反馈，叠加路由 busy 吞重复点击，感知为「点不中」）
+	"preloadRule": {
+		"pages/profile/Profile": {
+			"network": "all",
+			"packages": ["subpackages/system"]
+		}
+	},
 	"tabBar": {
 		"selectedColor": "#3b82f6",
 		"backgroundColor": "@bgColor",
