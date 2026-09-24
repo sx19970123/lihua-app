@@ -9,6 +9,10 @@ import { setPermissionRedDotSource } from '@/helpers/tabbar-red-dot'
 import { showNoticePush } from '@/helpers/notice-notify'
 import type {NoticeMessage} from '@/api/system/notice/type/notice-message'
 import { setupH5Guard } from "@/router/router"
+// #ifdef APP-PLUS
+import { checkAppUpdate, getAppUpdateRemind } from '@/helpers/app-update'
+import { setAppUpdateRedDotSource } from '@/helpers/tabbar-red-dot'
+// #endif
 
 const themeStore = useThemeStore()
 const noticeStore = useNoticeStore()
@@ -22,6 +26,12 @@ onLaunch(() => {
 	addNoticeEventListener()
 	// H5 地址栏直达/前进后退补验（非 H5 平台为空操作）
 	setupH5Guard()
+	// #ifdef APP-PLUS
+	// 恢复 App 更新提醒红点（持久化状态，静默检查的点亮/熄灭在 app-update 域内同步）
+	setAppUpdateRedDotSource(getAppUpdateRemind())
+	// App 启动静默检查更新：有新版本仅点亮红点不打扰用户，失败静默（结果处理在 utils 内部收口）
+	checkAppUpdate().catch(() => undefined)
+	// #endif
 })
 
 // 处理websocket消息通知监听

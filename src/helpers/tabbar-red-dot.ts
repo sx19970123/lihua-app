@@ -14,9 +14,11 @@ const PROFILE_TAB_INDEX = 1
 let noticeSource = false
 // 权限待更新来源
 let permissionSource = false
+// App 更新提醒来源（新版本导航提醒，持久化状态经 app-update 域同步）
+let appUpdateSource = false
 
 const apply = () => {
-	if (noticeSource || permissionSource) {
+	if (noticeSource || permissionSource || appUpdateSource) {
 		uni.showTabBarRedDot({ index: PROFILE_TAB_INDEX })
 	} else {
 		uni.hideTabBarRedDot({ index: PROFILE_TAB_INDEX })
@@ -32,5 +34,19 @@ export const setNoticeRedDotSource = (on: boolean) => {
 /** 权限待更新红点来源置位（permissionUpdate 状态消费） */
 export const setPermissionRedDotSource = (on: boolean) => {
 	permissionSource = on
+	apply()
+}
+
+/** App 更新提醒红点来源置位（app-update 域的持久化提醒状态消费） */
+export const setAppUpdateRedDotSource = (on: boolean) => {
+	appUpdateSource = on
+	apply()
+}
+
+/**
+ * 按各源当前内存值重放红点（AppRoot onShow 切回 tabbar 页时调用）：
+ * 写点可能发生在非 tabbar 页（uni API 静默 fail），切回时重放内存值即可，调用方无需感知各源细节
+ */
+export const reapplyTabBarRedDot = () => {
 	apply()
 }

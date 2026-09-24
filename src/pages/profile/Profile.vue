@@ -42,7 +42,12 @@
 		<!--操作列表-->
 		<view class="setting-content">
 			<sar-list card>
-				<sar-list-item title="设置" @click="toSetting" icon-family="icon" icon="SettingOutlined" hover arrow/>
+				<sar-list-item title="设置" @click="toSetting" icon-family="icon" icon="SettingOutlined" hover arrow>
+					<template #value>
+						<!-- App 更新导航提醒红点（持久化，手动检查更新后熄灭） -->
+						<sar-badge :dot="appUpdateRemind"/>
+					</template>
+				</sar-list-item>
 				<sar-list-item title="组件" @click="toComponentList" icon-family="icon" icon="SkinOutlined" hover arrow/>
 				<sar-list-item title="仓库" @click="toGitee" icon-family="custom" icon="GiteeCustom" hover arrow/>
 			</sar-list>
@@ -50,7 +55,8 @@
 	</view>
 </template>
 <script setup lang="ts">
-import { watch } from 'vue'
+import { ref, watch } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import {useUserStore} from '@/stores/user'
 import {useNoticeStore} from "@/stores/notice"
 import {useThemeStore} from "@/stores/theme"
@@ -59,6 +65,14 @@ import UserAvatar from '@/components/user-avatar/index.vue'
 import { GITEE_REPO_URL } from '@/constants/repo'
 import { webSocket, wsStatus } from '@/utils/web-socket'
 import { toast } from '@/utils/toast'
+import { getAppUpdateRemind } from '@/helpers/app-update'
+
+// App 更新导航提醒红点：tabbar 红点点亮期间引导到「设置 → 检查更新」，手动检查后熄灭
+const appUpdateRemind = ref(getAppUpdateRemind())
+
+onShow(() => {
+	appUpdateRemind.value = getAppUpdateRemind()
+})
 
 const userStore = useUserStore()
 const noticeStore = useNoticeStore()
