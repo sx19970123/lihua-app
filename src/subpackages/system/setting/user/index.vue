@@ -19,7 +19,8 @@
 				</sar-list-item>
 			</sar-list>
 			<sar-list card title="权限信息">
-				<sar-list-item title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>
+				<!-- 默认部门（用户无部门时隐藏，避免引导进空树页面） -->
+				<sar-list-item v-if="userStore.deptTrees.length" title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>
 				<sar-list-item title="所属岗位" :value="userStore.defaultDeptPosts.map((post: SysPost) => post.name).join('、')" hover></sar-list-item>
 				<sar-list-item title="我的角色" :value="userStore.roles.map((role: SysRole) => role.name).join('、')" hover></sar-list-item>
 			</sar-list>

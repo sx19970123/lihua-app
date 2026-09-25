@@ -26,8 +26,8 @@
 					<sar-space direction="vertical" size="small">
 						<!-- 昵称 -->
 						<view class="nickname" @click="toUserSetting()">{{userStore.$state.nickname}}</view>
-						<!-- 部门 -->
-						<sar-space align="center" class="dept">
+						<!-- 部门（用户无部门时隐藏，避免引导进空树页面） -->
+						<sar-space align="center" class="dept" v-if="userStore.$state.deptTrees.length">
 							<view @click="toChangeDept()">
 								{{userStore.$state.defaultDeptName ? userStore.$state.defaultDeptName : '设置默认部门'}}
 							</view>
