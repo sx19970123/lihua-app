@@ -78,7 +78,7 @@ import type { LoginType } from '@/api/system/authentication/type/login-type'
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
 import {toast, toastRequestError} from '@/utils/toast'
-import { useKeyboardStatus } from '@/composables/use-keyboard-status'
+import { useKeyboardStatus } from './use-keyboard-status'
 
 const settingStore = useSettingStore()
 import {rememberMe, getRememberedInfo} from '@/helpers/remember'

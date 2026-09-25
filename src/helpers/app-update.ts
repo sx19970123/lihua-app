@@ -58,7 +58,8 @@ const getCurrentVersionCode = (): Promise<number> => {
         })
         // #endif
         // #ifdef APP-HARMONY
-        resolve(uni.getAppBaseInfo().appVersionCode || 0)
+        // appVersionCode 类型声明为 string，Number 归一（undefined/NaN 落 0 由调用方判失败）
+        resolve(Number(uni.getAppBaseInfo().appVersionCode) || 0)
         // #endif
         // #ifndef APP
         resolve(0)
@@ -116,7 +117,7 @@ const setRemind = (on: boolean) => {
 }
 
 const getRemindedCode = (): number => {
-    return parseInt(uni.getStorageSync(REMINDED_CODE_STORAGE_KEY) || '0', 10) || 0
+    return parseInt(String(uni.getStorageSync(REMINDED_CODE_STORAGE_KEY) || '0'), 10) || 0
 }
 
 /**
@@ -343,10 +344,11 @@ export const downloadPackage = async (
             }
         })
 
-        // 监听下载进度
+        // 监听下载进度（downloadedSize/totalSize 类型可选：truthy 判断同时排除 undefined 与 0）
         task.addEventListener('statechanged', (download) => {
-            if (download.downloadedSize > 0 && download.totalSize > 0) {
-                onProgress?.(Math.floor((download.downloadedSize / download.totalSize) * 100))
+            const {downloadedSize, totalSize} = download
+            if (downloadedSize && totalSize) {
+                onProgress?.(Math.floor((downloadedSize / totalSize) * 100))
             }
         })
 
