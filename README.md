@@ -20,7 +20,6 @@
 ## 📚 文档
 
 - 📖 开发文档：https://doc.lihua.xyz（含 1.0 / 2.0 / 3.0 全版本）
-- 📱 移动端文档入口：https://doc.lihua.xyz/3.0/doc-app/basic/overview.html
 
 ## 💬 交流反馈
 
