@@ -79,4 +79,4 @@ npm run dev:mp-weixin
 - **App 端**：使用 HBuilderX 导入工程作为运行容器 / 真机基座（含鸿蒙签名配置）
 - **后端地址**：修改 `.env.development` 中 `VITE_APP_BASE_API` 与 `VITE_APP_WS_API`
 
-默认账号密码：`admin` / `admin123`
+默认账号密码：`admin` / `123456`
