@@ -11,10 +11,16 @@
 				<sar-list-item title="邮箱" :value="userStore.userInfo.email" arrow hover @click="goSaveDataPage('SaveEmail')"></sar-list-item>
 				<sar-list-item title="性别" :value="getDictLabel(user_gender, userStore.userInfo.gender)" arrow hover @click="goSaveDataPage('SaveGender')"></sar-list-item>
 				<sar-list-item title="手机号码" :value="userStore.userInfo.phoneNumber" arrow hover @click="goSaveDataPage('SavePhoneNumber')"></sar-list-item>
-				<sar-list-item title="数据更新" hover @click="reloadUserInfo"></sar-list-item>
+				<sar-list-item title="数据更新" hover @click="reloadUserInfo">
+					<template #value>
+						<!-- 权限数据待更新红点：指路本入口，点击完成更新后红点随标志复位熄灭 -->
+						<sar-badge :dot="userStore.permissionUpdate"/>
+					</template>
+				</sar-list-item>
 			</sar-list>
 			<sar-list card title="权限信息">
-				<sar-list-item title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>
+				<!-- 默认部门（用户无部门时隐藏，避免引导进空树页面） -->
+				<sar-list-item v-if="userStore.deptTrees.length" title="默认部门" :value="userStore.defaultDeptName" arrow hover @click="goSaveDataPage('SaveDefaultDept')"></sar-list-item>
 				<sar-list-item title="所属岗位" :value="userStore.defaultDeptPosts.map((post: SysPost) => post.name).join('、')" hover></sar-list-item>
 				<sar-list-item title="我的角色" :value="userStore.roles.map((role: SysRole) => role.name).join('、')" hover></sar-list-item>
 			</sar-list>
@@ -31,7 +37,7 @@ import { ref } from 'vue'
 import { useUserStore } from '@/stores/user'
 import UserAvatar from '@/components/user-avatar/index.vue'
 import router from '@/router/router'
-import {toast} from '@/utils/toast'
+import {toast, toastRequestError} from '@/utils/toast'
 import { reloadData } from '@/api/system/authentication/authentication'
 import {getDictLabel, initDict} from '@/helpers/dict'
 import type {SysPost} from "@/api/system/post/type/sys-post";
@@ -55,6 +61,7 @@ const goSaveDataPage = (pageName: string) => {
  * 刷新用户信息
  */
 const reloadUserInfo = async () => {
+	// loading/toast 共用原生槽位，hideLoading 须先于任何 toast，故不收在 finally
 	try {
 		uni.showLoading({title: '加载中', mask: true})
 		await reloadData()
@@ -63,9 +70,11 @@ const reloadUserInfo = async () => {
 		if (userAvatarRef.value) {
 			userAvatarRef.value.initAvatar()
 		}
-		toast("更新完成")
-	} finally {
 		uni.hideLoading()
+		toast("更新完成")
+	} catch (err) {
+		uni.hideLoading()
+		toastRequestError(err)
 	}
 }
 </script>

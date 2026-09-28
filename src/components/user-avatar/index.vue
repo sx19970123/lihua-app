@@ -2,12 +2,9 @@
 	<view v-if="avatarData">
 		<!-- 图片类型 -->
 		<sar-avatar v-if="avatarData.type === 'image'" :src="avatarData.url" :size="size + 'rpx'" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''"/>
-		<!-- 文本|图标类型 -->
+		<!-- 文本类型（存量 icon 头像一并按文本渲染） -->
 		<sar-avatar v-else :background="avatarData.backgroundColor" :size="size + 'rpx'" class="avatar-text" :shape="shape" :root-class="shape === 'square' ? 'avatar-shape' : ''">
-			<view style="margin-top: 3rpx;" v-if="avatarData.type === 'icon'">
-				<sar-icon :family="iconInfo?.family" :name="iconInfo?.name" color="#fff" :size="(size / 1.4) + 'rpx'"/>
-			</view>
-			<text v-else :style="{fontSize: fontSize + 'rpx', lineHeight: size + 'rpx'}" style="color: #fff">{{avatarData.value}}</text>
+			<text :style="{fontSize: fontSize + 'rpx', lineHeight: size + 'rpx'}" style="color: #fff">{{avatarData.value}}</text>
 		</sar-avatar>
 	</view>
 	<!-- 默认头像 -->
@@ -15,49 +12,47 @@
 </template>
 
 <script setup lang="ts">
-import {onMounted, ref, withDefaults, watch} from "vue"
+import {onMounted, ref, watch} from "vue"
 import type {AvatarType} from "@/api/system/profile/type/avatar-type"
 import {useUserStore} from "@/stores/user"
 import { onPageShow } from "@dcloudio/uni-app"
+import { AVATAR_DEFAULT_COLOR } from "@/constants/avatar-colors"
 
 // 接收参数
-const {size, shape, customAvatar} = withDefaults(defineProps<{
+const {size = 128, shape = "circle", customAvatar} = defineProps<{
 	// 头像大小（rpx）
 	size?: number,
 	// 图标形状
 	shape?: "square" | "circle",
 	// 头像
 	customAvatar?: AvatarType
-}>(), {
-	size: 128,
-	shape: "circle"
-})
+}>()
 
 const avatarData = ref<AvatarType>()
 const fontSize = ref<number>(0)
-const iconInfo = ref<{family: string, name: string}>()
-const svgIconPath = "/static/icons/svg/"
-const svgIconSuffix = ".svg"
 
 /**
  * 加载头像
  */
 const initAvatar = () => {
+	const userStore = useUserStore()
 	// 传入type表示自定义显示
 	if (customAvatar && customAvatar.type) {
 		avatarData.value = customAvatar
-	} else {
-		// type不存在，加载当前用户头像
-		const userStore = useUserStore()
-		avatarData.value = userStore.avatar
-		if (avatarData.value.backgroundColor?.includes('conic-gradient')) {
-			avatarData.value.backgroundColor = 'rgb(22, 119, 255)'
+		} else {
+			// type不存在，加载当前用户头像
+			avatarData.value = userStore.avatar
+			// Web 端存量头像的 conic-gradient 渐变背景在 App 端降级为色板首色
+			if (avatarData.value.backgroundColor?.includes('conic-gradient')) {
+				avatarData.value.backgroundColor = AVATAR_DEFAULT_COLOR
+			}
 		}
+	// App 端不提供图标头像（内置图标字体仅静态业务使用）：Web 端设置的 icon 头像退化为默认头像展示
+	if (avatarData.value?.type === 'icon') {
+		avatarData.value = userStore.getDefaultAvatar()
 	}
 	// 自适应文本尺寸
 	autoFontSize()
-	// 处理图标
-	handleIcon()
 }
 
 /**
@@ -90,22 +85,6 @@ const autoFontSize = () => {
 
   // 字号计算
   fontSize.value = (size * 0.8) / weightLen
-}
-
-// 处理图标
-const handleIcon = () => {
-	if (avatarData.value?.type !== 'icon') return
-	const icon = avatarData.value?.value
-	if (!icon) return
-	// ant design 图标
-	if (icon.endsWith("Outlined")) {
-		iconInfo.value = {family: 'outlined', name: icon}
-	} else if (icon.endsWith("Filled")) {
-		iconInfo.value = {family: 'filled', name: icon}
-	} else {
-		// 自定义svg及双色图标
-		iconInfo.value = {family: '', name: svgIconPath + icon + svgIconSuffix}
-	}
 }
 
 onMounted(() => {

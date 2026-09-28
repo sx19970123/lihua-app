@@ -1,5 +1,5 @@
 <template>
-	<view class="verify-wrap" @touchmove.stop.prevent @touchMove.stop.prevent v-if="verifyShow">
+	<view class="verify-wrap" :class="{ 'theme-dark': themeStore.isDark }" @touchmove.stop.prevent @touchMove.stop.prevent v-if="verifyShow">
 		<view class="verify-code">
 			<!-- 切换动画 -->
 			<view class="captcha-loading" v-show="captchaLoading"></view>
@@ -35,9 +35,9 @@
 							<movable-area class="move-block" :animation="true">
 								<view class="color-change" :style="{ width: colorWidth + 'px' }"></view>
 								<view class="move-shadow"></view>
-								<movable-view class="block-button" :x="x" :animation="true" direction="all"
-									@change="startMove" @touchstart="touchstart" @touchmove="touchmove"
-									@touchend="touchend">
+							<movable-view class="block-button" :x="x" :animation="true" direction="all"
+								@change="startMove" @touchstart="touchstart" @touchmove="touchmove"
+								@touchend="touchend" @mousedown="mousedown" @mousemove="mousemove">
 									<text class="arrow">
 										➜
 									</text>
@@ -74,6 +74,8 @@
 					</view>
 				</view>
 			</view>
+			<!-- 校验期间透明阻断层：提交后到刷新前禁止拖动/点击，不遮底部操作图标 -->
+			<view class="verify-freeze" v-if="verifying" @touchmove.stop.prevent @touchMove.stop.prevent></view>
 			<!-- 刷新，关闭 操作区 -->
 			<view class="verify-opts">
 				<image class="opts-icon" @click="refresh(false)" :src="refreshIcon" mode="aspectFill" />
@@ -84,12 +86,14 @@
 	</view>
 </template>
 <script setup lang="ts">
-	import { onMounted, computed, ref, nextTick, getCurrentInstance } from "vue"
+	import { onMounted, onUnmounted, computed, ref, nextTick, getCurrentInstance } from "vue"
 	import type { ComponentInternalInstance } from 'vue'
 	import { getCaptchaData, check } from "@/api/system/captcha/captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/captcha-type"
+	import { useThemeStore } from "@/stores/theme"
 	// 抛出方法
 	const emits = defineEmits(['success'])
+	const themeStore = useThemeStore()
 
 	// 图标类型
 	type BaseImgType = {
@@ -98,6 +102,8 @@
 		left ?: number,
 		top ?: number
 	}
+	// uni-app 运行时挂在组件代理上的页面作用域（selectorQuery.in 的查询范围，官方类型未定义该属性）
+	type UniPageScope = NonNullable<ComponentInternalInstance['proxy']> & { $scope?: unknown }
 	// 验证码执行需要的参数
 	type CaptchaProcessType = {
 		//当前生成的滑块ID, 后端生成
@@ -134,7 +140,7 @@
 		type ?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER'
 	}
 	// 验证结果类型
-	type VeriftResultType = {
+	type VerifyResultType = {
 		// 是否成功
 		isSuccess : boolean,
 		// 是否失败
@@ -150,11 +156,11 @@
 	// 背景图片尺寸
 	const bgImg = ref<BaseImgType>({})
 	const sliderImg = ref<BaseImgType>({})
-	// 验证码执行需要的参数
-	const defaultCaptchaProcess = { startTime: new Date(), backgroundImageWidth: 0, backgroundImageHeight: 0, trackArr: [], end: 206 }
-	const captchaProcess = ref<CaptchaProcessType>(defaultCaptchaProcess)
+	// 验证码执行需要的参数（每次重置须取新对象，勿共享可变默认值）
+	const createDefaultCaptchaProcess = () : CaptchaProcessType => ({ startTime: new Date(), backgroundImageWidth: 0, backgroundImageHeight: 0, trackArr: [], end: 206 })
+	const captchaProcess = ref<CaptchaProcessType>(createDefaultCaptchaProcess())
 	// 验证结果
-	const verifyResult = ref<VeriftResultType>({ isSuccess: false, isError: false })
+	const verifyResult = ref<VerifyResultType>({ isSuccess: false, isError: false })
 	// 滑块初始位置
 	const leftDistance = ref<number>(0)
 	// 滑块x距离
@@ -172,6 +178,10 @@
 	const instanceScope = ref<ComponentInternalInstance>();
 	// 连接失败
 	const loadingError = ref<string>()
+	// 成功/失败后的延时任务句柄（刷新、关闭、卸载时须清理）
+	let verifyTimer: ReturnType<typeof setTimeout> | undefined
+	// 校验进行中（提交后到下次刷新前），期间透明阻断层盖住游戏区
+	const verifying = ref<boolean>(false)
 	// 刷新 关闭图标
 	const refreshIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAJFBMVEVHcEyfn59xcXFgYGBbW1tYWFhYWFhXV1dYWFhXV1dXV1dXV1eOJtjUAAAAC3RSTlMAAgkQMUd0iKbR8IVomssAAABwSURBVHjapdFBDsMgDAXR7ya2MXP/+1ZNvUCwzNsxEkjY+vNRc9Zwk5p50aarBVTc13VHQUohKSGs7wRkIDm42nMCWRFaDECbADjbGT8PvTR/cosAqTMOLWKWCfZvukTuA5GU2+hCzYtWy0vW6+j0BSLdBQYxmJeMAAAAAElFTkSuQmCC"
 	const closeIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAHlBMVEVHcExiYmJeXl5YWFhYWFhZWVlYWFhYWFhXV1dXV1dh3LwmAAAACXRSTlMADRxPbYyl1/NFQhX5AAAAd0lEQVR42m2R0QoDMQgEx+hl3f//4dLmeqXgPIQwIOrKIbe6tZMfKd/o0ZetWhGrZF9f18VN9bHpTh6ynYBcQHA/ZUFawKUFSxcgJ9sFIWstWQHljbyAt5D1+Vq0g2OPI9yjHMvHRuNI4/DzmnMgc3RzyBD/53gBSd8FOjnClmAAAAAASUVORK5CYII="
@@ -190,7 +200,7 @@
 	const close = () => {
 		verifyShow.value = false
 		nextTick(() => {
-			captchaProcess.value = defaultCaptchaProcess
+			captchaProcess.value = createDefaultCaptchaProcess()
 			refresh(true)
 		})
 	}
@@ -220,14 +230,14 @@
 					captchaProcess.value.sliderImage = data.templateImage
 					// 等待dom更新完成
 					await nextTick()
-					const scope = (instanceScope.value?.proxy as any).$scope
+					const scope = (instanceScope.value?.proxy as UniPageScope | undefined)?.$scope
 					// 加载背景
 					await initBackground(scope)
 					// 根据验证码类型加载
 					switch (data.type) {
 						case "ROTATE":
 						case "SLIDER":
-							await initRoateAndSlider(scope)
+							await initRotateAndSlider(scope)
 							break
 						case "CONCAT":
 							await initConcat(data, scope)
@@ -242,6 +252,11 @@
 					captchaTransition.value = 'slide-in'
 					await new Promise(r => setTimeout(r, 300))
 					captchaLoading.value = false
+				} else {
+					// 非 200 也要结束加载态并提示，否则永久停在 loading
+					captchaTransition.value = ''
+					captchaLoading.value = false
+					loadingError.value = '验证码加载失败'
 				}
 			} catch (err) {
 				console.error(err);
@@ -254,13 +269,13 @@
 		/**
 		 * 加载背景图
 		 */
-		const initBackground = (scope : any) => {
+		const initBackground = (scope : unknown) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#bg")
 					.boundingClientRect((data) => {
-						if (!Array.isArray(data)) {
+						if (data && !Array.isArray(data)) {
 							bgImg.value.width = data.width
 							bgImg.value.height = data.height
 							resolve()
@@ -274,13 +289,13 @@
 		/**
 		 * 加载旋转和滑块验证码
 		 */
-		const initRoateAndSlider = (scope : any) => {
+		const initRotateAndSlider = (scope : unknown) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#slider-img")
 					.boundingClientRect((data) => {
-						if (!Array.isArray(data)) {
+						if (data && !Array.isArray(data)) {
 							sliderImg.value.width = data.width
 							sliderImg.value.height = data.height
 							resolve()
@@ -294,13 +309,14 @@
 		/**
 		 * 加载拼接验证码
 		 */
-		const initConcat = (captchaData : CaptchaResponseData, scope : any) => {
+		const initConcat = (captchaData : CaptchaResponseData, scope : unknown) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#verify-concat-bg")
-					.boundingClientRect((data) => {
-						if (!Array.isArray(data) && captchaData && captchaData.backgroundImageHeight && captchaData.data?.randomY) {
+						.boundingClientRect((data) => {
+							// randomY 可为合法的 0，只做空值判断
+							if (data && !Array.isArray(data) && captchaData && captchaData.backgroundImageHeight && captchaData.data?.randomY != null) {
 							const height = ((captchaData.backgroundImageHeight - captchaData.data.randomY) / captchaData.backgroundImageHeight) * uni.upx2px(captchaData.backgroundImageHeight);
 							sliderImg.value.height = height
 							resolve()
@@ -315,13 +331,13 @@
 		/**
 		 * 加载点选验证码
 		 */
-		const initWordClick = (scope : any) => {
+		const initWordClick = (scope : unknown) => {
 			return new Promise<void>((resolve, reject) => {
 				const query = uni.createSelectorQuery().in(scope)
 				query
 					.select("#image-click-mask")
 					.boundingClientRect((data) => {
-						if (!Array.isArray(data)) {
+						if (data && !Array.isArray(data)) {
 							sliderImg.value.left = data.left
 							sliderImg.value.top = data.top
 							resolve()
@@ -340,7 +356,9 @@
 			captchaProcess.value.backgroundImageHeight = Math.round(bgImg.value.height || 0)
 			captchaProcess.value.sliderImageWidth = Math.round(sliderImg.value.width || 0)
 			captchaProcess.value.sliderImageHeight = Math.round(sliderImg.value.height || 0)
-			captchaProcess.value.end = Math.round(bgImg.value.width || 0 - uni.upx2px(40))
+			// 拖动上限 = 背景宽 - 滑块按钮宽（须与 .block-button 的 80rpx 同步改），等于 movable-view 物理行程极限，
+			// 保证“拖到头”恰为满量程（旋转 360°/进度 100%），与后端百分比坐标系对齐
+			captchaProcess.value.end = Math.max(0, Math.round((bgImg.value.width || 0) - uni.upx2px(80)))
 		}
 
 		return {
@@ -354,10 +372,22 @@
 	 * 初始化验证码交互
 	 */
 	const initInteraction = () => {
+		// mouse 事件兜底坐标：uni-h5 会给 mouse 事件合成 changedTouches，原生 MouseEvent 直接取自身 pageX/pageY
+		const getEventPoint = (e : TouchEvent | MouseEvent) : { pageX : number, pageY : number } => {
+			const touch = (e as TouchEvent).changedTouches?.[0]
+			return touch ?? (e as MouseEvent)
+		}
+		// H5 桌面鼠标拖动兜底：uni-h5 movable-view 内部以 mouse 合成驱动位移（滑块跟手）但不派发 touchend，
+		// 校验唯一入口 touchend 永不触发（松手无反应且可继续拖）——补 mouse 入口复用同一组 touch handler。
+		// H5 触摸结束后浏览器还会补发合成 mousedown/mouseup（ghost mouse），会经 mouse 入口二次触发校验提交，
+		// 以最近一次真实 touchend 的时间窗抑制（人手不可能在 500ms 内完成 touch→mouse 切换）
+		let lastTouchEndTime = 0
+		const isTouchSuppressed = () => Date.now() - lastTouchEndTime < 500
 		// 滑块开始
-		const touchstart = (e : TouchEvent) => {
-			let startX = e.changedTouches[0].pageX
-			let startY = e.changedTouches[0].pageY
+		const touchstart = (e : TouchEvent | MouseEvent) => {
+			const point = getEventPoint(e)
+			let startX = point.pageX
+			let startY = point.pageY
 			captchaProcess.value.startX = startX
 			captchaProcess.value.startY = startY
 			captchaProcess.value.startTime = new Date()
@@ -374,15 +404,14 @@
 			trackArr.push(track)
 		}
 		// 滑块滑动中
-		const touchmove = (e : TouchEvent) => {
-			let pageX = Math.round(e.changedTouches[0].pageX)
-			let pageY = Math.round(e.changedTouches[0].pageY)
+		const touchmove = (e : TouchEvent | MouseEvent) => {
+			let pageX = Math.round(getEventPoint(e).pageX)
+			let pageY = Math.round(getEventPoint(e).pageY)
 
 			const startX = captchaProcess.value.startX || 0
 			const startY = captchaProcess.value.startY || 0
 			const startTime = captchaProcess.value.startTime
 			const end = captchaProcess.value.end
-			const bgImageWidth = captchaProcess.value.backgroundImageWidth
 			const trackArr = captchaProcess.value.trackArr
 			let moveX = pageX - startX
 
@@ -401,13 +430,17 @@
 			}
 
 			captchaProcess.value.moveX = moveX
-			captchaProcess.value.movePercent = moveX / bgImageWidth
+			captchaProcess.value.movePercent = moveX / end
 		}
 		// 滑块结束
-		const touchend = (e : TouchEvent) => {
+		const touchend = (e : TouchEvent | MouseEvent) => {
+			if (e.type === 'touchend') {
+				lastTouchEndTime = Date.now()
+			}
 			captchaProcess.value.stopTime = new Date()
-			let pageX = Math.round(e.changedTouches[0].pageX)
-			let pageY = Math.round(e.changedTouches[0].pageY)
+			const point = getEventPoint(e)
+			let pageX = Math.round(point.pageX)
+			let pageY = Math.round(point.pageY)
 			const startX = captchaProcess.value.startX || 0
 			const startY = captchaProcess.value.startY || 0
 			const startTime = captchaProcess.value.startTime
@@ -419,7 +452,7 @@
 				t: new Date().getTime() - startTime.getTime()
 			};
 			trackArr.push(track)
-			vertifyData()
+			verifyData()
 		}
 		// 滑块绑定卡片移动距离
 		const startMove = (e : { detail : { x : number } }) => {
@@ -431,7 +464,8 @@
 		}
 		// 点选
 		const recordClickItem = (e : TouchEvent | PointerEvent) => {
-			if (!sliderImg.value.left || !sliderImg.value.top) {
+			// left/top 为 0 是合法坐标（点在左上角），仅空值视为未初始化
+			if (sliderImg.value.left == null || sliderImg.value.top == null) {
 				return
 			}
 
@@ -468,21 +502,55 @@
 			captchaProcess.value.trackArr.push(track)
 
 			if (clickCount.value == 4) {
-				vertifyData()
+				verifyData()
+			}
+		}
+
+		// H5 鼠标入口（模板 @mousedown/@mousemove 绑定；MP/APP 端无 mouse 派发，绑定无效但不报错）
+		const mousedown = (e : MouseEvent) => {
+			if (isTouchSuppressed()) {
+				return
+			}
+			touchstart(e)
+			// #ifdef H5
+			// 鼠标松手可能发生在 movable-view 之外（触摸事件有目标捕获、鼠标没有），document 级一次性监听兜底
+			document.addEventListener("mouseup", onDocumentMouseup)
+			// #endif
+		}
+		// #ifdef H5
+		const onDocumentMouseup = (e : MouseEvent) => {
+			document.removeEventListener("mouseup", onDocumentMouseup)
+			if (isTouchSuppressed()) {
+				return
+			}
+			touchend(e)
+		}
+		// #endif
+		const mousemove = (e : MouseEvent) => {
+			// buttons 位掩码含左键（=1）才转发：悬停滑过不产生轨迹
+			if ((e.buttons & 1) === 1 && !isTouchSuppressed()) {
+				touchmove(e)
 			}
 		}
 
 		return {
-			touchstart, touchmove, touchend, startMove, recordClickItem
+			touchstart, touchmove, touchend, startMove, recordClickItem, mousedown, mousemove
 		}
 	}
 
-	const { touchstart, touchmove, touchend, startMove, recordClickItem } = initInteraction()
+	const { touchstart, touchmove, touchend, startMove, recordClickItem, mousedown, mousemove } = initInteraction()
 
 	/**
 	 * 刷新
 	 */
 	const refresh = (isClose : boolean) => {
+		// 清理成功/失败后的延时任务，防止关闭后旧任务对隐藏组件刷新/关闭
+		if (verifyTimer !== undefined) {
+			clearTimeout(verifyTimer)
+			verifyTimer = undefined
+		}
+		// 解除游戏区交互阻断
+		verifying.value = false
 		isActive.value = false
 		colorWidth.value = 0
 		x.value = xpos.value
@@ -506,16 +574,20 @@
 	}
 
 	// 滑动校验
-	const vertifyData = async () => {
+	const verifyData = async () => {
 		// 参数拼接与校验
 		const { id, backgroundImageWidth, backgroundImageHeight, startTime, stopTime, trackArr } = captchaProcess.value
 		if (!id || !stopTime) {
 			return
 		}
+		// 提交即阻断游戏区交互，直至下次刷新（失败自动刷新/成功展示后关闭均经过 refresh 解除）
+		verifying.value = true
 		const captchaData : CaptchaRequestData = {
 			id: id,
 			data: {
-				bgImageWidth: backgroundImageWidth,
+				// 旋转类型的进度以拖动满量程（end）为分母，与显示角度同坐标系（对齐官方 TAC 客户端：视觉重合即百分比命中）；
+				// 其余类型为绝对像素定位语义，仍以背景宽为分母
+				bgImageWidth: captchaProcess.value.type === 'ROTATE' ? captchaProcess.value.end : backgroundImageWidth,
 				bgImageHeight: backgroundImageHeight,
 				startTime: startTime.getTime(),
 				stopTime: stopTime.getTime(),
@@ -531,7 +603,8 @@
 			if (resp.code === 200 && resp.success) {
 				verifyResult.value.isSuccess = true
 				verifyResult.value.successMsg = `验证成功，耗时${(stopTime.getTime() - startTime.getTime()) / 1000}秒`
-				setTimeout(() => {
+				verifyTimer = setTimeout(() => {
+					verifyTimer = undefined
 					close()
 					emits('success', resp.data.id)
 				}, 1000)
@@ -548,7 +621,8 @@
 					default:
 						verifyResult.value.errorMsg = resp.msg
 				}
-				setTimeout(() => {
+				verifyTimer = setTimeout(() => {
+					verifyTimer = undefined
 					refresh(false)
 				}, 750)
 			}
@@ -564,7 +638,7 @@
 		switch (captchaProcess.value.type) {
 			case "ROTATE":
 				const angle = leftDistance.value / (captchaProcess.value.end / 360)
-				return `transform:translate(100%,0) rotate(${angle - 5}deg);`
+				return `transform:translate(100%,0) rotate(${angle}deg);`
 			case "SLIDER":
 				return `left: ${leftDistance.value}px;`;
 			case "CONCAT":
@@ -582,6 +656,12 @@
 
 	onMounted(() => {
 		instanceScope.value = getCurrentInstance() || undefined
+	})
+
+	onUnmounted(() => {
+		if (verifyTimer !== undefined) {
+			clearTimeout(verifyTimer)
+		}
 	})
 
 	// 向外部抛出方法
@@ -833,26 +913,36 @@
 						}
 					}
 
-					.color-change {
-						height: 80rpx;
-						border-radius: 100rpx;
-						background-color: #c6a876;
-						z-index: 2;
-					}
+				.color-change {
+					height: 80rpx;
+					border-radius: 100rpx;
+					background-color: #c6a876;
+					z-index: 2;
+					/* absolute 脱流：uni-h5/app-vue 的 movable-area 是普通盒（overflow:hidden），流式子元素会把
+					   movable-view 挤出 area 可命中区（滑块只剩顶部数像素可点、其余穿透，H5 端拖不动的根因）；
+					   小程序/APP 原生端 movable-view 自身绝对定位于 area，不受影响 */
+					position: absolute;
+					top: 0;
+					left: 0;
+				}
 
-					.block-button {
-						border-radius: 100rpx;
-						background-color: #b48d4d;
-						height: 80rpx;
-						width: 80rpx;
-						margin-top: -10rpx;
-						touch-action: none;
-						display: flex;
-						flex-direction: row;
-						align-items: center;
-						justify-content: center;
-						position: relative;
-						z-index: 10;
+				.block-button {
+					border-radius: 100rpx;
+					background-color: #b48d4d;
+					height: 80rpx;
+					width: 80rpx;
+					margin-top: -10rpx;
+					touch-action: none;
+					display: flex;
+					flex-direction: row;
+					align-items: center;
+					justify-content: center;
+					/* relative 改 absolute：锚定 movable-area 左上角（拖动位移由 transform 承担），
+					   恢复滑块整体可命中；小程序端原生 movable-view 定位由组件自管，此声明无副作用 */
+					position: absolute;
+					top: 0;
+					left: 0;
+					z-index: 10;
 
 						.arrow {
 							font-size: 32rpx;
@@ -908,6 +998,16 @@
 				}
 			}
 
+			/* 校验期间透明阻断层：盖住拼图与滑块区，不遮底部刷新/关闭 */
+			.verify-freeze {
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 90rpx;
+				z-index: 1001;
+			}
+
 			.verify-opts {
 				display: flex;
 				justify-content: flex-end;
@@ -935,81 +1035,79 @@
 		}
 	}
 
-	/** 暗色模式颜色适配 */
-	@media(prefers-color-scheme: dark) {
-		.verify-wrap {
-			.verify-code {
+	/** 暗色模式颜色适配（根节点 theme-dark class 由 themeStore.isDark 驱动，系统跟随与 App 内切换均即时生效） */
+	.verify-wrap.theme-dark {
+		.verify-code {
+			background-color: var(--sar-emphasis-bg);
+			box-shadow: var(--sar-shadow-sm);
+
+			.captcha-loading {
+				background-color: var(--sar-active-bg);
+			}
+
+			.captcha-loading::after {
+				background: linear-gradient(90deg, rgba(180, 130, 40, 0) 0%, rgba(180, 130, 40, 0.7) 50%, rgba(180, 130, 40, 0) 100%);
+			}
+
+			.verify-tip {
+				color: var(--sar-secondary-color);
+			}
+
+			.loading-error {
+				color: #7e2e2f;
+			}
+
+			.verify-content {
 				background-color: var(--sar-emphasis-bg);
-				box-shadow: var(--sar-shadow-sm);
 
-				.captcha-loading {
+				.move-block {
 					background-color: var(--sar-active-bg);
-				}
 
-				.captcha-loading::after {
-					background: linear-gradient(90deg, rgba(180, 130, 40, 0) 0%, rgba(180, 130, 40, 0.7) 50%, rgba(180, 130, 40, 0) 100%);
-				}
-
-				.verify-tip {
-					color: var(--sar-secondary-color);
-				}
-
-				.loading-error {
-					color: #7e2e2f;
-				}
-
-				.verify-content {
-					background-color: var(--sar-emphasis-bg);
-
-					.move-block {
-						background-color: var(--sar-active-bg);
-
-						.move-shadow {
-							background-color: rgba(0, 0, 0, 0.05);
-							box-shadow: var(--sar-shadow-sm);
-						}
-
-						.color-change {
-							background-color: #655843;
-						}
-
-						.block-button {
-							background-color: #9a7a40;
-
-							.arrow {
-								color: rgba(255, 255, 255, 0.5)
-							}
-						}
-
-						&::before {
-							background-color: #9a7a40;
-						}
+					.move-shadow {
+						background-color: rgba(0, 0, 0, 0.05);
+						box-shadow: var(--sar-shadow-sm);
 					}
 
-					.move-block::after {
-						color: rgba(255, 255, 255, 0.35);
+					.color-change {
+						background-color: #655843;
 					}
 
-					.image-click-mask {
-						.click-item {
-							background-color: #2a6fc7;
-							color: var(--sar-secondary-color);
-							border: 4rpx solid var(--sar-secondary-color);
-						}
-					}
+					.block-button {
+						background-color: #9a7a40;
 
-					.check-status {
-						.check-msg {
+						.arrow {
 							color: rgba(255, 255, 255, 0.5)
 						}
+					}
 
-						&.check-success {
-							background: #306317;
-						}
+					&::before {
+						background-color: #9a7a40;
+					}
+				}
 
-						&.check-error {
-							background: #7e2e2f;
-						}
+				.move-block::after {
+					color: rgba(255, 255, 255, 0.35);
+				}
+
+				.image-click-mask {
+					.click-item {
+						background-color: #2a6fc7;
+						color: var(--sar-secondary-color);
+						border: 4rpx solid var(--sar-secondary-color);
+					}
+				}
+
+				.check-status {
+					.check-msg {
+						color: rgba(255, 255, 255, 0.5)
+					}
+
+					&.check-success {
+						background: #306317;
+					}
+
+					&.check-error {
+						background: #7e2e2f;
 					}
 				}
 			}

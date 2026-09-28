@@ -6,33 +6,21 @@
 			<!-- 操作菜单 -->
 			<sar-list card>
 				<sar-list-item title="选择照片" arrow hover @click="chooseImage"></sar-list-item>
-				<sar-list-item title="选择图标" arrow hover @click="handleIconAvatar"></sar-list-item>
 				<sar-list-item title="编辑文本" arrow hover @click="handleTextAvatar"></sar-list-item>
 			</sar-list>
 		</sar-space>
 		<!-- 文本抽屉 -->
-		<sar-popout v-model:visible="textPopout" :overlay-closable="!keyboardOpen" :show-close="false"
-			@leave="autoFocus = false" :before-close="handleSave">
+		<sar-popout v-model:visible="textPopout" title="编辑文本头像" :overlay-closable="!keyboardOpen"
+			show-close @leave="autoFocus = false" :before-close="handleSave">
 			<view class="popout-content">
 				<sar-space direction="vertical" size="large">
-					<!-- 头像背景颜色 -->
-					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
+					<!-- 头像背景颜色（自定义色记忆键与 web 端 AvatarModifier 一致） -->
+					<color-select :dataSource="AVATAR_COLOR_SOURCE" v-model:color="avatarData.backgroundColor"
+						allow-custom custom-color-storage-key="avatarBackgroundColor"></color-select>
 					<!-- 头像文本 -->
 					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input"
 						placeholder="请输入文本" v-model="avatarData.value"
 						@keyboardheightchange="handleKeyboardChange"></sar-input>
-				</sar-space>
-			</view>
-		</sar-popout>
-		<!-- 图标抽屉 -->
-		<sar-popout v-model:visible="iconPopout" :show-close="false" @leave="autoFocus = false"
-			:before-close="handleSave">
-			<view class="popout-content">
-				<sar-space direction="vertical" size="large">
-					<!-- 头像背景颜色 -->
-					<color-select :dataSource="colorSource" v-model:color="avatarData.backgroundColor"></color-select>
-					<!-- 头像图标 -->
-					<IconSelect v-model:value="avatarData.value" width="686rpx"></IconSelect>
 				</sar-space>
 			</view>
 		</sar-popout>
@@ -47,60 +35,16 @@ import UserAvatar from '@/components/user-avatar/index.vue'
 import ColorSelect from '@/components/color-select/index.vue'
 import type { AvatarType } from '@/api/system/profile/type/avatar-type'
 import { saveBasics } from '@/api/system/profile/profile'
-import { publicUpload } from '@/api/system/attachment/attachment-storage'
+import { upload } from '@/api/system/attachment/attachment-storage'
 import { useUserStore } from '@/stores/user'
 import router from '@/router/router'
-import { toast } from '@/utils/toast'
+import { toast, toastRequestError } from '@/utils/toast'
 import { cloneDeep } from 'lodash-es'
-import IconSelect from '@/components/icon-select/index.vue'
 import {getFileInfo} from '@/utils/attachment/attachment-utils'
+import { AVATAR_COLOR_SOURCE } from '@/constants/avatar-colors'
 
 const userStore = useUserStore()
 type EditableAvatarType = AvatarType & { value: string }
-
-// 头像背景颜色
-const colorSource = [
-	{
-		name: '拂晓蓝',
-		color: 'rgb(22, 119, 255)',
-		key: '1'
-	},
-	{
-		name: '薄暮',
-		color: 'rgb(245, 34, 45)',
-		key: '2'
-	},
-	{
-		name: '火山',
-		color: 'rgb(250, 84, 28)',
-		key: '3'
-	},
-	{
-		name: '日暮',
-		color: 'rgb(250, 173, 20)',
-		key: '4'
-	},
-	{
-		name: '明青',
-		color: 'rgb(19, 194, 194)',
-		key: '5'
-	},
-	{
-		name: '极光绿',
-		color: 'rgb(82, 196, 26)',
-		key: '6'
-	},
-	{
-		name: '极客蓝',
-		color: 'rgb(47, 84, 235)',
-		key: '7'
-	},
-	{
-		name: '酱紫',
-		color: 'rgb(114, 46, 209)',
-		key: '8'
-	}
-]
 
 // 头像数据
 const avatarData = ref<EditableAvatarType>({
@@ -108,50 +52,68 @@ const avatarData = ref<EditableAvatarType>({
 	value: userStore.avatar.value || ''
 })
 
-// 执行保存
+// 执行保存（作为 popout 的 before-close：promise 在途时确认按钮自动 loading，reject 阻止抽屉关闭）
 const handleSave = async (type ?: 'confirm' | 'cancel' | 'close') => {
 	if (type === 'confirm') {
-		// url 字段无需保存
-		avatarData.value.url = undefined
-		const resp = await saveBasics({ avatar: JSON.stringify(avatarData.value) })
-		if (resp.code === 200) {
-			// 刷新store
-			await userStore.initUserInfo()
-			router.navigateBack({})
-		} else {
-			toast(resp.msg)
+		// url 字段无需保存；用局部 payload 不清响应式源——保存失败抽屉停留时 750rpx 预览仍有数据可显示
+		try {
+			const resp = await saveBasics({ avatar: JSON.stringify({...avatarData.value, url: undefined}) })
+			if (resp.code === 200) {
+				// 刷新store
+				await userStore.initUserInfo()
+				router.navigateBack({})
+			} else {
+				toast(resp.msg)
+				// 保存失败保持抽屉打开，允许调整后重试
+				return Promise.reject()
+			}
+		} catch (err) {
+			toastRequestError(err)
+			// 网络异常同样保持抽屉打开，允许调整后重试
+			return Promise.reject()
 		}
 	}
 }
-/**
- * 初始化图片头像
- */
-    // 选择头像
+// 选择照片
 const chooseImage = async () => {
-  // 选择照片｜拍照
-  const filePath = await new Promise<string>((resolve, reject) => {
-    uni.chooseImage({
-      count: 1,
-      sizeType: ['original', 'compressed'],
-      sourceType: ['album', 'camera'],
-      success: (resp) => resolve(resp.tempFilePaths[0]),
-      fail: reject,
+  let filePath: string
+  let croppedFilePath: string
+  try {
+    // 选择照片｜拍照（用户取消走 fail 回调，errMsg 各平台不一致，统一按放弃处理）
+    filePath = await new Promise<string>((resolve, reject) => {
+      uni.chooseImage({
+        count: 1,
+        sizeType: ['original', 'compressed'],
+        sourceType: ['album', 'camera'],
+        success: (resp) => resolve(resp.tempFilePaths[0]),
+        fail: reject,
+      });
     });
-  });
 
-  // 裁剪图片
-  const croppedFilePath = await new Promise<string>((resolve, reject) => {
-    cropImage({
-      // 图片压缩到一半的清晰度
-      beforeCrop: () => 0.5,
-      src: filePath,
-      success: resolve,
-      fail: reject,
+    // 裁剪图片（用户取消裁剪同样走 fail）
+    croppedFilePath = await new Promise<string>((resolve, reject) => {
+      cropImage({
+        // 图片压缩到一半的清晰度
+        beforeCrop: () => 0.5,
+        src: filePath,
+        success: resolve,
+        fail: reject,
+      });
     });
-  });
+  } catch {
+    // 用户取消选图/裁剪，放弃本次上传
+    return
+  }
 
-  // 获取图片信息
-  const {size} = await getFileInfo(croppedFilePath)
+  // 获取图片信息（获取失败按放弃上传处理，避免未处理 Promise 异常）
+  let size: number | undefined
+  try {
+    ({ size } = await getFileInfo(croppedFilePath))
+  } catch (err) {
+    console.error(err)
+    toast("上传失败")
+    return
+  }
 
   // 限制 2MB
   if (!size || (size / 1024 / 1024 > 2)) {
@@ -159,45 +121,25 @@ const chooseImage = async () => {
     return;
   }
 
-  // 上传图片
+  // 上传图片（loading/toast 共用原生槽位，hideLoading 须先于任何 toast，故不收在 finally）
   uni.showLoading({ title: "正在上传", mask: true });
   try {
-    const resp = await publicUpload(croppedFilePath, "UserAvatar");
-    if (resp.code === 200) {
+    const resp = await upload(croppedFilePath, {businessCode: "UserAvatar", public: true});
+    uni.hideLoading()
+    if (resp.code === 200 && resp.data?.path) {
       avatarData.value.type = "image";
-      avatarData.value.value = resp.data;
-      handleSave("confirm");
+      avatarData.value.value = resp.data.path;
+      // 失败提示已在 handleSave 内 toast，这里吞掉 reject 防止未处理 Promise 异常
+      await handleSave("confirm")?.catch(() => undefined);
     } else {
-      toast(resp.msg);
+      toast(resp.code === 200 ? "上传失败" : resp.msg);
     }
   } catch (err) {
+    uni.hideLoading()
     console.error(err);
     toast("上传失败");
-  } finally {
-    uni.hideLoading();
   }
 }
-
-/**
- * 初始化图标头像
- */
-const initIconAvatar = () => {
-	// 图标抽屉开关
-	const iconPopout = ref<boolean>(false)
-	// 处理图标头像
-	const handleIconAvatar = () => {
-		if (avatarData.value.type !== 'icon') {
-			avatarData.value.type = 'icon'
-			avatarData.value.value = ''
-		}
-		iconPopout.value = true
-	}
-	return {
-		iconPopout,
-		handleIconAvatar
-	}
-}
-const { iconPopout, handleIconAvatar } = initIconAvatar()
 
 /**
  * 初始化文本头像
@@ -243,17 +185,8 @@ const { textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardCha
 <style scoped lang="scss">
 @import "@/static/style/input.scss";
 
-.avatar-title {
-	font-size: var(--sar-text-lg);
-	font-weight: var(--sar-font-bold);
-}
-
 .popout-content {
 	padding-left: 32rpx;
 	padding-right: 32rpx
-}
-
-:deep(.sar-popout__header) {
-	height: 32rpx !important;
 }
 </style>

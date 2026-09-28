@@ -22,6 +22,7 @@
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { toast } from '@/utils/toast';
+import { ResponseError } from '@/api/global/type';
 import MpHtml from "@/components/mp-html/mp-html.vue"
 import {useNoticeStore} from "@/stores/notice"
 import type {PreviewNotice} from '@/api/system/notice/type/preview-notice';
@@ -38,6 +39,8 @@ const preview = (id?: string) => {
 	// 预览
 	noticeStore.previewNotice(id).then((resp) => {
 		noticeData.value = resp
+	}).catch(err => {
+		toast(err instanceof ResponseError ? err.msg : "通知加载失败")
 	})
 }
 

@@ -29,6 +29,16 @@ export const rememberMe = (enable: boolean, username?: string, password?: string
 }
 
 /**
+ * 修改密码后同步更新已记住的密码
+ * 仅记住我开启时生效，避免旧密码残留导致下次自动填充登录失败
+ */
+export const updateRememberedPassword = (password: string) => {
+	if (uni.getStorageSync(REMEMBER_ME_KEY)) {
+		uni.setStorageSync(PASSWORD_KEY, encrypt(password))
+	}
+}
+
+/**
  * 获取记住我保存的信息
  * 存在：返回对象
  * 不存在：返回false

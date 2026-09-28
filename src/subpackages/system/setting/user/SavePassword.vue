@@ -12,10 +12,11 @@
 <script setup lang="ts">
 import {reactive, ref, nextTick, onMounted} from 'vue';
 import router from '@/router/router';
-import {toast} from '@/utils/toast';
+import {toast, toastRequestError} from '@/utils/toast';
 import PasswordInput from '@/components/password-input/index.vue'
 import type {passwordType} from "@/api/system/profile/type/password-type";
 import {updatePassword} from "@/api/system/profile/profile";
+import {updateRememberedPassword} from "@/helpers/remember"
 
 // 自动聚焦
 const autoFocus = ref<boolean>(false)
@@ -34,15 +35,21 @@ const handleSaveData = async () => {
 		return
 	}
 	// 保存密码
-	try {
-		saveLoading.value = true
-		const resp = await updatePassword(password)
-		if (resp.code === 200) {
-			router.navigateBack({})
+		try {
+			saveLoading.value = true
+			const resp = await updatePassword(password)
+			if (resp.code === 200) {
+				// 改密成功后同步记住的密码，避免下次自动填充旧密码（与向导改密步一致）
+				updateRememberedPassword(password.newPassword)
+				router.navigateBack({})
+			} else {
+				toast(resp.msg)
+			}
+		} catch (err) {
+			toastRequestError(err)
+		} finally {
+			saveLoading.value = false
 		}
-	} finally {
-		saveLoading.value = false
-	}
 }
 
 // 检查密码完整性

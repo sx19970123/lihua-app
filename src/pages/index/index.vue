@@ -6,8 +6,9 @@
 			<sar-notice-bar>基于 uni-app 开发，仅适配 App（Android、iOS、鸿蒙）及微信小程序，其余平台请自行测试。</sar-notice-bar>
 			<!-- title卡片 -->
 			<sar-card>
-			    <sar-space size="large">
-					<sar-avatar src="/static/logo.png" shape="square"></sar-avatar>
+					<sar-space size="large">
+						<!-- 系统徽章：亮色 miao / 暗色 hei，跟随实际生效主题动态切换 -->
+						<sar-avatar :src="logoSrc" shape="square"></sar-avatar>
 					<sar-space direction="vertical">
 						<h4>Hello 狸花猫 APP</h4>
 						<text @click="showVersion = true" style="color: var(--sar-primary); font-size: var(--sar-text-base);">当前版本 {{versionInfo[0].version}}</text>
@@ -89,11 +90,40 @@
 </template>
 
 <script setup lang="ts">
-import {ref} from 'vue'
+import {ref, computed, onUnmounted} from 'vue'
 const showVersion = ref<boolean>(false)
+
+// 当前实际生效主题（auto 偏好下取系统值；未开启 darkmode 的平台无 theme 字段，按亮色处理）
+const theme = ref(uni.getSystemInfoSync().theme || 'light')
+const onThemeChange = (res: UniApp.OnThemeChangeCallbackResult) => {
+	theme.value = res.theme
+}
+uni.onThemeChange(onThemeChange)
+onUnmounted(() => uni.offThemeChange(onThemeChange))
+// 系统徽章：亮色 miao / 暗色 hei
+const logoSrc = computed(() => theme.value === 'dark' ? '/static/logo-hei.png' : '/static/logo-miao.png')
 
 
 const versionInfo = [
+	{
+		version: '3.0.0',
+		updateDate: '2026-09-30',
+		updateContent: [
+			'1. 统一 App 与后端、Web 版本为 3.0.0',
+			'2. 新增检查更新：启动时静默检查新版本，红点引导更新（Android / iOS / 鸿蒙）',
+			'3. 登录后信息补全向导：按需引导完善默认部门等设置',
+			'4. 权限变更实时提醒：权限被调整后收到「权限已更新」提示，「我的」页签红点引导',
+			'5. 通知体验升级：实时推送断线自动重连与手动重连、通知横幅原生投影增强、通知页支持下拉刷新与上拉加载',
+			'6. 登录注册体验打磨：协议确认弹窗、提示防跳动、键盘弹起表单自适应',
+			'7. 无部门用户隐藏「默认部门」入口',
+			'8. H5 端全面适配修复：暗色模式、登录页布局、滑块验证码、文件上传、外链新窗口打开',
+			'9. 微信小程序：WebSocket 断连状态机修复，分包预下载提速通知页首开',
+			'10. 错误兜底页 403 / 404 / 451 上线，对齐 Web 端猫猫插画风格',
+			'11. 更新 UniApp 到 3.0.0-5020620260917001，Vue 3.5.43、Pinia 3.0.4、TypeScript 6.0.3',
+			'12. 更新 sard-uniapp 到 1.30.6',
+			'13. 网络层、附件链路、路由守卫、图标体系全面体检优化，修复通知域与登录注册域多项缺陷',
+		]
+	},
 	{
 		version: '2.2.0',
 		updateDate: '2026-06-25',

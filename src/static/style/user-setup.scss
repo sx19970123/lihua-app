@@ -1,0 +1,43 @@
+/* ========== 登录后初始设置向导（五步组件共享样式：图标/标题/描述/内容/底部按钮同构） ========== */
+.setup-step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	box-sizing: border-box;
+	padding: 48rpx 48rpx calc(48rpx + env(safe-area-inset-bottom));
+
+	.setup-icon {
+		margin-top: 96rpx;
+	}
+
+	.setup-title {
+		margin-top: 48rpx;
+		font-size: 44rpx;
+		font-weight: var(--sar-font-bold);
+		/* 主字体色（亮黑/暗白），与主题色图标区分 */
+		color: var(--sar-body-color);
+	}
+
+	.setup-desc {
+		margin-top: 16rpx;
+		font-size: var(--sar-text-base);
+		color: var(--sar-tertiary-color);
+		text-align: center;
+	}
+
+	.setup-form {
+		width: 100%;
+		margin-top: 64rpx;
+	}
+
+	.setup-btns {
+		width: 100%;
+		margin-top: 64rpx;
+
+		.setup-sub-btns {
+			display: flex;
+			justify-content: center;
+			margin-top: 16rpx;
+		}
+	}
+}

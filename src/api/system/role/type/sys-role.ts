@@ -19,8 +19,4 @@ export interface SysRole {
    * 备注
    */
   remark?: string;
-  /**
-   * 菜单id集合
-   */
-  menuIds?: string[] | { checked: string[] };
 }

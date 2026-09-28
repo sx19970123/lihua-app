@@ -4,9 +4,17 @@ page {
   overflow: hidden;
 }
 
-.auth-body { 
+.auth-body {
   padding: 48rpx;
+  /* #ifdef APP-PLUS || MP-WEIXIN */
   margin-top: 40%;
+  /* #endif */
+  /* #ifdef H5 */
+  /* 竖向百分比 margin 按父级宽度解析（CSS 规范）：手机竖屏下恰似纵向比例观感正常，
+     但宽视口（桌面/平板全屏）下 40% 宽达数百 px，叠加 page overflow 锁滚动后表单被推出视口；
+     取视口高 20% 与原 40% 的较小值——窄屏保持原观感，宽屏封顶 */
+  margin-top: min(20vh, 40%);
+  /* #endif */
 
   .auth-title {
     font-size: 48rpx;
@@ -53,6 +61,10 @@ page {
   .auth-item {
 	  caret-color: transparent;
 	  transition: caret-color 0.3s linear;
+  }
+  .auth-item.show-caret {
+	  /* 延迟须与 .auth-content 的上移动画时长一致（0.3s）：移动完成后光标才开始淡入；收起方向走上面的即时淡出 */
+	  transition: caret-color 0.3s linear 0.3s;
   }
   /* #endif */
 }

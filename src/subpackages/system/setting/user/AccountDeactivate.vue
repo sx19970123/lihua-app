@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted} from 'vue';
 import {checkPassword, accountDeactivate} from "@/api/system/profile/profile";
-import {toast} from '@/utils/toast';
+import {toast, toastRequestError} from '@/utils/toast';
 import { useUserStore } from '@/stores/user';
 
 const userStore = useUserStore()
@@ -54,6 +54,8 @@ const initPasswordCheck = () => {
 			} else {
 				toast(resp.msg)
 			}
+		} catch (err) {
+			toastRequestError(err)
 		} finally {
 			checkLoading.value = false
 		}
@@ -83,10 +85,13 @@ const initDeactivate = () => {
 			deactivateLoading.value = true
 			const resp = await accountDeactivate()
 			if (resp.code === 200) {
-				userStore.handleLogout()
+				// 退出请求失败时本地登出仍由 store finally 兜底，此处仅消 unhandled rejection
+				userStore.handleLogout().catch(() => undefined)
 			} else {
 				toast(resp.msg)
 			}
+		} catch (err) {
+			toastRequestError(err)
 		} finally {
 			deactivateLoading.value = false
 		}

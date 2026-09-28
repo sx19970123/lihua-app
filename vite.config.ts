@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import uni from "@dcloudio/vite-plugin-uni";
 import UniKuRoot from '@uni-ku/root'
-import { IconBuildPlugin } from "./plugins/buildIcons";
 
 export default defineConfig({
 	plugins: [
@@ -10,8 +9,7 @@ export default defineConfig({
 			rootFileName: "AppRoot",
 			enabledGlobalRef: true
 		}),
-		uni(), 
-		IconBuildPlugin()],
+		uni()],
 	optimizeDeps: {
 		exclude: ['sard-uniapp'],
 	},

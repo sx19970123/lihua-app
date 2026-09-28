@@ -7,7 +7,7 @@
 	        <sar-list-item v-for="mode in modeOption" :key="mode.value" :title="mode.label" hover @click="toggle(mode.value)">
 	          <template #value>
 				<!-- 选中标识 -->
-	            <sar-icon v-if="mode.value === value" color="var(--sar-primary)" family="outlined" size="32rpx" name="CheckOutlined"/>
+	            <sar-icon v-if="mode.value === value" color="var(--sar-primary)" size="32rpx" name="check"/>
 	          </template>
 	        </sar-list-item>
 	      </sar-list>

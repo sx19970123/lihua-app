@@ -3,8 +3,8 @@
 		<!-- 输入框 -->
 		<!-- 微信小程序下 插槽使用v-if禁用也会出现样式变化，所以对整个组件进行v-if -->
 		<sar-input v-if="props.showPrepend" :placeholder="props.placeholder" root-class="rounded-input" :class="clazz" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus>
-			<template #prepend v-if="props.showPrepend">
-				<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="LockOutlined" />
+			<template #prepend>
+				<sar-icon color="var(--sar-tertiary-color)" family="icon" name="LockOutlined" />
 			</template>
 		</sar-input>
 		<sar-input v-else :placeholder="props.placeholder" root-class="rounded-input" :class="clazz" @input="handleChangePwd" v-model="pwdValue" :maxlength="30" type="password" show-eye clearable show-clear-only-focus />
@@ -18,11 +18,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-// 不同强度正则表达式
+import { ref, watch } from 'vue'
+// 不同强度正则表达式（字母类用 Unicode \p{L}，与 web 端判定一致：中文等非拉丁字母同样计入）
 const weakRegex = /^.{6,}$/;
-const mediumRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
-const strongRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{10,}$/;
+const mediumRegex = /^(?=.*\p{L})(?=.*\d).{8,}$/u;
+const strongRegex = /^(?=.*\p{L})(?=.*\d)(?=.*[^\p{L}\d]).{10,}$/u;
 
 const props = defineProps<{value?: string, showPrepend?: boolean, placeholder?: string, clazz?: string}>()
 const emits = defineEmits(['update:value'])
@@ -63,10 +63,11 @@ const handleChangePwd = () => {
 }
 
 
-onMounted(() => {
-	pwdValue.value = props.value
+// 外部值变化时同步输入框并重算强度（父组件重置/换绑密码场景）
+watch(() => props.value, (value) => {
+	pwdValue.value = value
 	handleChangePwd()
-})
+}, { immediate: true })
 </script>
 
 <style scoped lang="scss">

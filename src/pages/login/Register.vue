@@ -20,8 +20,9 @@
 					@blur="handleCheckUsername"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="UserOutlined" />
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="UserOutlined" />
 					</template>
+					
 				</sar-input>
 				
 				<password-input 
@@ -42,30 +43,31 @@
 					v-model="registerData.confirmPassword"
 				>
 					<template #prepend>
-						<sar-icon color="var(--sar-tertiary-color)" family="outlined" name="LockOutlined" />
+						<sar-icon color="var(--sar-tertiary-color)" family="icon" name="LockOutlined" />
 					</template>
 				</sar-input>
 				
 				<sar-button 
 					root-class="auth-item auth-item-btn" 
 					:loading="registerLoading"
-					@click="enableCaptcha? openCaptcha(): handleRegister()">注 册</sar-button>
+					@click="isEnableCaptcha? openCaptcha(): handleRegister()">注 册</sar-button>
 			</sar-space>
 		</view>
 		
 		<!-- 验证码 -->
-		<Captcha @success="handleRegister" ref="captchaRef" v-if="enableCaptcha"/>
+		<Captcha @success="handleRegister" ref="captchaRef" v-if="isEnableCaptcha"/>
 	</view>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { RegisterType } from '@/api/system/authentication/type/register-type'
 import {register, checkUserName} from '@/api/system/authentication/authentication'
 import router from '@/router/router'
 import Captcha from '@/components/captcha/index.vue'
-import {toast} from '@/utils/toast'
-import {onShow, onHide, onLoad} from "@dcloudio/uni-app"
+import {toast, toastRequestError} from '@/utils/toast'
+import { useKeyboardStatus } from './use-keyboard-status'
+import { useSettingStore } from '@/stores/setting'
 import {cloneDeep} from "lodash-es"
 import PasswordInput from '@/components/password-input/index.vue'
 
@@ -84,7 +86,7 @@ const toLogin = () => {
  */
 const initRegister = () => {
 	// 用户注册数据
-	const registerData = ref<RegisterType>({username: '', password: '', passwordRequestKey: '', confirmPassword: '', confirmPasswordRequestKey: ''})
+	const registerData = ref<RegisterType>({username: '', password: '', confirmPassword: ''})
 	// 用户名是否已存在
 	const usernameExists = ref<boolean>(false)
 	// 用户注册loading
@@ -131,7 +133,7 @@ const initRegister = () => {
 			toast("两次密码不一致")
 			return false
 		}
-		
+
 		return true
 	}
 	
@@ -179,6 +181,9 @@ const initRegister = () => {
 			} else {
 				toast(resp.msg)
 			}
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
 		} finally {
 			registerLoading.value = false
 		}
@@ -198,9 +203,11 @@ const {registerData, registerLoading, checkRegisterData, handleCheckUsername, ha
 /**
  * 初始化验证码相关
  */
+const settingStore = useSettingStore()
+
 const initCaptcha = () => {
-	// 是否启用验证码
-	const enableCaptcha = ref<boolean>(false)
+	// 是否启用验证码（取自设置 store，与登录页同源）
+	const isEnableCaptcha = computed(() => settingStore.enableCaptcha)
 	
 	// 打开验证码
 	const openCaptcha = async () => {
@@ -216,44 +223,21 @@ const initCaptcha = () => {
 	}
 	
 	return {
-		enableCaptcha,
+		isEnableCaptcha,
 		openCaptcha
 	}
 }
 
-const {enableCaptcha, openCaptcha} = initCaptcha()
+const {isEnableCaptcha, openCaptcha} = initCaptcha()
 
 /**
- * 初始化键盘监听
+ * 初始化键盘监听（公共 composable，onShow/onHide 注册在其内）
  */
-const initKeyboardStatus = () => {
-	// 控制键盘弹起状态
-	const openKeyboard = ref<boolean>(false)
-	// 键盘高度变化监听
-	const handleChangeKeyboardHeight = (data : UniNamespace.OnKeyboardHeightChangeResult) => {
-		openKeyboard.value = data.height > 0
-	}
-		
-	return {
-		openKeyboard,
-		handleChangeKeyboardHeight
-	}
-}
+const {openKeyboard} = useKeyboardStatus()
 
-const {openKeyboard, handleChangeKeyboardHeight} = initKeyboardStatus()
-
-onLoad((option) => {
-	if (option) {
-		enableCaptcha.value = option.enableCaptcha
-	}
-})
-
-onShow(() => {
-	uni.onKeyboardHeightChange(handleChangeKeyboardHeight)
-})
-
-onHide(() => {
-	uni.offKeyboardHeightChange(handleChangeKeyboardHeight)
+onMounted(() => {
+	// 断网进注册页探测失败仅吞错（页面停留在默认配置，恢复后重试）
+	settingStore.initBaseSetting().catch(() => undefined)
 })
 </script>
 

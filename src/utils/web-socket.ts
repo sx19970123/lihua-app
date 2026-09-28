@@ -1,6 +1,12 @@
+import { ref } from 'vue'
 import {getOnceToken} from "@/api/system/authentication/authentication";
 import {getUUID} from "@/utils/uuid/uuid"
 import {getClientType} from '@/utils/client'
+
+// WebSocket 连接状态（断连重连入口的状态源）：connected=已连接；reconnecting=连接建立中/自动重连中；
+// disconnected=自动重连额度耗尽已断链（仅 reconnect 耗尽分支写入），等待手动重连或重新登录
+export type WsStatus = 'connected' | 'reconnecting' | 'disconnected'
+export const wsStatus = ref<WsStatus>('reconnecting')
 
 /**
  * webSocket连接具体实现逻辑
@@ -20,8 +26,13 @@ class WebSocketManager {
     private maxRetryNumber: number = 3
     // 重试间隔
     private retryInterval: number = 2 * 1000
+    // 已排定的重连定时器（排程去重：同一轮异常多路信号只排一次）
+    private reconnectTimer?: ReturnType<typeof setTimeout>
     // 是否开启重连
     private enableRetry: boolean = true
+    // 连接在途标志：getOnceToken 网络往返窗口内实例闸门（this.webSocket）尚未建立，
+    // 守卫在 initUserInfo 返回前的连续导航会并发触发 connect（H5 冷启动守卫+splash 双跳双连接必现），在途直接忽略
+    private connecting: boolean = false
 
     constructor() {
         this.listeners = new Map()
@@ -33,61 +44,82 @@ class WebSocketManager {
      * 建立连接
      */
     public connect = async () => {
+        // 在途去重：token 往返窗口内的并发 connect 只放行首个，其余忽略
+        if (this.connecting) {
+            console.log("WebSocket连接建立中，忽略重复 connect")
+            return
+        }
         if (!this.webSocket) {
+            // 每次显式连接重置重连开关，避免上次主动关闭（如登出）后的关闭态延续到本次连接
+            this.enableRetry = true
+            this.connecting = true
+            wsStatus.value = 'reconnecting'
 			try {
-			    const { code, data } = await getOnceToken()
-			
-			    if (code !== 200 || !data) {
-			        console.error("WebSocket获取连接token失败")
-			        return;
-			    }
-			
+				const { code, data } = await getOnceToken()
+
+				if (code !== 200 || !data) {
+					console.error("WebSocket获取连接token失败")
+					this.connecting = false
+					this.reconnect()
+					return;
+				}
+
 				// 拼接连接地址
 				const url = import.meta.env.VITE_APP_WS_API + '?token=' + data + '&clientId=' + await getUUID() + '&clientType=' + getClientType()
-			
-				// 建立连接
-				this.webSocket = uni.connectSocket({
-					url,
-					success: () => console.log("WebSocket连接中"),
-					fail: (e) => {
-						console.error("WebSocket连接失败", e)
-						this.reconnect()
-					}
-				})
-				
-				// 连接成功
-				this.webSocket.onOpen(() => {
-					console.info('WebSocket连接成功')
-					this.retryNumber = 0
-					this.enableRetry = true
-					this.isConnected = true
-					this.startHeartbeat()
-				})
-				
-				// 连接错误
-				this.webSocket.onError((err) => {
-					this.isConnected = false
-					this.reconnect()
-					console.error('WebSocket连接错误:', err)
-				})
-				
-				// 连接关闭
-				this.webSocket.onClose((event) => {
-					console.info('WebSocket连接关闭:', event)
-					this.isConnected = false
-					this.webSocket = undefined
-					this.closeHeartbeat()
-					if (this.enableRetry) {
-						this.reconnect()
-					}
-				})
-				
-				// 接收消息
-				this.webSocket.onMessage((res) => {
-					this.receiveMessage(res)
-				})
+
+	            // 建立连接（发起即交还互斥给实例闸门 this.webSocket）
+	            const task = this.webSocket = uni.connectSocket({
+	                url,
+	                success: () => console.log("WebSocket连接中"),
+	                fail: (e) => {
+	                    console.error("WebSocket连接失败", e)
+	                    this.reconnect()
+	                }
+	            })
+	            this.connecting = false
+
+	            // 连接成功
+	            task.onOpen(() => {
+	                console.info('WebSocket连接成功')
+	                this.retryNumber = 0
+	                this.enableRetry = true
+	                this.isConnected = true
+	                wsStatus.value = 'connected'
+	                this.startHeartbeat()
+	            })
+
+	            // 连接错误：与 onClose 走同一套清理+重连（handleAbnormalEnd 内以 task 引用去重，error+close 双触发只算一次）。
+	            // 小程序 SocketTask 连接建立失败时常只触发 error 不触发 close（H5/APP 则 error 后必补 close），
+	            // 只记录不清理会令僵尸 task 残留、阻塞 connect/manualReconnect，wsStatus 永停 reconnecting
+	            task.onError((err) => {
+	                this.isConnected = false
+	                console.error('WebSocket连接错误:', err)
+	                this.handleAbnormalEnd(task)
+	            })
+
+	            // 连接关闭：非 1000 关闭码视为异常断开（部分平台 event 无 code 字段，undefined 按异常处理倾向重连；主动关闭由 enableRetry=false 拦截）
+	            task.onClose((event) => {
+	                console.info('WebSocket连接关闭:', event)
+	                this.isConnected = false
+	                this.closeHeartbeat()
+	                // task 引用去重：error 分支已清理过（this.webSocket 已换防/置空）则跳过，防双触发重复重连
+	                if (this.webSocket !== task) {
+	                    return
+	                }
+	                this.webSocket = undefined
+	                if (event?.code !== 1000 && this.enableRetry) {
+	                    this.reconnect()
+	                }
+	            })
+
+	            // 接收消息
+	            task.onMessage((res) => {
+	                this.receiveMessage(res)
+	            })
 			} catch (e) {
-			    console.error("websocket连接失败",e)
+				console.error("websocket连接失败",e)
+				this.connecting = false
+				this.reconnect()
 			}
 		} else {
 			console.log("当前websocket实例已存在")
@@ -101,12 +133,7 @@ class WebSocketManager {
 	    }
 	    this.listeners.set(type, callback);
 	}
-	
-	// 删除事件
-	public removeEventListener = (type: string) => {
-	    this.listeners?.delete(type)
-	}
-	
+
 	// 发送数据
 	public sendMessage = (type: string, data: any): Promise<boolean> => {
 	    return new Promise((resolve, reject) => {
@@ -131,26 +158,70 @@ class WebSocketManager {
 		})
 	}
 	
+	// 手动重连：清零重试计数重启新一轮自动重连；自动重连耗尽停止后的外部恢复通道，由 UI 层显式调用
+	public manualReconnect = () => {
+		if (this.webSocket) {
+			// 僵尸 task 兜底：连接失败态的 task（小程序 error 无 close 场景）会永久占位阻塞重连，强制清理后重启；
+			// close 后补发的 onClose 经 task 引用去重跳过
+			this.webSocket.close({code: 1000})
+			this.webSocket = undefined
+			this.closeHeartbeat()
+		}
+		this.enableRetry = true
+		this.retryNumber = 0
+		this.connect()
+	}
+
 	// 主动关闭连接
 	public closeConnect = () => {
 		console.log("WebSocket主动关闭")
 	    this.enableRetry = false
+	    // 主动关闭后清零重试计数，下次连接从满额度开始
+	    this.retryNumber = 0
+		// 撤销排定中的自动重连（enableRetry 已拦截执行，此处同步收回定时器与状态）
+		if (this.reconnectTimer) {
+			clearTimeout(this.reconnectTimer)
+			this.reconnectTimer = undefined
+		}
 		this.webSocket?.close({code: 1000})
 		this.webSocket = undefined
 	}
 
-    // 重试连接
+    // 异常终止统一处理：清理 task 与心跳后走重连（onError 入口；onClose 里 task 引用比对去重后走同款逻辑）
+    private handleAbnormalEnd = (task: UniNamespace.SocketTask) => {
+        if (this.webSocket !== task) {
+            return
+        }
+        this.isConnected = false
+        this.webSocket = undefined
+        this.closeHeartbeat()
+        if (this.enableRetry) {
+            this.reconnect()
+        }
+    }
+
+    // 重试连接：固定间隔；累计 maxRetryNumber 次仍未连上则停止自动重连，等待下次登录触发
     private reconnect = () => {
         if (this.retryNumber >= this.maxRetryNumber) {
-            console.error("websocket 超过重试次数")
+            wsStatus.value = 'disconnected'
+            console.warn("WebSocket 重连失败已达上限，停止自动重连")
             return
         }
 		this.webSocket = undefined
+        // 排程去重：同一轮异常的 fail/error/close 多路信号只计一次数、排一次定时器（enableRetry=false 拦截执行）
+        if (this.reconnectTimer) {
+            return
+        }
         this.retryNumber ++
-        setTimeout(() => {
-            console.log("websocket 执行第" + this.retryNumber + "次重试")
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = undefined
+            // 等待期间被主动关闭（如登出）则不再重连
+            if (!this.enableRetry) {
+                return
+            }
+            console.log("websocket 执行第" + this.retryNumber + "次重连")
             this.connect()
-        }, this.retryNumber * this.retryInterval)
+        }, this.retryInterval)
     }
 
     // 接收数据

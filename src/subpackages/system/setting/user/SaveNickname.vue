@@ -12,7 +12,7 @@ import { ref, nextTick, onMounted} from 'vue';
 import { useUserStore } from '@/stores/user';
 import router from '@/router/router';
 import {saveBasics} from '@/api/system/profile/profile';
-import {toast} from '@/utils/toast';
+import {toast, toastRequestError} from '@/utils/toast';
 
 const userStore = useUserStore()
 const nickName = ref<string>(userStore.$state.nickname)
@@ -22,7 +22,7 @@ const autoFocus = ref<boolean>(false)
 const handleSaveData = async () => {
 	// 输入校验
 	if (!nickName.value) {
-		toast("请输入用户名")
+		toast("请输入昵称")
 		return
 	}
 	// 值未修改
@@ -41,6 +41,8 @@ const handleSaveData = async () => {
 		} else {
 			toast(resp.msg)
 		}
+	} catch (err) {
+		toastRequestError(err)
 	} finally {
 		saveLoading.value = false
 	}

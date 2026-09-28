@@ -3,8 +3,9 @@ import { queryUnReadCount } from '@/api/system/notice/notice'
 import {read} from '@/api/system/notice/notice'
 import type {PreviewNotice} from '@/api/system/notice/type/preview-notice'
 import { preview } from '@/api/system/notice/notice'
-import type {ResponseType} from '@/api/global/type'
+import {ResponseError, type ResponseType} from '@/api/global/type'
 import dayjs from 'dayjs'
+import { setNoticeRedDotSource } from '@/helpers/tabbar-red-dot'
 
 
 /**
@@ -22,69 +23,53 @@ export const useNoticeStore = defineStore('notice', {
 		}
 	},
 	actions: {
-		// 获取未读数量
-		getUnreadCount(): Promise<number> {
-			return new Promise((resolve, reject) => {
-				queryUnReadCount().then(resp => {
-					if (resp.code === 200) {
-						this.unreadCount = resp.data
-						resolve(resp.data)
-					} else {
-						reject(resp.msg)
-					}
-				}).catch(err => {
-					reject(err)
-				})
-			})
+		// 获取未读数量（红点数据尽力更新：失败保持现值不向调用方抛错；unreadCount 变化由 App 级 watch 驱动红点）
+		async getUnreadCount(): Promise<number> {
+			try {
+				const resp = await queryUnReadCount()
+				if (resp.code === 200) {
+					this.unreadCount = resp.data
+				} else {
+					console.error("获取未读数量失败", resp.msg)
+				}
+			} catch (err) {
+				console.error("获取未读数量失败", err)
+			}
+			return this.unreadCount
 		},
 		// 预览
 		previewNotice(noticeId: string): Promise<PreviewNotice> {
-			return new Promise(async (resolve, reject) => {
-				const resp = await preview(noticeId)
-				if (resp.code === 200) {
-					const data = resp.data
-					resolve({
-						title: data.title,
-						content: data.content,
-						releaseUser: data.releaseUser,
-						releaseTime: dayjs(data.releaseTime).format('YYYY-MM-DD HH:mm')
-					})
-				} else {
-					reject(resp.msg)
-				}
+			return new Promise((resolve, reject) => {
+				preview(noticeId).then((resp) => {
+					if (resp.code === 200) {
+						const data = resp.data
+						resolve({
+							title: data.title,
+							content: data.content,
+							releaseUser: data.releaseUser,
+							releaseTime: dayjs(data.releaseTime).format('YYYY-MM-DD HH:mm')
+						})
+					} else {
+						// 统一 reject ResponseError，消费方可经 instanceof / toastRequestError 取真实 msg
+						reject(new ResponseError(resp.code, resp.msg))
+					}
+				}).catch(err => reject(err))
 			})
 		},
-		// 标记为已读，并重新查询未读数量，设置未读红点
+		// 标记为已读，并重新查询未读数量（红点更新由 unreadCount 变化驱动）
 		markAsRead(noticeId: string): Promise<ResponseType<string>> {
 			return new Promise((resolve, reject) => {
 				read(noticeId).then((resp) => {
-					this.getUnreadCount().then(() => this.setTabbarRedDot())
+					this.getUnreadCount()
 					resolve(resp)
 				}).catch(err => reject(err))
 			})
 		},
-		// 处理底部导航栏红点
+		// 处理底部导航栏红点（通知来源；槽位与权限待更新红点共享，亮/灭统一经 tabbar-red-dot 收敛判定，
+		// 该 API 仅 tabbar 页面生效，切回页面由 AppRoot onShow 重设）
 		setTabbarRedDot() {
-			// 不存在红点，并阅读数等于0直接返回
-			if (!this.isShowTabBarRedDot && this.unreadCount === 0) {
-				return
-			}
-			// 存在红点，并未读数大于0直接返回
-			if (this.isShowTabBarRedDot && this.unreadCount > 0) {
-				return
-			}
-			// 设置红点（此api只有tabbar页面中才可设置生效，其余页面会进fail回调，切换页面时会触发根节点的onShow回调，所以处于tabbar页面总能看到新消息）
-			if (this.unreadCount > 0) {
-				uni.showTabBarRedDot({
-					index: 1, 
-					success: () => this.isShowTabBarRedDot = true,
-				})
-			} else {
-				uni.hideTabBarRedDot({
-					index: 1, 
-					success: () => this.isShowTabBarRedDot = false,
-				})
-			}
+			setNoticeRedDotSource(this.unreadCount > 0)
+			this.isShowTabBarRedDot = this.unreadCount > 0
 		}
 	}
 })

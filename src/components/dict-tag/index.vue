@@ -11,7 +11,6 @@
 import { ref, watch } from "vue"
 import type { SysDictDataType } from "@/api/system/dict/type/sys-dict-data-type"
 import { traverseWithPath } from "@/utils/tree"
-import { cloneDeep } from 'lodash-es'
 const props = withDefaults(
 	defineProps<{
 		// 字典选项
@@ -42,34 +41,28 @@ const props = withDefaults(
 const targetDict = ref<SysDictDataType>({})
 
 const initTargetDict = () => {
-	const option = cloneDeep(props.dictDataOption)
-	const value = cloneDeep(props.dictDataValue)
+	const option = props.dictDataOption
+	const value = props.dictDataValue
 	// option 和 value 全部存在时才进行处理
 	if (option && option.length > 0 && value) {
-		let label = undefined
-		let dict : SysDictDataType | undefined = undefined
-		// 遍历树形所有节点
+		// 遍历树形所有节点，命中则浅拷贝节点组装 label（拷贝后再改写，避免污染 store 中的字典源数据）
 		traverseWithPath(option, (dictDataList : SysDictDataType[]) => {
-			if (props.fullTreeSeparator) {
-				const targetIndex = dictDataList.findIndex(item => item.value === value)
-				if (targetIndex !== -1) {
-					dict = dictDataList[targetIndex]
-					if (props.fullTreeNode) {
-						label = dictDataList.slice(0, targetIndex + 1).map(item => item.label).join(props.fullTreeSeparator)
-					} else {
-						label = dict.label
-					}
-				}
+			if (!props.fullTreeSeparator) {
+				return
+			}
+			const targetIndex = dictDataList.findIndex(item => item.value === value)
+			if (targetIndex === -1) {
+				return
+			}
+			const dict = dictDataList[targetIndex]
+			const label = props.fullTreeNode
+				? dictDataList.slice(0, targetIndex + 1).map(item => item.label).join(props.fullTreeSeparator)
+				: dict.label
+			targetDict.value = {
+				...dict,
+				label: props.rootTreeNodePrefix !== "" ? props.rootTreeNodePrefix + props.fullTreeSeparator + label : label
 			}
 		})
-		if (dict) {
-			targetDict.value = dict
-			if (props.rootTreeNodePrefix !== "") {
-				targetDict.value.label = props.rootTreeNodePrefix + props.fullTreeSeparator + label
-			} else {
-				targetDict.value.label = label
-			}
-		}
 	}
 }
 
@@ -91,23 +84,24 @@ const differenceAdapt = (theme ?: string) => {
 		case 'error': {
 			return 'danger'
 		}
+		default: {
+			return 'default'
+		}
 	}
 }
 
-// 监听字典option变化
-watch(() => props.dictDataOption, () => {
-	initTargetDict()
-}, { immediate: true })
-// 监听字典值变化
-watch(() => props.dictDataValue, () => {
+// 监听字典 option 与值变化（合并单 watch，避免双 immediate 同 tick 重复初始化）
+watch([() => props.dictDataOption, () => props.dictDataValue], () => {
 	initTargetDict()
 }, { immediate: true })
 
-// 校验必填 prop
-if (!props.dictDataValue) {
-	console.error("dict-tag/DictTag 组件中 dictDataValue 值不存在")
-}
-if (!props.dictDataOption) {
-	console.error("dict-tag/DictTag 组件中 dictDataOption 值不存在")
+// 校验必填 prop（仅开发期提示）
+if (import.meta.env.DEV) {
+	if (!props.dictDataValue) {
+		console.error("dict-tag 组件中 dictDataValue 值不存在")
+	}
+	if (!props.dictDataOption) {
+		console.error("dict-tag 组件中 dictDataOption 值不存在")
+	}
 }
 </script>

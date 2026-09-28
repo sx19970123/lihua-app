@@ -1,7 +1,7 @@
 <template>
 	<view class="content">
 		<sar-space direction="vertical" size="large">
-			<sar-input placeholder="请输入手机号码" v-model="phoneNumber" :focus="autoFocus" root-class="rounded-input" clearable show-clear-only-focus :maxlength="20"></sar-input>
+			<sar-input placeholder="请输入手机号码" v-model="phoneNumber" :focus="autoFocus" root-class="rounded-input" clearable show-clear-only-focus :maxlength="11"></sar-input>
 			<sar-button round :loading="saveLoading" @click="handleSaveData">保 存</sar-button>
 		</sar-space>
 	</view>
@@ -12,7 +12,7 @@ import { ref, nextTick, onMounted} from 'vue';
 import { useUserStore } from '@/stores/user';
 import router from '@/router/router';
 import {saveBasics} from '@/api/system/profile/profile';
-import {toast} from '@/utils/toast';
+import {toast, toastRequestError} from '@/utils/toast';
 
 const userStore = useUserStore()
 const phoneNumber = ref<string | undefined>(userStore.userInfo.phoneNumber)
@@ -41,6 +41,8 @@ const handleSaveData = async () => {
 		} else {
 			toast(resp.msg)
 		}
+	} catch (err) {
+		toastRequestError(err)
 	} finally {
 		saveLoading.value = false
 	}

@@ -55,7 +55,7 @@
 			@remove="handleModelValue"
 			v-if="props.uploadType !== 'file' && props.uploadType !== 'all' && props.mode === 'picture'"/>
 		
-		<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（仅微信小程序支持） -->
+		<!-- 上传附件类型不为image和video，自行实现，只能以按钮形式上传（微信小程序从聊天记录选取、H5 本地文件选择、App 暂无对应能力） -->
 		<sar-space direction="vertical" v-if="props.uploadType === 'file' || props.uploadType === 'all'">
 			<sar-button 
 				v-if="!props.readonly && fileList.length < props.maxCount" 
@@ -67,7 +67,7 @@
 				:size="props.buttonSize"
 				:icon="props.buttonIcon"
 				:icon-family="props.buttonIconFamily" 
-				@click="handleMessageChoose"
+				@click="handleFileChoose"
 				>{{props.buttonText}}</sar-button>
 			<attachment-card-list
 				fileType="file" 
@@ -83,18 +83,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
 import type { UploadFileItem } from 'sard-uniapp'
 import { dialog } from 'sard-uniapp'
 import AttachmentCardList from '@/components/attachment-upload/AttachmentCardList.vue'
 import {toast} from '@/utils/toast'
 import {getFileInfo} from '@/utils/attachment/attachment-utils'
-import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, deleteFromBusiness} from '@/api/system/attachment/attachment-storage'
+import {queryAttachmentInfoByIds, upload, fastUpload, existsAttachmentByMd5, deleteFromBusiness, resolveAttachmentEntryUrl} from '@/api/system/attachment/attachment-storage'
 import { ResponseError } from '@/api/global/type'
+import type {ResponseType} from '@/api/global/type'
+import type {FastUploadResultVO} from '@/api/system/attachment/type/sys-attachment'
+import { ATTACHMENT_STATUS } from '@/api/system/attachment/type/sys-attachment'
 // 记录双向绑定回显是否已经完成
 let modelValueInitComplete = false
 // 删除的id
 const removeIds: string[] = []
+// 上传状态落定后的重渲染定时器（组件卸载时统一清理，避免卸载后仍向父组件 emit）
+const refreshTimers: ReturnType<typeof setTimeout>[] = []
 
 // 传入参数
 const props = withDefaults(defineProps<{
@@ -116,10 +121,10 @@ const props = withDefaults(defineProps<{
 	readonly?: boolean,
 	// 可否删除
 	removable?: boolean,
-	// 业务编码（自定义，用于后台附件管理区分附件对应的业务）
-	businessCode: string,
-	// 业务名称（自定义，用于后台附件管理区分附件对应的业务）
-	businessName: string,
+		// 业务编码（自定义，用于后台附件管理区分附件对应的业务；缺省取当前页面路由路径兜底）
+		businessCode?: string,
+		// 业务名称（自定义，用于后台附件管理区分附件对应的业务；缺省后端回显 businessCode）
+		businessName?: string,
 	// 自动删除（点击删除按钮是否自动进行业务删除）
 	autoRemove?: boolean,
 	// 删除描述（自动删除开启后，点击删除弹框提示文本）
@@ -159,7 +164,7 @@ const props = withDefaults(defineProps<{
 })
 
 // 抛出方法
-const emits = defineEmits(['update:model-value', 'uploadSuccess', 'uploadError', 'exceedMaxCount'])
+const emits = defineEmits(['update:model-value', 'uploadSuccess', 'uploadError', 'exceedMaxSize'])
 
 // 初始化双向绑定
 const initModelValue = async () => {
@@ -168,13 +173,12 @@ const initModelValue = async () => {
 		try {
 			const resp = await queryAttachmentInfoByIds(modelValue.split(","))
 			if (resp.code === 200) {
-				// 组合数据
+				// 组合数据（info 下发的 path 已是访问链形态，经统一解析器补网关前缀）
 				fileList.value = resp.data.map(item => {
 					return {
-						// 返回路径以http开头，则直接回显，否则拼接路径访问后台获取附件
-						url: item.path?.startsWith("http") ? item.path : import.meta.env.VITE_APP_BASE_API + '/app' + item.path,
+						url: item.path ? resolveAttachmentEntryUrl(item.path) : item.path,
 						name: item.originalName,
-						status: item.status === 'error' ? "failed" : "done",
+						status: item.status === ATTACHMENT_STATUS.FAIL ? "failed" : "done",
 						message: item.errorMsg,
 						id: item.id,
 						type: item.type?.includes("image") ? 'image' : item.type?.includes("video") ? 'video' : 'file',
@@ -216,32 +220,42 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 	
 	// 获取附件md5
 	try {
-		const { md5, fileName, filePath, size } = await getFileInfo(fileItem.url)
+		const fileInfo = await getFileInfo(fileItem.url)
+		// H5 临时路径（blob URL）截取的文件名是无后缀 UUID：优先选择回调的真实 file.name；
+		// file/all 类型手动入列的项无 file 属性、取 name（微信/H5 文件选择均携带真实名）；末级回退路径截取名
+		const fileName = fileItem.file?.name || fileItem.name || fileInfo.fileName
+		const {md5, filePath, size} = fileInfo
 		if (!md5 || !fileName || !filePath || !size) {
 			toast("附件信息获取异常")
 			return
 		}
 		const resp = await existsAttachmentByMd5(md5)
 		if (resp.code === 200) {
-			let uploadResp
+			// 秒传响应是上传响应的扩展（多 uploaded 字段），统一按宽类型接收
+			let uploadResp: ResponseType<FastUploadResultVO>
 			// 附件存在，进行文件秒传
 			if (resp.data) {
-				uploadResp = await handleFastUpload(fileName, size, md5)
+				uploadResp = await handleFastUpload(fileName, md5)
 			} else {
 				// 附件上传
-				uploadResp = await handleFileUpload(filePath, md5)
+				uploadResp = await handleFileUpload(filePath)
 			}
-			// 上传完成
-			if (uploadResp.code === 200) {
+			// 上传完成（秒传响应 uploaded 为 false 表示未命中竞态，按失败处理）
+			if (uploadResp.code === 200 && uploadResp.data.uploaded !== false) {
 				// 将服务器id记录到 fileItem 对象
-				fileItem.id = uploadResp.data
+				fileItem.id = uploadResp.data.id
 				// 修改状态
 				fileItem.status = 'done'
+				// 用服务器访问链替换本地临时路径（预览/展示消费）
+				if (uploadResp.data.url) {
+					fileItem.url = resolveAttachmentEntryUrl(uploadResp.data.url)
+				}
 				emits('uploadSuccess', fileItem, fileList.value)
 			} else {
+				const message = uploadResp.code === 200 ? "附件秒传未命中，请重新上传" : uploadResp.msg
 				fileItem.status = 'failed'
-				fileItem.message = uploadResp.msg
-				emits('uploadError', fileItem, uploadResp.msg)
+				fileItem.message = message
+				emits('uploadError', fileItem, message)
 			}
 		} else {
 			fileItem.status = 'failed'
@@ -255,30 +269,41 @@ const handleUpload = async (fileItem : UploadFileItem) => {
 			fileItem.message = "上传失败"
 		}
 	} finally {
-		setTimeout(() => {
+		refreshTimers.push(setTimeout(() => {
 			nextTick(() => {
 				// 重新赋值
 				fileList.value = [...fileList.value]
 				// 处理双向绑定
 				handleModelValue()
 			})
-		}, 100)
+		}, 100))
 	}
 }
 
+// 兜底业务编码：未显式传入时取当前页面路由末两段以 _ 连接（uni 无路由 name 体系，与 lihua-web 端
+// businessCode ?? route.name 兜底同语义；末两段区分 index 同名页面，且满足后端
+// ^[A-Za-z0-9_-]{1,32}$ 校验——完整路径含 / 会直接被拒）
+const resolveBusinessCode = () => {
+	if (props.businessCode) {
+		return props.businessCode
+	}
+	const route = getCurrentPages().pop()?.route || ""
+	return route.split('/').slice(-2).join('_').slice(0, 32)
+}
+
 // 处理文件秒传
-const handleFastUpload = async (fileName: string, size: number, md5: string) => {
-	return await fastUpload(fileName, props.businessCode, props.businessName, size, md5)
+const handleFastUpload = async (fileName: string, md5: string) => {
+	return await fastUpload({originalName: fileName, md5, businessCode: resolveBusinessCode(), businessName: props.businessName})
 }
 
 // 处理附件上传
-const handleFileUpload = async (filePath: string, md5: string) => {
-	return await upload(filePath, props.businessCode, props.businessName, md5)
+const handleFileUpload = async (filePath: string) => {
+	return await upload(filePath, {businessCode: resolveBusinessCode(), businessName: props.businessName})
 }
 
 // 处理超出指定大小
 const handleOverSize = (fileItemList: UploadFileItem[]) => {
-	emits('exceedMaxCount', fileItemList)
+	emits('exceedMaxSize', fileItemList)
 	// 根据附件大小转换 mb 和 kb 提示
 	const maxSize = props.maxSize / 1024 / 1024
 	toast(fileItemList.length + "个附件上传失败，单个附件不能超过" + (maxSize < 1 ? maxSize * 1024 + 'KB' : maxSize + 'MB'))
@@ -345,7 +370,8 @@ const handleDelete = async (_index: number, fileItem: UploadFileItem) => {
 const businessRemove = async () => {
 	return new Promise((resolve, reject) => {
 		if (removeIds.length === 0) {
-			reject({msg: '附件id不存在'})
+			// 无待删除附件按成功空操作处理，避免调用方未 catch 产生 unhandled rejection
+			resolve({})
 			return
 		}
 		deleteFromBusiness(removeIds)
@@ -359,40 +385,63 @@ const businessRemove = async () => {
 	})
 }
 
-// 微信消息文件选择
+// 文件入列并上传（file/all 类型手动管理列表；H5 chooseFile 与微信 chooseMessageFile 的选择结果共用）
+const pushAndUploadFiles = (tempFiles: {path: string; name: string; size: number, type: string}[]) => {
+	// 超出大小的附件
+	const overSizeFiles: UploadFileItem[] = []
+
+	tempFiles.forEach(file => {
+		const {size, path, name, type} = file
+		const fileItem: UploadFileItem = {url: path, name: name, type: type, status: 'uploading', message: '正在上传'}
+		if (size <= props.maxSize) {
+			// 大小范围内的附件先入列表再上传（状态由 handleUpload 更新）
+			fileList.value.push(fileItem)
+			handleUpload(fileItem)
+		} else {
+			// 超出大小的附件进行收集
+			overSizeFiles.push(fileItem)
+		}
+	})
+
+	// 同一处理超出大小的附件
+	if (overSizeFiles.length > 0) {
+		handleOverSize(overSizeFiles)
+	}
+}
+
+// #ifdef MP-WEIXIN
+// 微信从聊天记录选取文件（chooseMessageFile 仅微信小程序提供）
 const handleMessageChoose = () => {
+	uni.chooseMessageFile({
+		count: props.maxCount - fileList.value.length,
+		type: props.uploadType,
+		extension: props.extension,
+		success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
+			pushAndUploadFiles(tempFiles)
+		}
+	})
+}
+// #endif
+
+// 文件选择入口（file/all 类型上传按钮）：微信从聊天记录选取、H5 本地文件选择、App 暂无对应能力提示
+const handleFileChoose = () => {
 	// #ifdef MP-WEIXIN
-		uni.chooseMessageFile({
+		handleMessageChoose()
+	// #endif
+	// #ifdef H5
+		uni.chooseFile({
 			count: props.maxCount - fileList.value.length,
-			type: props.uploadType,
-			extension: props.extension,
-			success: ({ tempFiles }: { tempFiles: { path: string; name: string; size: number, type: string }[] }) => {
-				// 超出大小的附件
-				const overSizeFiles: UploadFileItem[] = []
-				
-				tempFiles.forEach(file => {
-					const {size, path, name, type} = file
-					const fileItem = {url: path, name: name, type: type}
-					if (size <= props.maxSize) {
-						// 大小范围内的附件进行上传
-						handleUpload(fileItem)
-						fileList.value.push(fileItem)
-					} else {
-						// 超出大小的附件进行收集
-						overSizeFiles.push(fileItem)
-					}
-				})
-				
-				// 同一处理超出大小的附件
-				if (overSizeFiles.length > 0) {
-					handleOverSize(overSizeFiles)
-				}
+			type: 'all',
+			// uni-h5 的 _createInput 无条件调用 extension.map，缺省必须传空数组（空 accept 即不限类型）
+			extension: props.extension ?? [],
+			success: ({ tempFiles }) => {
+				// tempFiles 为带 path（blob URL getter）的真实 File 对象，name/size/type 结构满足共用入列签名
+				pushAndUploadFiles(tempFiles as unknown as {path: string; name: string; size: number, type: string}[])
 			}
 		})
 	// #endif
 	// #ifdef APP-PLUS
-		toast("仅微信小程序支持此配置")
-		throw new Error("APP 不支持传入uploadType为 file 和 all")
+		toast("仅H5和微信小程序支持此配置")
 	// #endif
 }
 
@@ -406,10 +455,20 @@ const handleWechatImgPreview = (_index: number, item: UploadFileItem) => {
 
 }
 
-// 处理回显
+// 处理回显（清空时重置列表与回显标记，父组件后续换绑可重新回显）
 watch(() => props.modelValue, (value) => {
-    if (value) initModelValue()
-  },{ immediate: true })
+	if (!value) {
+		fileList.value = []
+		modelValueInitComplete = false
+		return
+	}
+	initModelValue()
+},{ immediate: true })
+
+// 组件卸载时清理在途的重渲染定时器
+onUnmounted(() => {
+	refreshTimers.forEach(timer => clearTimeout(timer))
+})
 
 // 抛出函数
 defineExpose({

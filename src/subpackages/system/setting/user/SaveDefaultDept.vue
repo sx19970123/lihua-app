@@ -22,6 +22,7 @@ import { useUserStore } from '@/stores/user'
 import type { SysDept } from '@/api/system/dept/type/sys-dept'
 import {traverse} from '@/utils/tree'
 import router from '@/router/router';
+import { toastRequestError } from '@/utils/toast'
 
 const userStore = useUserStore()
 const keyword = ref<string>('')
@@ -52,11 +53,13 @@ const handleChangeDefaultDept = (key: string) => {
 	traverse(treeData.value, (item: SysDept) => {
 		if (item.id === key) {
 			uni.showLoading({title: '加载中', mask: true})
-			// 更新默认部门
+			// 更新默认部门（loading/toast 共用原生槽位，hideLoading 须先于 toast，故不收在 finally）
 			userStore.updateDefaultDept(item).then(() => {
-				router.navigateBack({})
-			}).finally(() => {
 				uni.hideLoading()
+				router.navigateBack({})
+			}).catch((err) => {
+				uni.hideLoading()
+				toastRequestError(err)
 			})
 			return true
 		}
