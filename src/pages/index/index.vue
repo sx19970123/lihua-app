@@ -107,7 +107,7 @@ const logoSrc = computed(() => theme.value === 'dark' ? '/static/logo-hei.png' :
 const versionInfo = [
 	{
 		version: '3.0.0',
-		updateDate: '2026-09-30',
+		updateDate: '2026-09-28',
 		updateContent: [
 			'1. 统一 App 与后端、Web 版本为 3.0.0',
 			'2. 新增检查更新：启动时静默检查新版本，红点引导更新（Android / iOS / 鸿蒙）',
