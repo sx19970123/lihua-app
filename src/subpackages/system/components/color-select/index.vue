@@ -5,6 +5,9 @@
 			<view class="model-val">双向绑定Key：{{value}}</view>
 			<!-- 头像背景颜色 -->
 			<color-select :dataSource="AVATAR_COLOR_SOURCE" v-model:color="color" v-model:value="value"></color-select>
+			<view class="model-val">自定义颜色（allowCustom，记忆键 demoColorSelectCustom）：{{customColor}}</view>
+			<color-select :dataSource="AVATAR_COLOR_SOURCE" v-model:color="customColor" allow-custom
+				custom-color-storage-key="demoColorSelectCustom"></color-select>
 		</sar-space>
 	</view>
 </template>
@@ -16,6 +19,7 @@ import { AVATAR_COLOR_SOURCE } from '@/constants/avatar-colors'
 
 const color = ref<string>('rgb(114, 46, 209)')
 const value = ref<string>('8')
+const customColor = ref<string>('rgb(82, 196, 26)')
 </script>
 
 <style scoped lang="scss">

@@ -10,12 +10,13 @@
 			</sar-list>
 		</sar-space>
 		<!-- 文本抽屉 -->
-		<sar-popout v-model:visible="textPopout" :overlay-closable="!keyboardOpen" :show-close="false"
-			@leave="autoFocus = false" :before-close="handleSave">
+		<sar-popout v-model:visible="textPopout" title="编辑文本头像" :overlay-closable="!keyboardOpen"
+			show-close @leave="autoFocus = false" :before-close="handleSave">
 			<view class="popout-content">
 				<sar-space direction="vertical" size="large">
-					<!-- 头像背景颜色 -->
-					<color-select :dataSource="AVATAR_COLOR_SOURCE" v-model:color="avatarData.backgroundColor"></color-select>
+					<!-- 头像背景颜色（自定义色记忆键与 web 端 AvatarModifier 一致） -->
+					<color-select :dataSource="AVATAR_COLOR_SOURCE" v-model:color="avatarData.backgroundColor"
+						allow-custom custom-color-storage-key="avatarBackgroundColor"></color-select>
 					<!-- 头像文本 -->
 					<sar-input :focus="autoFocus" :adjust-position="false" root-class="rounded-input"
 						placeholder="请输入文本" v-model="avatarData.value"
@@ -187,9 +188,5 @@ const { textPopout, autoFocus, keyboardOpen, handleTextAvatar, handleKeyboardCha
 .popout-content {
 	padding-left: 32rpx;
 	padding-right: 32rpx
-}
-
-:deep(.sar-popout__header) {
-	height: 32rpx !important;
 }
 </style>
