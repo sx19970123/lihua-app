@@ -8,14 +8,14 @@
 			</sar-space>
 			<view class="title">树型字典</view>
 			<sar-space wrap>
-				<dict-tag dict-data-value="2-2" :dict-data-option="test_tree" plain/>
-				<dict-tag dict-data-value="2-2-1" :dict-data-option="test_tree" full-tree-node/>
-				<dict-tag dict-data-value="2-2-1" :dict-data-option="test_tree" full-tree-node root-tree-node-prefix="~"/>
+				<dict-tag dict-data-value="2-2" :dict-data-option="tree" plain/>
+				<dict-tag dict-data-value="2-2-1" :dict-data-option="tree" full-tree-node/>
+				<dict-tag dict-data-value="2-2-1" :dict-data-option="tree" full-tree-node root-tree-node-prefix="~"/>
 			</sar-space>
 			<view class="description">
 				树的样式
 			</view>
-			<sar-tree :data="test_tree" :node-keys="{ title: 'label', key: 'value' }" default-expand-all/>
+			<sar-tree :data="tree" :node-keys="{ title: 'label', key: 'value' }" default-expand-all/>
 		</sar-space>
 	</view>
 </template>
@@ -24,7 +24,7 @@
 import DictTag from "@/components/dict-tag/index.vue"
 import {initDict} from "@/helpers/dict"
 
-const {sys_status, test_tree} = initDict("sys_status", "test_tree")
+const {sys_status, tree} = initDict("sys_status", "tree")
 </script>
 
 <style scoped lang="scss">
