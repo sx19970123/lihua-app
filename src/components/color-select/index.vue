@@ -17,10 +17,15 @@
 			<text v-else-if="!storedCustomColor" class="custom-auto-a">A</text>
 		</view>
 	</sar-space>
-	<!-- 自定义取色抽屉：确认（change）才写记忆并对外应用，取消/点遮罩只关闭不生效；
-		resettable 让关闭后丢弃未确认草稿，起步色每次打开按当前色/记忆重算 -->
-	<sar-color-picker-popout v-if="props.allowCustom" v-model:visible="pickerVisible" v-model="pickerColor"
-		title="自定义颜色" format="hex" resettable @change="handleCustomChange" />
+	<!-- 自定义取色抽屉：拖动过程实时透出预览色给 v-model（头像等调用方即时可见）；
+		确认才写记忆并对外 click；取消/X/遮罩回滚到打开前颜色，拖动预览不算数 -->
+	<sar-popout v-if="props.allowCustom" v-model:visible="pickerVisible" title="自定义颜色"
+		:before-close="handlePickerBeforeClose">
+		<template #visible="{ already }">
+			<sar-color-picker v-if="already" :model-value="pickerColor" format="hex"
+				@update:model-value="handleDraftChange" />
+		</template>
+	</sar-popout>
 </template>
 
 <script setup lang="ts">
@@ -140,35 +145,54 @@ const checkColorFor = (background : string) => {
 	return luminance > 0.6 ? 'rgba(0, 0, 0, 0.88)' : '#fff'
 }
 
-// ---------- 取色抽屉（sar-color-picker-popout：底部抽屉 + 确定/取消） ----------
+// ---------- 取色抽屉（sar-popout + sar-color-picker 组装，同 sard 官方 color-picker-popout 内部结构） ----------
 const pickerVisible = ref(false)
-// 抽屉面板色（每次打开前按下方优先级赋起步值；确认 change 才对外应用）
+// 抽屉面板色：打开前按下方优先级赋起步值；拖动过程由用户改色实时更新
 const pickerColor = ref<string>('#1989FA')
+// 打开抽屉时的颜色快照与面板起步值快照（取消回滚与「未动确认不提交」判定用）
+let colorAtOpen : string | undefined
+let draftAtOpen = ''
 
 // 点击自定义入口：有记忆且当前非自定义选中态时快捷应用记忆色（快速重选上次的色，抽屉仍打开可继续微调）；
 // 当前已是自定义色（带值来修改）：仅打开抽屉起步于当前色，不应用记忆（多账号同机时记忆是他人的）
 const handleCustomSwatchClick = () => {
-	if (storedCustomColor.value && !isCustomActive.value) {
+	const quickApplied = !!storedCustomColor.value && !isCustomActive.value
+	if (quickApplied) {
 		emits('update:color', storedCustomColor.value)
 		emits('click', { color: storedCustomColor.value, name: '自定义' })
 	}
+	// 快捷应用过的以记忆色为「打开前颜色」（取消回滚不应吞掉快捷应用）
+	colorAtOpen = quickApplied ? storedCustomColor.value : props.color
 	// 起步色优先当前 v-model 色——多账号同机时各自的当前色才是修改起点（记忆是上一用户的会错意）；
 	// v-model 非合法 hex（预置 rgb()/'auto' 等非自定义形态）时回退本机记忆色，再无则交面板默认
 	pickerColor.value = props.color && HEX_COLOR_PATTERN.test(props.color)
 		? props.color
 		: storedCustomColor.value ?? pickerColor.value
+	draftAtOpen = pickerColor.value
 	pickerVisible.value = true
 }
 
-// 抽屉确认（sard 仅在面板色与当前值不同时触发 change）：sard 输出大写 hex，
-// 统一小写与 web 端存储格式对齐；先存记忆再对外应用
-const handleCustomChange = (value : string) => {
-	const hex = value.toLowerCase()
-	storedCustomColor.value = hex
-	uni.setStorageSync(storageKey(), hex)
-	pickerColor.value = hex
-	emits('update:color', hex)
-	emits('click', { color: hex, name: '自定义' })
+// 拖动实时预览：sard 在 touchmove 里连续 emit update:model-value，每次变化直接透给 v-model（小写化），
+// 头像等调用方拖动中即时可见；确认前不写记忆、不发 click
+const handleDraftChange = (value : string) => {
+	pickerColor.value = value
+	emits('update:color', value.toLowerCase())
+}
+
+// 确认：面板色相对打开时有变化才提交（写记忆 + 对外 click，小写与 web 存储格式对齐），未动确认无操作；
+// 取消/X/遮罩：回滚到打开前颜色（快捷应用的记忆色不被吞掉）
+const handlePickerBeforeClose = (type : 'close' | 'cancel' | 'confirm') => {
+	if (type === 'confirm') {
+		const hex = pickerColor.value.toLowerCase()
+		if (hex === draftAtOpen.toLowerCase()) return
+		storedCustomColor.value = hex
+		uni.setStorageSync(storageKey(), hex)
+		pickerColor.value = hex
+		emits('update:color', hex)
+		emits('click', { color: hex, name: '自定义' })
+	} else if (colorAtOpen !== undefined && props.color !== colorAtOpen) {
+		emits('update:color', colorAtOpen)
+	}
 }
 </script>
 
