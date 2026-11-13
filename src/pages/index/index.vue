@@ -106,6 +106,17 @@ const logoSrc = computed(() => theme.value === 'dark' ? '/static/logo-hei.png' :
 
 const versionInfo = [
 	{
+		version: '3.1.0',
+		updateDate: '2026-11-13',
+		updateContent: [
+			'1. 统一 App 与后端、Web 版本为 3.1.0',
+			'2. 新增 POW（工作量证明）验证码：iOS App 走 WASM 加速（均值约 2 秒），安卓 / H5 纯 JS 秒级完成，微信小程序 Worker 后台求解',
+			'3. 验证码分端配置：Web 与 App 独立设置开关与类型勾选池，取码按 App 端勾选池随机出题',
+			'4. 更新 UniApp 编译器到 5.03.04（3.0.0-5030420261029002）、Vue 3.5.45、vue-tsc 3.3.14',
+			'5. 其他细节优化',
+		]
+	},
+	{
 		version: '3.0.0',
 		updateDate: '2026-09-28',
 		updateContent: [
