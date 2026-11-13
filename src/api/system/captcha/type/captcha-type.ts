@@ -16,7 +16,9 @@ export interface CaptchaRequestData {
 		// 结束时间
 		stopTime: number;
 		// 轨迹
-		trackList: Array<{x: number, y: number, type: string, t: number}>
+		trackList: Array<{x: number, y: number, type: string, t: number}>;
+		// 工作量证明解（POW 类型使用，nonce 以 "-" 连接）
+		data?: string
 	}
 }
 
@@ -31,7 +33,7 @@ export interface CaptchaResponseData {
 	/**
 	 * 验证码类型
 	 */
-	type?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER';
+	type?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER' | 'POW';
 	/**
 	 * 背景图片
 	 */
@@ -71,7 +73,11 @@ export interface CaptchaResponseData {
 		/**
 		 * Y轴旋转角度（拼接类型使用）
 		 */
-		randomY?: number
+		randomY?: number;
+		/**
+		 * 工作量证明参数（POW 类型使用）[difficulty, saltLen, num]
+		 */
+		POW?: number[]
 	}
-	
+
 }

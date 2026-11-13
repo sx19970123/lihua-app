@@ -5,8 +5,27 @@
 			<view class="captcha-loading" v-show="captchaLoading"></view>
 			<view class="loading-error" v-if="!captchaLoading && loadingError">{{loadingError}}</view>
 			<view :class="captchaTransition" v-if="!loadingError">
+				<!-- 工作量证明（POW）：结构与滑块分支同构（tip 在 content 外，pow-body 占图片区位置） -->
+				<block v-if="captchaProcess.type === 'POW'">
+					<view class="verify-tip">正在进行安全校验</view>
+					<view class="verify-content">
+						<view class="pow-body">
+							<view v-if="!verifyResult.isSuccess && !verifyResult.isError" class="pow-mining">
+								<view class="pow-spinner"></view>
+								<text class="verify-tip pow-tip">正在验证中...</text>
+								<text class="verify-tip pow-tip">{{ powProgress ? `${powProgress.solved}/${powProgress.total}` : '' }}</text>
+							</view>
+							<view v-if="verifyResult.isSuccess" class="check-status check-success">
+								<text class="check-msg">{{verifyResult.successMsg}}</text>
+							</view>
+							<view v-if="verifyResult.isError" class="check-status check-error">
+								<text class="check-msg">{{ verifyResult.errorMsg }}</text>
+							</view>
+						</view>
+					</view>
+				</block>
 				<!-- SLIDER  ROTATE  CONCAT 类型 -->
-				<block v-if="captchaProcess.type !== 'WORD_IMAGE_CLICK'">
+				<block v-else-if="captchaProcess.type !== 'WORD_IMAGE_CLICK'">
 					<view class="verify-tip">拖动滑块完成拼图</view>
 					<view class="verify-content">
 						<view class="verify-body">
@@ -76,10 +95,12 @@
 			</view>
 			<!-- 校验期间透明阻断层：提交后到刷新前禁止拖动/点击，不遮底部操作图标 -->
 			<view class="verify-freeze" v-if="verifying" @touchmove.stop.prevent @touchMove.stop.prevent></view>
-			<!-- 刷新，关闭 操作区 -->
+			<!-- 刷新，关闭 操作区（POW 为自动流程，挖矿期间无刷新入口） -->
 			<view class="verify-opts">
-				<image class="opts-icon" @click="refresh(false)" :src="refreshIcon" mode="aspectFill" />
-				<view class="divide"></view>
+				<block v-if="captchaProcess.type !== 'POW'">
+					<image class="opts-icon" @click="refresh(false)" :src="refreshIcon" mode="aspectFill" />
+					<view class="divide"></view>
+				</block>
 				<image class="opts-icon" @click="close" :src="closeIcon" mode="aspectFill" />
 			</view>
 		</view>
@@ -90,6 +111,7 @@
 	import type { ComponentInternalInstance } from 'vue'
 	import { getCaptchaData, check } from "@/api/system/captcha/captcha"
 	import type { CaptchaRequestData, CaptchaResponseData } from "@/api/system/captcha/type/captcha-type"
+	import { solvePow } from "./pow"
 	import { useThemeStore } from "@/stores/theme"
 	// 抛出方法
 	const emits = defineEmits(['success'])
@@ -137,7 +159,9 @@
 		//滑块滑动界限值
 		end : number,
 		// 验证码类型
-		type ?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER'
+		type ?: 'WORD_IMAGE_CLICK' | 'CONCAT' | 'ROTATE' | 'SLIDER' | 'POW',
+		// 工作量证明参数（POW 类型使用）
+		powParam ?: number[]
 	}
 	// 验证结果类型
 	type VerifyResultType = {
@@ -182,6 +206,10 @@
 	let verifyTimer: ReturnType<typeof setTimeout> | undefined
 	// 校验进行中（提交后到下次刷新前），期间透明阻断层盖住游戏区
 	const verifying = ref<boolean>(false)
+	// POW 挖矿进度
+	const powProgress = ref<{ solved : number, total : number }>()
+	// 进行中的 POW 挖矿取消句柄（刷新/关闭时终止后台计算）
+	let cancelPowMining : (() => void) | undefined
 	// 刷新 关闭图标
 	const refreshIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAJFBMVEVHcEyfn59xcXFgYGBbW1tYWFhYWFhXV1dYWFhXV1dXV1dXV1eOJtjUAAAAC3RSTlMAAgkQMUd0iKbR8IVomssAAABwSURBVHjapdFBDsMgDAXR7ya2MXP/+1ZNvUCwzNsxEkjY+vNRc9Zwk5p50aarBVTc13VHQUohKSGs7wRkIDm42nMCWRFaDECbADjbGT8PvTR/cosAqTMOLWKWCfZvukTuA5GU2+hCzYtWy0vW6+j0BSLdBQYxmJeMAAAAAElFTkSuQmCC"
 	const closeIcon = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAUCAMAAAC6V+0/AAAAHlBMVEVHcExiYmJeXl5YWFhYWFhZWVlYWFhYWFhXV1dXV1dh3LwmAAAACXRSTlMADRxPbYyl1/NFQhX5AAAAd0lEQVR42m2R0QoDMQgEx+hl3f//4dLmeqXgPIQwIOrKIbe6tZMfKd/o0ZetWhGrZF9f18VN9bHpTh6ynYBcQHA/ZUFawKUFSxcgJ9sFIWstWQHljbyAt5D1+Vq0g2OPI9yjHMvHRuNI4/DzmnMgc3RzyBD/53gBSd8FOjnClmAAAAAASUVORK5CYII="
@@ -198,6 +226,9 @@
 	 * 关闭
 	 */
 	const close = () => {
+		// 终止进行中的 POW 挖矿
+		cancelPowMining?.()
+		cancelPowMining = undefined
 		verifyShow.value = false
 		nextTick(() => {
 			captchaProcess.value = createDefaultCaptchaProcess()
@@ -221,15 +252,26 @@
 				loadingError.value = undefined
 				// 动画执行完成后隐藏，并重置transformX为0，防止影响点选
 				captchaTransition.value = 'slide-hidden'
-				const captchaResp = await getCaptchaData()
-				if (captchaResp.code === 200) {
-					const data = captchaResp.data
-					captchaProcess.value.type = data.type
-					captchaProcess.value.id = data.id
-					captchaProcess.value.backgroundImage = data.backgroundImage
-					captchaProcess.value.sliderImage = data.templateImage
-					// 等待dom更新完成
-					await nextTick()
+					const captchaResp = await getCaptchaData()
+					if (captchaResp.code === 200) {
+						const data = captchaResp.data
+						captchaProcess.value.type = data.type
+						captchaProcess.value.id = data.id
+						captchaProcess.value.backgroundImage = data.backgroundImage
+						captchaProcess.value.sliderImage = data.templateImage
+						// POW 无图片与 DOM 探测，记录参数后进入视图即后台挖矿
+						if (data.type === 'POW') {
+							// 重置计时起点（弹窗未关闭重复触发时 process 复用旧 startTime，耗时统计会跨弹窗虚高）
+							captchaProcess.value.startTime = new Date()
+							captchaProcess.value.powParam = data.data?.POW
+							captchaTransition.value = 'slide-in'
+							await new Promise(r => setTimeout(r, 300))
+							captchaLoading.value = false
+							startPowMining()
+							return
+						}
+						// 等待dom更新完成
+						await nextTick()
 					const scope = (instanceScope.value?.proxy as UniPageScope | undefined)?.$scope
 					// 加载背景
 					await initBackground(scope)
@@ -565,6 +607,10 @@
 		verifyResult.value.successMsg = undefined
 		leftDistance.value = 0
 		clickCount.value = 0
+		powProgress.value = undefined
+		// 终止旧挑战的 POW 挖矿（避免后台空转阻塞主线程/worker）
+		cancelPowMining?.()
+		cancelPowMining = undefined
 		captchaProcess.value.trackArr = []
 		// 关闭验证码调用方法不获取新验证码
 		// 验证码正在获取中不获取新验证码
@@ -573,28 +619,10 @@
 		}
 	}
 
-	// 滑动校验
-	const verifyData = async () => {
-		// 参数拼接与校验
-		const { id, backgroundImageWidth, backgroundImageHeight, startTime, stopTime, trackArr } = captchaProcess.value
-		if (!id || !stopTime) {
-			return
-		}
+	// 提交验证结果并处理响应（滑动类与 POW 共用）
+	const submitCaptcha = async (captchaData : CaptchaRequestData, durationMs : number) => {
 		// 提交即阻断游戏区交互，直至下次刷新（失败自动刷新/成功展示后关闭均经过 refresh 解除）
 		verifying.value = true
-		const captchaData : CaptchaRequestData = {
-			id: id,
-			data: {
-				// 旋转类型的进度以拖动满量程（end）为分母，与显示角度同坐标系（对齐官方 TAC 客户端：视觉重合即百分比命中）；
-				// 其余类型为绝对像素定位语义，仍以背景宽为分母
-				bgImageWidth: captchaProcess.value.type === 'ROTATE' ? captchaProcess.value.end : backgroundImageWidth,
-				bgImageHeight: backgroundImageHeight,
-				startTime: startTime.getTime(),
-				stopTime: stopTime.getTime(),
-				trackList: trackArr
-			}
-		}
-
 		try {
 			// 验证
 			const resp = await check(captchaData)
@@ -602,7 +630,7 @@
 			// 校验成功
 			if (resp.code === 200 && resp.success) {
 				verifyResult.value.isSuccess = true
-				verifyResult.value.successMsg = `验证成功，耗时${(stopTime.getTime() - startTime.getTime()) / 1000}秒`
+				verifyResult.value.successMsg = `验证成功，耗时${durationMs / 1000}秒`
 				verifyTimer = setTimeout(() => {
 					verifyTimer = undefined
 					close()
@@ -630,6 +658,78 @@
 			// 异常刷新
 			console.error(err)
 			refresh(false)
+		}
+	}
+
+	// 滑动校验
+	const verifyData = async () => {
+		// 参数拼接与校验
+		const { id, backgroundImageWidth, backgroundImageHeight, startTime, stopTime, trackArr } = captchaProcess.value
+		if (!id || !stopTime) {
+			return
+		}
+		const captchaData : CaptchaRequestData = {
+			id: id,
+			data: {
+				// 旋转类型的进度以拖动满量程（end）为分母，与显示角度同坐标系（对齐官方 TAC 客户端：视觉重合即百分比命中）；
+				// 其余类型为绝对像素定位语义，仍以背景宽为分母
+				bgImageWidth: captchaProcess.value.type === 'ROTATE' ? captchaProcess.value.end : backgroundImageWidth,
+				bgImageHeight: backgroundImageHeight,
+				startTime: startTime.getTime(),
+				stopTime: stopTime.getTime(),
+				trackList: trackArr
+			}
+		}
+		await submitCaptcha(captchaData, stopTime.getTime() - startTime.getTime())
+	}
+
+	// POW 后台挖矿：取到验证码即开始（等待时间藏在用户操作期间），解出后自动提交
+	const startPowMining = async () => {
+		const id = captchaProcess.value.id
+		const powParam = captchaProcess.value.powParam
+		if (!id || !powParam) {
+			loadingError.value = '验证码配置缺失'
+			return
+		}
+		try {
+			const handle = solvePow(id, powParam, (solved, total) => {
+				powProgress.value = { solved, total }
+			})
+			cancelPowMining = handle.cancel
+			// 取消（刷新/关闭）时以空串收场；空解哨兵必须先于代际检查——
+			// cancel 的 resolve 续体先于 close 的 nextTick（process 重建）执行，代际检查此时拦不住
+			const customData = await handle.result
+			cancelPowMining = undefined
+			if (!customData) {
+				return
+			}
+			// 挖矿期间刷新/关闭已换取新验证码时，丢弃过期解
+			if (captchaProcess.value.id !== id) {
+				return
+			}
+			const startTime = captchaProcess.value.startTime.getTime()
+			const stopTime = Date.now()
+			captchaProcess.value.stopTime = new Date(stopTime)
+			// POW 为纯数学验证，不做行为轨迹校验：占位轨迹+非零占位宽高（后端公共前置校验要求），
+			// nonce 串放 track 的 data 字段（tianai POW 校验从 ImageCaptchaTrack.data 读取）
+			const captchaData : CaptchaRequestData = {
+				id: id,
+				data: {
+					bgImageWidth: 318,
+					bgImageHeight: 180,
+					startTime: startTime,
+					stopTime: stopTime,
+					trackList: [{ x: 0, y: 0, type: '', t: 0 }],
+					data: customData
+				}
+			}
+			await submitCaptcha(captchaData, stopTime - startTime)
+		} catch (err) {
+			console.error(err)
+			cancelPowMining = undefined
+			if (captchaProcess.value.id === id) {
+				refresh(false)
+			}
 		}
 	}
 
@@ -662,6 +762,7 @@
 		if (verifyTimer !== undefined) {
 			clearTimeout(verifyTimer)
 		}
+		cancelPowMining?.()
 	})
 
 	// 向外部抛出方法
@@ -728,6 +829,12 @@
 				}
 			}
 
+			@keyframes pow-rotate {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+
 			.loading-error {
 				position: absolute;
 				transform: translate(-50%, -50%);
@@ -790,6 +897,36 @@
 				background-color: #ffffff;
 				box-sizing: border-box;
 				overflow: hidden;
+
+				/* 工作量证明（POW）：灰色占位区与图片区同规格（100% × 360rpx、6px 圆角） */
+				.pow-body {
+					position: relative;
+					width: 100%;
+					height: 360rpx;
+					border-radius: 6px;
+					overflow: hidden;
+					background-color: #f5f5f5;
+					display: flex;
+					align-items: center;
+					justify-content: center;
+				}
+
+				.pow-mining {
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					gap: 24rpx;
+				}
+
+				.pow-spinner {
+					width: 64rpx;
+					height: 64rpx;
+					border: 6rpx solid #f0f0f0;
+					border-top-color: #f7b645;
+					border-radius: 50%;
+					box-sizing: border-box;
+					animation: pow-rotate 0.8s linear infinite;
+				}
 
 				.verify-concat-bg {
 					width: 100%;
@@ -1095,6 +1232,15 @@
 						color: var(--sar-secondary-color);
 						border: 4rpx solid var(--sar-secondary-color);
 					}
+				}
+
+				.pow-body {
+					background-color: #2a2a2a;
+				}
+
+				.pow-spinner {
+					border-color: #3a3a3a;
+					border-top-color: #f7b645;
 				}
 
 				.check-status {

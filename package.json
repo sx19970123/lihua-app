@@ -55,6 +55,7 @@
     "@dcloudio/uni-quickapp-webview": "3.0.0-5020620260917001",
     "crypto-js": "^4.2.0",
     "dayjs": "^1.11.23",
+    "hash-wasm": "^4.13.0",
     "lodash-es": "^4.18.1",
     "pinia": "^3.0.4",
     "sard-uniapp": "^1.30.6",
