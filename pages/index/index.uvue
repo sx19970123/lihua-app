@@ -1,24 +1,58 @@
 <template>
-	<view>
-		<image class="logo" src="/static/logo.png"></image>
-		<text class="title">{{title}}</text>
+	<view class="page">
+		<text class="title">P0 尖峰验证</text>
+		<view class="card">
+			<text class="label">V1 · Pinia（npm 依赖 + 组合式 store）</text>
+			<text class="value">count = {{ counter.count }}</text>
+			<button class="btn" type="primary" @tap="counter.increment">count + 1</button>
+		</view>
+		<view class="card">
+			<text class="label">V2 · 编译期环境变量（process.env 注入）</text>
+			<text class="value">BASE_API = {{ baseUrl }}</text>
+			<text class="value">NODE_ENV = {{ nodeEnv }}</text>
+		</view>
 	</view>
 </template>
 
-<script setup>
-	const title = ref('Hello')
+<script setup lang="ts">
+import { useCounterStore } from '@/stores/counter'
+import { BASE_API, IS_DEV } from '@/utils/env'
+
+const counter = useCounterStore()
+const baseUrl = BASE_API
+const nodeEnv = IS_DEV ? 'development' : 'production'
 </script>
 
 <style>
-	.logo {
-		height: 100px;
-		width: 100px;
-		margin: 100px auto 25px auto;
+	.page {
+		padding: 24rpx;
 	}
 
 	.title {
-		font-size: 18px;
-		color: #8f8f94;
-		text-align: center;
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #333333;
+	}
+
+	.card {
+		margin-top: 24rpx;
+		padding: 24rpx;
+		background-color: #f5f5f5;
+		border-radius: 12rpx;
+	}
+
+	.label {
+		font-size: 26rpx;
+		color: #999999;
+	}
+
+	.value {
+		margin-top: 12rpx;
+		font-size: 28rpx;
+		color: #333333;
+	}
+
+	.btn {
+		margin-top: 16rpx;
 	}
 </style>

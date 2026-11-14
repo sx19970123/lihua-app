@@ -1,0 +1,19 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "esnext",
+		"moduleResolution": "bundler",
+		"strict": false,
+		"allowUnreachableCode": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./*"]
+		},
+		"lib": ["esnext", "dom"],
+		"types": []
+	},
+	"include": ["**/*.ts", "**/*.d.ts"],
+	"exclude": ["node_modules", "unpackage"]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "lihua-app",
+  "version": "3.1.0",
+  "private": true,
+  "dependencies": {
+    "pinia": "^3.0.4",
+    "vue": "^3.5.45"
+  }
+}

@@ -11,3 +11,5 @@
 /package-lock.json
 # Mac OS
 .DS_Store
+# HBuilderV uni-agent 本地数据
+/.hbuilderv/
