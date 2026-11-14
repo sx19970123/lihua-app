@@ -3,6 +3,7 @@
   "version": "3.1.0",
   "private": true,
   "dependencies": {
+    "crypto-js": "^4.2.0",
     "pinia": "^3.0.4",
     "vue": "^3.5.45"
   }

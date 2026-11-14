@@ -100,3 +100,22 @@ sard 的 `Request` 类用拦截器链（request.use / response.use）做横切�
 ### 注释纪律（用户两次提醒后的执行标准）
 
 **一两行说用途+关键参数即上限**（如 `DEV_API 开发环境后台地址`）；设计推理链、决策记录放本笔记或 commit message，不塞代码。旧版 request.ts 里的多行语义注释迁移时一律压缩成单行核心语义。
+
+## 第 3 篇 · attachment 域整迁 + user store 接线（2026-11-14）
+
+### 本轮做了什么
+
+attachment 域整迁提前（S4-06，6 文件+crypto-js）→ user store 轮（12 文件直迁+request 层 401 接线）。顺序由用户两轮拍板：域先成域，store 再消费。
+
+### uni-app x API 认知更新
+
+- **x 端无全局 `uni.getFileInfo`**：正规姿势 `uni.getFileSystemManager().getFileInfo()`（iOS 4.11+/微信 4.41+；返回字段 size/digest 与旧全局 API 同形，digest 默认 md5）。**fsm 的 Web 平台未支持** → web.ts 保持 fetch/Blob + crypto-js 方案
+- `uni.downloadFile` 双端可用（iOS 4.11+/Android 3.91+）；`getCurrentPages()` iOS 4.11+ 可用，`page.route` 字符串比较是官方示例同款用法（401 登录页豁免依赖它）
+- 平台标记三连改：`APP-PLUS`→`APP`、`H5`→`WEB`、`#ifndef APP-PLUS || H5`→`#ifndef APP || WEB`；platform/ 伴随文件命名 h5.ts→web.ts 随标记走
+
+### 设计决策记录（用户拍板）
+
+- **multipart Content-Type 策略收进 attachmentUpload**：旧设计经 header 参数外露给调用方是 3.0 content-type 定稿的不彻底处（JSON 头自加/multipart 头却让调用方传，不对称）。现在 request=JSON 自加、attachmentUpload=多 part 自定，对称；App/小程序保留手动 `'multipart/form-data'` 声明（旧实证形态，原生补 boundary，未赌「不传自动组」），WEB 不设（浏览器自动生成含 boundary 的头）。platform 层不再定义上传头（唯一消费者=storage.upload，grep 实证后删）
+- **域入口三个 namespace import 包进 #ifdef**：x ts2js 流树摇行为不确定，未用平台文件及其依赖（crypto-js）不进对应端包；域内 #ifdef 符合铁律（工具类合法驻地）
+- **request↔store 循环依赖**：旧 sard 时代同款形态（两边仅函数体内惰性调用）已实证可用；pinia 在 main.ts 先于一切请求安装
+- **两处标记行纪律**（同 401 先例）：authenticationFailure 里 `webSocket.closeConnect()` 留注释待 WS 轮补；`reLaunch('/pages/login/Login')` 保留原样等 ③ 注册路由生效（本轮不可达，尖峰页无 API 调用）
