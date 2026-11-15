@@ -19,12 +19,40 @@
 			</app-checkbox-group>
 			<text class="value">selected = {{ groupValuesText }}</text>
 		</view>
+
+		<view class="card">
+			<text class="label">app-input · 基础（v-model + clearable）</text>
+			<view class="row">
+				<app-input v-model="inputText" placeholder="请输入内容" clearable />
+			</view>
+			<text class="value">value = {{ inputText || '（空）' }}</text>
+		</view>
+
+		<view class="card">
+			<text class="label">app-input · 密码（maxlength + showCount）</text>
+			<view class="row">
+				<app-input v-model="inputPwd" password maxlength="12" showCount placeholder="密码（≤12 位）" />
+			</view>
+			<text class="value">length = {{ inputPwd.length }}</text>
+		</view>
+
+		<view class="card">
+			<text class="label">Captcha · 弹窗验证码（ref.open + @success）</text>
+			<view class="row">
+				<button type="primary" @click="openCaptcha">打开验证码</button>
+			</view>
+			<text class="value">result = {{ captchaResult }}</text>
+			<!-- proxy 模式挂载：App/Web 开 dialogPage，微信直渲，业务方无感 -->
+			<Captcha ref="captchaRef" @success="onCaptchaSuccess" />
+		</view>
 	</view>
 </template>
 
 <script setup lang="ts">
 import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
 import AppCheckboxGroup from '@/components/app-checkbox-group/app-checkbox-group.uvue'
+import AppInput from '@/components/app-input/app-input.uvue'
+import Captcha from '@/components/captcha/captcha.uvue'
 
 // 独立模式
 const single = ref<boolean>(false)
@@ -33,6 +61,20 @@ const single = ref<boolean>(false)
 const groupValues = ref<string[]>([])
 
 const groupValuesText = computed(() => groupValues.value.length > 0 ? groupValues.value.join(', ') : '（空）')
+
+// input 基础
+const inputText = ref<string>('')
+const inputPwd = ref<string>('')
+
+// captcha 弹窗（proxy 模式：open 触发，success 回执校验通过的后端 id）
+const captchaRef = ref<any>(null)
+const captchaResult = ref<string>('（未验证）')
+const openCaptcha = () => {
+	captchaRef.value?.open()
+}
+const onCaptchaSuccess = (id : string) => {
+	captchaResult.value = `验证成功，id=${id}`
+}
 </script>
 
 <style>

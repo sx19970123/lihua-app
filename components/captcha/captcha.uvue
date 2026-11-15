@@ -970,8 +970,9 @@
 	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点（旧版不遮操作区语义） */
 	.lh-cap-opts {
 		position: absolute;
-		top: 8px;
-		right: 8px;
+		/* 按钮 21px 盒与 title 行盒同顶（padding 16 线）→天然垂直居中；right 4+末按钮 margin 8=icon 距边 8px */
+		top: 16px;
+		right: 4px;
 		z-index: 20;
 		flex-direction: row;
 		align-items: center;
@@ -1034,14 +1035,17 @@
 
 	/* 点击热区容器（icon 本体不带事件，见 template 注释） */
 	.lh-cap-opts-btn {
+		/* 与 title 行盒同高同起点（top 16=padding 线），flex 居中=与 title 天然上下居中 */
+		height: 21px;
 		justify-content: center;
 		align-items: center;
+		/* x 无 gap，按钮间距走 margin（容器 right 相应 -4 补偿贴边） */
+		margin-right: 8px;
 	}
 
 	.lh-cap-opts-icon {
-		font-size: 20px;
+		font-size: 18px;
 		color: var(--lh-fourth-color, #b5b9bd);
-		padding: 4px;
 	}
 
 	/* 中央区（loading / POW 结果） */
@@ -1176,7 +1180,8 @@
 		font-size: 15px;
 		font-weight: bold;
 		color: var(--lh-secondary-color, #1f2329);
-		margin: 4px 0 8px 4px;
+		/* 上 0=与左右/图区下边距同为 padding 16；下 12=承接原 margin-top 4px 守恒内容总高（卡片高不动） */
+		margin: 0 0 12px 4px;
 	}
 
 	.lh-cap-click-tips {
