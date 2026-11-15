@@ -1,0 +1,200 @@
+<template>
+	<view class="app-input" :class="{
+		'app-input-focused': focused,
+		'app-input-round': shape === 'round',
+		'app-input-sm': size === 'small',
+		'app-input-lg': size === 'large',
+		'app-input-disabled': disabled
+	}">
+		<view v-if="slots.prepend" class="app-input-prepend">
+			<slot name="prepend" />
+		</view>
+		<input class="app-input-control" :class="{
+			'app-input-control-readonly': readonly,
+			'app-input-control-disabled': disabled,
+			'app-input-control-sm': size === 'small',
+			'app-input-control-lg': size === 'large'
+		}" :value="modelValue"
+			:password="password && !showPassword" :placeholder="placeholder" :disabled="disabled"
+			:maxlength="maxlength ?? -1" placeholder-class="app-input-placeholder" @input="onInput" @focus="onFocus"
+			@blur="onBlur" />
+		<view v-if="clearable && !disabled && !readonly && modelValue" class="app-input-tool" @click="onClear">
+			<uni-icons class="app-input-tool-clear" type="clear" />
+		</view>
+		<view v-if="password && !disabled" class="app-input-tool" @click="togglePassword">
+			<uni-icons class="app-input-tool-eye" :type="showPassword ? 'eye' : 'eye-slash'" />
+		</view>
+		<text v-if="showCount && validMaxlength" class="app-input-count">{{ (modelValue?.length ?? 0) }}/{{ maxlength }}</text>
+		<view v-if="slots.append" class="app-input-append">
+			<slot name="append" />
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+// 视觉对齐 sard-uniapp Input（白底卡片+灰边框+聚焦 primary 边框；focused 类驱动，ucss 无伪类）
+const props = defineProps<{
+	// 输入值（v-model）
+	modelValue: string
+	// 密码模式
+	password?: boolean
+	placeholder?: string
+	// value 非空即显示清除钮
+	clearable?: boolean
+	// 形状：default 圆角卡片 / round 胶囊
+	shape?: 'default' | 'round'
+	// 尺寸
+	size?: 'small' | 'default' | 'large'
+	// 禁用（透传内置 input，含置灰样式）
+	disabled?: boolean
+	// 只读：pointer-events none（内置 input 无 readonly，x 原生支持该 css）
+	readonly?: boolean
+	// 最大输入长度（透传内置 input）
+	maxlength?: number
+	// 显示字数统计（maxlength 有效时生效）
+	showCount?: boolean
+}>()
+
+const emit = defineEmits<{(e: 'update:modelValue', value: string): void}>()
+
+const slots = useSlots()
+
+const focused = ref<boolean>(false)
+
+// 密码明文切换（默认隐藏）
+const showPassword = ref<boolean>(false)
+
+// maxlength 有效值（>0 才启用 count）
+const validMaxlength = computed(() => props.maxlength !== undefined && props.maxlength > 0)
+
+const onInput = (e: InputEvent) => {
+	emit('update:modelValue', e.detail.value)
+}
+
+const onFocus = () => {
+	focused.value = true
+}
+
+const onBlur = () => {
+	focused.value = false
+}
+
+const onClear = () => {
+	emit('update:modelValue', '')
+}
+
+const togglePassword = () => {
+	showPassword.value = !showPassword.value
+}
+</script>
+
+<style>
+.app-input {
+	flex-direction: row;
+	align-items: center;
+	width: 100%;
+	/* 卡片底色：亮=sar-white 面 / 暗=sar gray-900（dark emphasis-bg surface）；组件级 token 可被主题覆盖 */
+	background-color: var(--lh-input-bg, #ffffff);
+	padding: 5px 12px;
+	border: 1px solid var(--lh-border-color, #e2e3e4);
+	border-radius: var(--lh-radius);
+}
+
+@media (prefers-color-scheme: dark) {
+	.app-input {
+		background-color: var(--lh-input-bg, #242628);
+	}
+}
+
+.app-input-focused {
+	border-color: var(--lh-primary);
+}
+
+.app-input-round {
+	border-radius: var(--lh-radius-full);
+}
+
+.app-input-sm {
+	padding-top: 3px;
+	padding-bottom: 3px;
+}
+
+.app-input-lg {
+	padding-top: 6px;
+	padding-bottom: 6px;
+}
+
+.app-input-disabled {
+	background-color: var(--lh-disabled-shallow-bg, #ecedee);
+}
+
+@media (prefers-color-scheme: dark) {
+	.app-input-disabled {
+		background-color: var(--lh-disabled-shallow-bg, #505457);
+	}
+}
+
+.app-input-prepend {
+	margin-right: 8px;
+}
+
+/* 内置 input 透明底融入根容器，根壳负责底色与边框 */
+.app-input-control {
+	flex: 1;
+	height: 24px;
+	font-size: 14px;
+	color: var(--lh-emphasis-color);
+	background-color: transparent;
+	padding: 0;
+}
+
+/* placeholder 走 fourth token（亮 gray-500/暗 gray-600），placeholder-class App 端原生支持（Web/小程序 x，S6 再议） */
+.app-input-placeholder {
+	color: var(--lh-fourth-color);
+}
+
+/* size 三档=完整视觉档位（control 高度+字号，根高由 padding+control 自然撑，页面可用 class 定死） */
+.app-input-control-sm {
+	height: 20px;
+	font-size: 12px;
+}
+
+.app-input-control-lg {
+	height: 28px;
+	font-size: 16px;
+}
+
+.app-input-control-readonly {
+	/* x 内置 input 无 readonly，pointer-events none 实现只读（点不进、不弹键盘） */
+	pointer-events: none;
+}
+
+.app-input-control-disabled {
+	color: var(--lh-disabled-color, #b5b9bd);
+}
+
+.app-input-tool {
+	padding: 0 4px;
+}
+
+/* 图标色走语义 token（uni-icons 单 text 根，外部 class 落根）：clear 更醒目用 tertiary、eye 次要语义用 fourth */
+.app-input-tool-clear {
+	font-size: 18px;
+	color: var(--lh-tertiary-color, #74787c);
+}
+
+.app-input-tool-eye {
+	font-size: 18px;
+	color: var(--lh-fourth-color, #b5b9bd);
+}
+
+.app-input-count {
+	font-size: 12px;
+	color: var(--lh-tertiary-color, #74787c);
+	margin-left: 6px;
+}
+
+.app-input-append {
+	margin-left: 8px;
+}
+</style>
