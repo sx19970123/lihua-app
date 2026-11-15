@@ -39,7 +39,10 @@
 	// #endif
 </script>
 
-<style>
+<style lang="scss">
+	@import '@/styles/tokens.scss';
+	@import '@/styles/common.scss';
+
 	/*每个页面公共css */
 	.uni-row {
 		flex-direction: row;
