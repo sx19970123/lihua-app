@@ -1,0 +1,38 @@
+<template>
+	<view class="app-checkbox-group">
+		<slot />
+	</view>
+</template>
+
+<script setup lang="ts">
+// checkbox 组容器：provide 上下文使子 app-checkbox 受控于选中值集合（子项需 value prop）；
+// 子项勾选/取消经 toggle 转为 update:modelValue+change。纵向列表布局，横向组合由页面自行排列
+const props = defineProps<{
+	// 选中值集合（v-model，与子项 value 对应）
+	modelValue?: string[]
+}>()
+
+const emit = defineEmits<{
+	(e: 'update:modelValue', value: string[]): void
+	(e: 'change', value: string[]): void
+}>()
+
+// includes/toggle 闭包读 props，保证子项 computed 的响应性
+provide('app-checkbox-group', {
+	includes: (value: string) => (props.modelValue ?? []).includes(value),
+	toggle: (value: string) => {
+		const list = props.modelValue ?? []
+		const next = list.includes(value) ? list.filter(v => v !== value) : list.concat([value])
+		emit('update:modelValue', next)
+		emit('change', next)
+	}
+})
+</script>
+
+<style>
+.app-checkbox-group {
+	flex-direction: column;
+	/* 组首呼吸边距（与组尾子项 margin-bottom 对称），防与上方内容贴合 */
+	padding-top: var(--lh-gap-sm);
+}
+</style>

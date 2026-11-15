@@ -1,0 +1,109 @@
+<template>
+	<view class="app-checkbox" :class="{ 'app-checkbox-pressed': pressed, 'app-checkbox-grouped': !!groupCtx }"
+		@click="onClick" @touchstart="pressed = true" @touchend="pressed = false" @touchcancel="pressed = false">
+		<view class="app-checkbox-box" :class="{
+			'app-checkbox-box-checked': isChecked,
+			'app-checkbox-box-disabled': disabled
+		}">
+			<uni-icons v-if="isChecked" class="app-checkbox-check" type="checkmarkempty" />
+		</view>
+		<text v-if="label" class="app-checkbox-label" :class="{ 'app-checkbox-label-disabled': disabled }">{{ label }}</text>
+	</view>
+</template>
+
+<script setup lang="ts">
+// 视觉：未选=灰空框（fourth 色 1px 边框圆角 3px），选中=主题色填满方块+白勾。
+// 双模式：inject 到 checkbox-group 上下文时受控于值集合（需 value prop），否则独立 v-model:checked
+const props = defineProps<{
+	// 勾选状态（独立模式 v-model:checked）
+	checked: boolean
+	// 文字标签（兼 aria-label）
+	label?: string
+	// group 模式下的选中标识
+	value?: string
+	disabled?: boolean
+}>()
+
+const emit = defineEmits<{
+	(e: 'update:checked', value: boolean): void
+	(e: 'change', value: boolean): void
+}>()
+
+const groupCtx = inject('app-checkbox-group', null) as {
+	includes: (value: string) => boolean,
+	toggle: (value: string) => void
+} | null
+
+const pressed = ref<boolean>(false)
+
+// group 模式选中态随集合响应，独立模式随 prop
+const isChecked = computed(() => {
+	if (groupCtx) {
+		return groupCtx.includes(props.value ?? '')
+	}
+	return props.checked
+})
+
+const onClick = () => {
+	if (props.disabled) {
+		return
+	}
+	if (groupCtx) {
+		groupCtx.toggle(props.value ?? '')
+		return
+	}
+	const next = !props.checked
+	emit('update:checked', next)
+	emit('change', next)
+}
+</script>
+
+<style>
+.app-checkbox {
+	flex-direction: row;
+	align-items: center;
+}
+
+.app-checkbox-pressed {
+	opacity: var(--lh-active-opacity, 0.5);
+}
+
+/* group 模式纵向列表间距（ucss 无 gap，容器控制不了 slot 子项，由子项自带；组尾多一个 sm 间隙可接受） */
+.app-checkbox-grouped {
+	margin-bottom: var(--lh-gap-sm);
+}
+
+.app-checkbox-box {
+	width: 20px;
+	height: 20px;
+	border: 1px solid var(--lh-fourth-color, #b5b9bd);
+	border-radius: 3px;
+	justify-content: center;
+	align-items: center;
+}
+
+.app-checkbox-box-checked {
+	/* 选中：主题色填满方块，内部白勾 */
+	border-color: transparent;
+	background-color: var(--lh-primary);
+}
+
+.app-checkbox-box-disabled {
+	border-color: var(--lh-disabled-border-color, #d1d4d6);
+}
+
+.app-checkbox-check {
+	font-size: 14px;
+	color: #ffffff;
+}
+
+.app-checkbox-label {
+	margin-left: 8px;
+	font-size: 14px;
+	color: var(--lh-emphasis-color);
+}
+
+.app-checkbox-label-disabled {
+	color: var(--lh-disabled-color, #b5b9bd);
+}
+</style>
