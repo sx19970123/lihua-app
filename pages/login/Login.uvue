@@ -50,6 +50,9 @@
 			</view>
 
 		</view>
+
+		<!-- 验证码（proxy 模式：App/WEB 下开 dialogPage，成功回传走 handleLogin） -->
+		<Captcha ref="captchaRef" @success="handleLogin" />
 	</view>
 </template>
 
@@ -64,8 +67,11 @@ import { queryPostLoginCheckData } from '@/api/system/profile/profile'
 import { login } from "@/api/system/authentication/authentication"
 import AppInput from '@/components/app-input/app-input.uvue'
 import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+import Captcha from '@/components/captcha/captcha.uvue'
 
 type ProtocolPendingAction = (() => void | Promise<void>) | null
+
+const captchaRef = ref()
 
 const settingStore = useSettingStore()
 
@@ -187,8 +193,7 @@ const initCaptcha = () => {
 		if (!checkLoginData(() => openCaptcha())) {
 			return
 		}
-		// Captcha 组件未迁移（④压轴）：表单完整但验证码未就绪，占位提示
-		toast('验证码待迁移，登录暂不可用')
+		captchaRef.value?.open()
 	}
 
 	// 登录按钮点击分发：验证码开启走验证码链路

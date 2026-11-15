@@ -1,0 +1,26 @@
+<template>
+	<Captcha ref="captchaRef" mode="active" @success="onSuccess" />
+</template>
+
+<script setup lang="ts">
+	// 验证码 dialogPage 壳（仅 APP/WEB 编译）：挂载本体、拦截 back、成功经事件总线回传业务页
+	import Captcha from '@/components/captcha/captcha.uvue'
+
+	const captchaRef = ref()
+
+	// 本体只 emit('success')，跨页转发由壳负责（业务页挂的 proxy 实例 $on 接收）
+	const onSuccess = (id : string) => {
+		uni.$emit('lh-captcha-success', id)
+	}
+
+	// 弹窗页就绪即打开验证码（onReady 时 ref 已挂载）
+	onReady(() => {
+		captchaRef.value?.open()
+	})
+
+	// back 键/手势：走本体关闭流程（清理挖矿与延时任务）而非直接关页
+	onBackPress(() => {
+		captchaRef.value?.close()
+		return true
+	})
+</script>

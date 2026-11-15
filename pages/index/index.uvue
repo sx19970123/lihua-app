@@ -35,7 +35,7 @@
 import { useCounterStore } from '@/stores/counter'
 import { BASE_API, IS_DEV } from '@/utils/env'
 import { getCaptchaData, check } from '@/api/system/captcha/captcha'
-import { sha256Hex, mineSlice as mineSliceJs, prngHex } from '@/utils/pow/sha256'
+import { sha256Hex, mineSlice as mineSliceJs, prngHex } from '@/components/captcha/pow/sha256'
 import { mineSlice, prepareEngine, engineName } from '@/uni_modules/lihua-pow'
 
 const counter = useCounterStore()

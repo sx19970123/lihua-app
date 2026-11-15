@@ -1,0 +1,1088 @@
+<template>
+	<view v-if="visible" class="lh-cap-mask" @touchmove="onMaskTouchMove">
+		<view class="lh-cap-card" :class="sizeClass">
+			<!-- 右上操作区：POW 无刷新入口（自动流程） -->
+			<view class="lh-cap-opts" v-if="!captchaLoading && !loadingError">
+				<uni-icons v-if="type !== 'POW'" class="lh-cap-opts-icon" type="refreshempty" @click="refresh(false)" />
+				<uni-icons class="lh-cap-opts-icon" type="closeempty" @click="close()" />
+			</view>
+
+			<!-- 加载 / 错误 -->
+			<view v-if="captchaLoading" class="lh-cap-zone">
+				<view class="lh-cap-spinner"></view>
+				<text class="lh-cap-zone-text">加载中...</text>
+			</view>
+			<text v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">{{ loadingError }}，点击重试</text>
+
+			<!-- 工作量证明（POW）：滑动触发 → 挖矿 → 对勾/红叉 + 底部填充 -->
+			<view v-else-if="type === 'POW'" class="lh-cap-pow">
+				<text class="lh-cap-tip">安全校验</text>
+				<view v-if="powPhase === 'slide'" class="lh-cap-track">
+					<text class="lh-cap-track-text">按住滑块，拖到最右</text>
+					<view class="lh-cap-unit" ref="powUnitEl" @touchstart="onPowTouchStart"
+						@touchmove="onPowTouchMove" @touchend="onPowTouchEnd" @touchcancel="onPowTouchCancel">
+						<view class="lh-cap-unit-fill"></view>
+						<view class="lh-cap-unit-thumb">
+							<uni-icons class="lh-cap-unit-thumb-icon" type="arrow-right" />
+						</view>
+					</view>
+				</view>
+				<view v-else class="lh-cap-zone lh-cap-pow-zone">
+					<view v-if="powPhase === 'mining'" class="lh-cap-spinner lh-cap-spinner-lg"></view>
+					<view v-else class="lh-cap-badge" :class="powPhase === 'success' ? 'lh-cap-badge-ok' : 'lh-cap-badge-no'">
+						<uni-icons class="lh-cap-badge-icon"
+							:type="powPhase === 'success' ? 'checkmarkempty' : 'closeempty'" />
+					</view>
+					<text class="lh-cap-zone-text">{{ powCenterText }}</text>
+				</view>
+				<!-- 底部结果填充条：从左向右铺满后关闭/刷新 -->
+				<view v-if="powPhase === 'success'" class="lh-cap-fill lh-cap-fill-ok"></view>
+				<view v-else-if="powPhase === 'fail'" class="lh-cap-fill lh-cap-fill-no"></view>
+			</view>
+
+			<!-- 图形四类型 -->
+			<view v-else class="lh-cap-graphic">
+				<text class="lh-cap-tip">{{ type === 'WORD_IMAGE_CLICK' ? '请依次点击文字' : '拖动滑块完成拼图' }}</text>
+				<view v-if="type === 'WORD_IMAGE_CLICK'" class="lh-cap-click-tips">
+					<text class="lh-cap-click-label">请依次点击:</text>
+					<image class="lh-cap-click-hint" :src="sliderImage" mode="scaleToFill" />
+				</view>
+				<view class="lh-cap-image-wrap">
+					<image class="lh-cap-image" :src="backgroundImage" mode="scaleToFill" />
+					<!-- 拼接：overflow hidden 窗口 + 整图平移（x 无 background-position） -->
+					<view v-if="type === 'CONCAT'" key="concat" class="lh-cap-concat" :style="{ height: concatHeight + 'px' }">
+						<view class="lh-cap-concat-strip" ref="sliderEl">
+							<image class="lh-cap-concat-img" :src="backgroundImage" mode="scaleToFill" />
+							<image class="lh-cap-concat-img" :src="backgroundImage" mode="scaleToFill" />
+						</view>
+					</view>
+					<view v-else-if="type === 'ROTATE'" key="rotate" class="lh-cap-rotate-box">
+						<image class="lh-cap-rotate-img" ref="sliderEl" :style="{ width: (pieceWidth || 180) + 'px' }"
+							:src="sliderImage" mode="scaleToFill" @load="onPieceLoad" />
+					</view>
+					<view v-else-if="type === 'SLIDER'" key="slider" class="lh-cap-slider" ref="sliderEl">
+						<image class="lh-cap-slider-img" :style="{ width: (pieceWidth || 180) + 'px' }"
+							:src="sliderImage" mode="scaleToFill" @load="onPieceLoad" />
+					</view>
+					<!-- 结果横条（图形类沿用旧形态，底部弹出） -->
+					<view v-if="showResult" class="lh-cap-status" :class="resultOk ? 'lh-cap-status-ok' : 'lh-cap-status-no'">
+						<text class="lh-cap-status-text">{{ resultMsg }}</text>
+					</view>
+					<!-- 点选蒙层：touchend 取坐标（click 事件无可靠坐标） -->
+					<view v-if="type === 'WORD_IMAGE_CLICK'" id="lh-cap-click-mask" class="lh-cap-click-mask" @touchend="onMaskTap">
+						<view v-for="(item, index) in trackArr" :key="index" class="lh-cap-click-dot"
+							:style="{ left: item.x - 13 + 'px', top: item.y - 13 + 'px' }">
+							<text class="lh-cap-click-dot-text">{{ index + 1 }}</text>
+						</view>
+					</view>
+				</view>
+				<view v-if="type !== 'WORD_IMAGE_CLICK'" class="lh-cap-track">
+					<text class="lh-cap-track-text">向右拖动完成验证</text>
+					<view class="lh-cap-unit" ref="dragUnitEl" @touchstart="onDragStart"
+						@touchmove="onDragMove" @touchend="onDragEnd" @touchcancel="onDragCancel">
+						<view class="lh-cap-unit-fill"></view>
+						<view class="lh-cap-unit-thumb">
+							<uni-icons class="lh-cap-unit-thumb-icon" type="arrow-right" />
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 校验期间透明阻断层 -->
+			<view v-if="verifying" class="lh-cap-freeze" @touchmove="onFreezeTouchMove"></view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 验证码组件本体（双底座）：App/Web 经 dialogPage 壳挂载（mode=active），微信端由业务页直接挂载（S6）。
+	// 业务方统一 <Captcha ref @success> + captchaRef.open()，平台差异在组件内消化。
+	// 模式：proxy（业务页挂载，App/Web 下仅作 API 锚点与事件转发）/ active（dialogPage 壳挂载，渲染真身）
+	import { getCaptchaData, check } from '@/api/system/captcha/captcha'
+	import { solvePow } from './pow/index'
+	import type { CaptchaRequestData, CaptchaResponseData } from '@/api/system/captcha/type/captcha-type'
+
+	type TrackItem = { x : number, y : number, type : string, t : number }
+
+	const props = defineProps<{
+		mode ?: 'proxy' | 'active'
+	}>()
+
+	const emit = defineEmits<{
+		(e : 'success', id : string) : void
+	}>()
+
+	// 布局常量（提交后端的轨迹坐标系同源）：卡片 320、内容 288、图区高 180、轨道/滑块钮 40
+	const CARD_PADDING = 16
+	const CARD_WIDTH = 320
+	const CONTENT_WIDTH = CARD_WIDTH - CARD_PADDING * 2
+	const IMAGE_HEIGHT = 180
+	const THUMB_SIZE = 40
+	const DRAG_END = CONTENT_WIDTH - THUMB_SIZE
+
+	const visible = ref<boolean>(false)
+	const captchaLoading = ref<boolean>(false)
+	const loadingError = ref<string>()
+	const type = ref<CaptchaResponseData['type']>()
+	const captchaId = ref<string>('')
+	const backgroundImage = ref<string>('')
+	const sliderImage = ref<string>('')
+	const powParam = ref<number[]>()
+	const concatHeight = ref<number>(0)
+	// 图块渲染宽（高恒 180，宽按原图比例数据算——x 端 image 默认盒 320，heightFix 盒宽不可靠）
+	const pieceWidth = ref<number>(0)
+
+	const startTime = ref<number>(0)
+	const stopTime = ref<number>(0)
+	const trackArr = ref<TrackItem[]>([])
+	const clickCount = ref<number>(0)
+	const maskRect = { left : 0, top : 0 }
+
+	const dragX = ref<number>(0)
+	const powX = ref<number>(0)
+	const dragging = ref<boolean>(false)
+	const powPhase = ref<'slide' | 'mining' | 'success' | 'fail'>('slide')
+	const powFailMsg = ref<string>('验证失败，请重试')
+
+	const showResult = ref<boolean>(false)
+	const resultOk = ref<boolean>(false)
+	const resultMsg = ref<string>('')
+	const verifying = ref<boolean>(false)
+
+	let verifyTimer : ReturnType<typeof setTimeout> | undefined
+	let cancelPowMining : (() => void) | undefined
+
+	// 所属页面实例（active 时=dialogPage）：getCurrentInstance 仅 setup/生命周期内可用，
+	// 点击回调里现取为 null，须挂载期缓存供 close 使用
+	let ownerPage : any = null
+
+	const clamp = (v : number, min : number, max : number) : number => v < min ? min : v > max ? max : v
+
+	// 图块宽度兜底：响应缺 templateImageWidth/Height 时（部分类型不返回），用加载后自然比例算
+	const onPieceLoad = (e : ImageLoadEvent) => {
+		if (pieceWidth.value > 0) {
+			return
+		}
+		const d = e.detail
+		if (d && d.width > 0 && d.height > 0) {
+			pieceWidth.value = Math.round(IMAGE_HEIGHT * d.width / d.height)
+		}
+	}
+
+	// ---------- 打开 / 关闭 ----------
+
+	// 打开：App/WEB 的 proxy 实例开 dialogPage（模态遮罩天然防重开）；active/微信端直接渲染
+	const open = () => {
+		// #ifdef APP || WEB
+		if (props.mode !== 'active') {
+			uni.openDialogPage({ url: '/pages/captcha/captcha' })
+			return
+		}
+		// #endif
+		visible.value = true
+		getCaptcha()
+	}
+
+	const close = (emitId ?: string) => {
+		stopJobs()
+		if (emitId !== undefined) {
+			emit('success', emitId)
+		}
+		// #ifdef APP || WEB
+		if (props.mode === 'active') {
+			visible.value = false
+			if (ownerPage) {
+				uni.closeDialogPage({ dialogPage : ownerPage })
+			}
+			resetState()
+			return
+		}
+		// #endif
+		visible.value = false
+		resetState()
+	}
+
+	const resetState = () => {
+		type.value = undefined
+		captchaId.value = ''
+		trackArr.value = []
+		clickCount.value = 0
+		dragX.value = 0
+		powX.value = 0
+		showResult.value = false
+		verifying.value = false
+		powPhase.value = 'slide'
+		loadingError.value = undefined
+	}
+
+	const stopJobs = () => {
+		if (verifyTimer !== undefined) {
+			clearTimeout(verifyTimer)
+			verifyTimer = undefined
+		}
+		cancelPowMining?.()
+		cancelPowMining = undefined
+	}
+
+	// ---------- 取码 ----------
+
+	const getCaptcha = async () => {
+		captchaLoading.value = true
+		loadingError.value = undefined
+		try {
+			const resp = await getCaptchaData()
+			if (resp.code !== 200 || !resp.data) {
+				throw new Error(`code=${resp.code}`)
+			}
+			const d = resp.data
+			type.value = d.type
+			captchaId.value = d.id
+			backgroundImage.value = d.backgroundImage ?? ''
+			sliderImage.value = d.templateImage ?? ''
+			powParam.value = d.type === 'POW' ? d.data?.POW : undefined
+			// CONCAT 窗口高 =（原图高 - randomY）/ 原图高 × 图区高
+			if (d.type === 'CONCAT' && d.backgroundImageHeight && d.data?.randomY != null) {
+				concatHeight.value = Math.round((d.backgroundImageHeight - d.data.randomY) / d.backgroundImageHeight * IMAGE_HEIGHT)
+			} else {
+				concatHeight.value = 0
+			}
+			pieceWidth.value = d.templateImageWidth && d.templateImageHeight
+				? Math.round(IMAGE_HEIGHT * d.templateImageWidth / d.templateImageHeight) : 0
+			startTime.value = Date.now()
+			trackArr.value = []
+			clickCount.value = 0
+			dragX.value = 0
+			powX.value = 0
+			powPhase.value = 'slide'
+			showResult.value = false
+			verifying.value = false
+		} catch (err) {
+			console.error('验证码取码失败', err)
+			loadingError.value = '验证码加载失败'
+		} finally {
+			captchaLoading.value = false
+		}
+		// 同类型刷新时轨道节点不重建，直驱位移显式归位
+		resetVisual()
+		// 点选：内容渲染完成后量蒙层绝对位置（轨迹换算基准），失败按 0 兜底（轨迹偏移可容忍一次刷新）
+		if (!loadingError.value && type.value === 'WORD_IMAGE_CLICK') {
+			await nextTick()
+			await measureMask()
+		}
+	}
+
+	const measureMask = () : Promise<void> => {
+		return new Promise(resolve => {
+			// dialogPage 内 selectorQuery 查不到组件元素（同 uni.getElementById 限制，实测 null），
+			// 经缓存页面实例 getElementById 取；非 dialogPage 宿主（S6 组件挂载）回退 selectorQuery
+			const el = ownerPage?.getElementById('lh-cap-click-mask')
+			if (el) {
+				const rect = el.getBoundingClientRect()
+				maskRect.left = rect.left
+				maskRect.top = rect.top
+				resolve()
+				return
+			}
+			uni.createSelectorQuery().in(getCurrentInstance()?.proxy).select('.lh-cap-click-mask').boundingClientRect().exec(ret => {
+				const r = ret[0] as { left : number, top : number } | null
+				if (r) {
+					maskRect.left = r.left
+					maskRect.top = r.top
+				}
+				resolve()
+			})
+		})
+	}
+
+	// 遮罩/阻断层滚动拦截（x 端 touch 修饰符不可靠，官方姿势=回调内手动调用）
+	const onMaskTouchMove = (e : TouchEvent) => {
+		e.stopPropagation()
+		e.preventDefault()
+	}
+
+	const onFreezeTouchMove = (e : TouchEvent) => {
+		e.stopPropagation()
+		e.preventDefault()
+	}
+
+	// ---------- 拖动直驱（官方 touch-events 姿势） ----------
+	// 蒸汽端 :style 响应式链路逐帧更新必滞后，元素引用 setProperty 直驱绕开；
+	// 色带+圆钮为一体元素（色带藏轨道左侧外，拖动=整体拖入），单元素单次 setProperty，
+	// 同步问题结构性消除；transition 摘除/恢复同样直驱（类切换走 patch 有粘滞帧）
+	const powUnitEl = ref<UniElement | null>(null)
+	const dragUnitEl = ref<UniElement | null>(null)
+	const sliderEl = ref<UniElement | null>(null)
+
+	// identifier 跟踪：多指下锁定拖动起始指（hello 同款）
+	let dragTouchId = -1
+	const findTouchByIdentifier = (touches : Touch[], identifier : number) : Touch | null => {
+		for (let i = 0; i < touches.length; i++) {
+			if (touches[i].identifier == identifier) {
+				return touches[i]
+			}
+		}
+		return null
+	}
+
+	const unitEl = () : UniElement | null => type.value === 'POW' ? powUnitEl.value : dragUnitEl.value
+
+	// 一体元素位移 = 拖动量 - 内容宽（色带段 288 在轨道外，thumb 落位 x）；图形类拼图块联动
+	const driveVisual = (x : number) => {
+		unitEl()?.style?.setProperty('transform', `translateX(${x - CONTENT_WIDTH}px)`)
+		if (type.value === 'SLIDER') {
+			sliderEl.value?.style?.setProperty('transform', `translateX(${x}px)`)
+		} else if (type.value === 'ROTATE') {
+			const angle = x / (DRAG_END / 360)
+			sliderEl.value?.style?.setProperty('transform', `rotate(${angle}deg)`)
+		} else if (type.value === 'CONCAT') {
+			sliderEl.value?.style?.setProperty('transform', `translateX(${x - CONTENT_WIDTH}px)`)
+		}
+	}
+
+	// 拖动开始：摘过渡（直驱，不经 class patch）
+	const disableUnitTransition = () => {
+		unitEl()?.style?.setProperty('transition', 'none')
+	}
+
+	// 松手回弹：恢复过渡后直驱归零（连续 setProperty 按序生效）
+	const springBack = () => {
+		const el = unitEl()
+		if (el) {
+			el.style.setProperty('transition', 'transform 200ms ease')
+			el.style.setProperty('transform', `translateX(${-CONTENT_WIDTH}px)`)
+		}
+		powX.value = 0
+		dragX.value = 0
+	}
+
+	// 同类型刷新时轨道节点不重建，直驱位移显式归位（瞬时，无动画）
+	const resetVisual = () => {
+		nextTick(() => {
+			powUnitEl.value?.style?.setProperty('transition', 'none')
+			powUnitEl.value?.style?.setProperty('transform', `translateX(${-CONTENT_WIDTH}px)`)
+			dragUnitEl.value?.style?.setProperty('transition', 'none')
+			dragUnitEl.value?.style?.setProperty('transform', `translateX(${-CONTENT_WIDTH}px)`)
+			if (type.value === 'ROTATE') {
+				sliderEl.value?.style?.setProperty('transform', 'rotate(0deg)')
+			} else if (type.value === 'CONCAT') {
+				sliderEl.value?.style?.setProperty('transform', `translateX(${-CONTENT_WIDTH}px)`)
+			} else {
+				sliderEl.value?.style?.setProperty('transform', 'translateX(0px)')
+			}
+		})
+	}
+
+	// ---------- POW：滑动触发挖矿 ----------
+
+	let powStartX = 0
+	const onPowTouchStart = (e : TouchEvent) => {
+		if (powPhase.value !== 'slide') {
+			return
+		}
+		const startTouch = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
+		if (startTouch == null) {
+			return
+		}
+		dragging.value = true
+		dragTouchId = startTouch.identifier
+		powStartX = startTouch.screenX
+		disableUnitTransition()
+	}
+	const onPowTouchMove = (e : TouchEvent) => {
+		if (!dragging.value) {
+			return
+		}
+		const p = findTouchByIdentifier(e.changedTouches, dragTouchId) ?? findTouchByIdentifier(e.touches, dragTouchId)
+		if (p == null) {
+			return
+		}
+		powX.value = clamp(p.screenX - powStartX, 0, DRAG_END)
+		driveVisual(powX.value)
+	}
+	const onPowTouchEnd = () => {
+		if (!dragging.value) {
+			return
+		}
+		dragging.value = false
+		if (powX.value >= DRAG_END) {
+			startPowMining()
+		} else {
+			springBack()
+		}
+	}
+
+	// 系统打断（来电/手势冲突）：纯回弹，不触发挖矿/校验
+	const onPowTouchCancel = () => {
+		if (dragging.value) {
+			dragging.value = false
+			springBack()
+		}
+	}
+
+	// 滑到最右才触发计算（滑动为纯前端感知层，后端只校验 nonce）
+	const startPowMining = async () => {
+		const id = captchaId.value
+		const param = powParam.value
+		if (!id || !param) {
+			loadingError.value = '验证码配置缺失'
+			return
+		}
+		powPhase.value = 'mining'
+		startTime.value = Date.now()
+		try {
+			const handle = solvePow(id, param)
+			cancelPowMining = handle.cancel
+			const customData = await handle.result
+			cancelPowMining = undefined
+			// 空解=取消；代际不符=已刷新换码，丢弃过期解
+			if (!customData || captchaId.value !== id) {
+				return
+			}
+			stopTime.value = Date.now()
+			submitCaptcha(id, {
+				bgImageWidth : CONTENT_WIDTH,
+				bgImageHeight : IMAGE_HEIGHT,
+				startTime : startTime.value,
+				stopTime : stopTime.value,
+				trackList : [{ x : 0, y : 0, type : '', t : 0 }],
+				data : customData
+			}, stopTime.value - startTime.value, true)
+		} catch (err) {
+			console.error(err)
+			cancelPowMining = undefined
+			if (captchaId.value === id) {
+				refresh(false)
+			}
+		}
+	}
+
+	// ---------- 图形类：拖动 / 点选 ----------
+
+	let dragStartX = 0
+	const onDragStart = (e : TouchEvent) => {
+		const startTouch = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
+		if (startTouch == null) {
+			return
+		}
+		dragging.value = true
+		dragTouchId = startTouch.identifier
+		dragStartX = startTouch.screenX
+		disableUnitTransition()
+		startTime.value = Date.now()
+		trackArr.value.push({ x : 0, y : 0, type : 'down', t : 0 })
+	}
+	const onDragMove = (e : TouchEvent) => {
+		if (!dragging.value) {
+			return
+		}
+		const p = findTouchByIdentifier(e.changedTouches, dragTouchId) ?? findTouchByIdentifier(e.touches, dragTouchId)
+		if (p == null) {
+			return
+		}
+		dragX.value = clamp(p.screenX - dragStartX, 0, DRAG_END)
+		driveVisual(dragX.value)
+		trackArr.value.push({ x : dragX.value, y : 0, type : 'move', t : Date.now() - startTime.value })
+	}
+	const onDragEnd = () => {
+		if (!dragging.value) {
+			return
+		}
+		dragging.value = false
+		stopTime.value = Date.now()
+		trackArr.value.push({ x : dragX.value, y : 0, type : 'up', t : stopTime.value - startTime.value })
+		verifyGraphic()
+	}
+
+	// 系统打断：纯回弹，不记录 up 轨迹不提交
+	const onDragCancel = () => {
+		if (dragging.value) {
+			dragging.value = false
+			springBack()
+		}
+	}
+
+	// 点选：坐标换算到图片容器系（蒙层位置打开时量测）
+	const onMaskTap = (e : TouchEvent) => {
+		e.stopPropagation()
+		const point = e.changedTouches[0]
+		if (!point) {
+			return
+		}
+		if (clickCount.value === 0) {
+			startTime.value = Date.now()
+		}
+		clickCount.value++
+		if (clickCount.value > 4) {
+			return
+		}
+		stopTime.value = Date.now()
+		trackArr.value.push({
+			x : Math.round(point.clientX - maskRect.left),
+			y : Math.round(point.clientY - maskRect.top),
+			type : 'click',
+			t : stopTime.value - startTime.value
+		})
+		if (clickCount.value === 4) {
+			verifyGraphic()
+		}
+	}
+
+	const verifyGraphic = () => {
+		const id = captchaId.value
+		if (!id) {
+			return
+		}
+		// 旋转以拖满量程为分母（与显示角度同坐标系），其余类型以背景宽为分母
+		const bgWidth = type.value === 'ROTATE' ? DRAG_END : CONTENT_WIDTH
+		submitCaptcha(id, {
+			bgImageWidth : bgWidth,
+			bgImageHeight : IMAGE_HEIGHT,
+			startTime : startTime.value,
+			stopTime : stopTime.value,
+			trackList : trackArr.value
+		}, stopTime.value - startTime.value, false)
+	}
+
+	// ---------- 提交与结果编排 ----------
+
+	const submitCaptcha = (id : string, data : CaptchaRequestData['data'], durationMs : number, isPow : boolean) => {
+		verifying.value = true
+		check({ id, data }).then(resp => {
+			if (resp.code === 200 && resp.success) {
+				if (isPow) {
+					powPhase.value = 'success'
+					// 填充 400ms + 驻留 1000ms 后关闭
+					verifyTimer = setTimeout(() => {
+						verifyTimer = undefined
+						close(resp.data?.id ?? id)
+					}, 1400)
+				} else {
+					showResult.value = true
+					resultOk.value = true
+					resultMsg.value = `验证成功，耗时${(durationMs / 1000).toFixed(1)}秒`
+					verifyTimer = setTimeout(() => {
+						verifyTimer = undefined
+						close(resp.data?.id ?? id)
+					}, 1000)
+				}
+			} else {
+				const msg = resp.code === 4001 ? '验证失败，请重新尝试！' : resp.code === 4000 ? '验证码被黑洞吸走了！' : resp.msg
+				if (isPow) {
+					powFailMsg.value = msg ?? '验证失败，请重试'
+					powPhase.value = 'fail'
+					verifyTimer = setTimeout(() => {
+						verifyTimer = undefined
+						refresh(false)
+					}, 1600)
+				} else {
+					showResult.value = true
+					resultOk.value = false
+					resultMsg.value = msg ?? '验证失败'
+					verifyTimer = setTimeout(() => {
+						verifyTimer = undefined
+						refresh(false)
+					}, 750)
+				}
+			}
+		}).catch(err => {
+			console.error(err)
+			verifying.value = false
+			refresh(false)
+		})
+	}
+
+	const refresh = (isClose : boolean) => {
+		stopJobs()
+		verifying.value = false
+		showResult.value = false
+		resultMsg.value = ''
+		dragX.value = 0
+		powX.value = 0
+		clickCount.value = 0
+		trackArr.value = []
+		powPhase.value = 'slide'
+		if (!isClose && !captchaLoading.value) {
+			getCaptcha()
+		}
+	}
+
+	// ---------- 视图派生 ----------
+
+	const powCenterText = computed(() : string => {
+		if (powPhase.value === 'mining') {
+			return '正在验证'
+		}
+		return powPhase.value === 'success' ? '验证成功' : powFailMsg.value
+	})
+
+	const sizeClass = computed(() : string => {
+		if (captchaLoading.value || loadingError.value) {
+			return 'lh-cap-card--loading'
+		}
+		return type.value === 'POW' ? 'lh-cap-card--pow' : 'lh-cap-card--graphic'
+	})
+
+	// ---------- 生命周期 ----------
+
+	// proxy 实例接收 dialogPage 壳的成功广播并转发给业务方
+	const onBusSuccess = (id : string) => {
+		emit('success', id)
+	}
+
+	onMounted(() => {
+		// #ifdef APP || WEB
+		if (props.mode !== 'active') {
+			uni.$on('lh-captcha-success', onBusSuccess)
+		} else {
+			ownerPage = getCurrentInstance()?.proxy?.$page ?? null
+		}
+		// #endif
+	})
+
+	onUnmounted(() => {
+		// #ifdef APP || WEB
+		if (props.mode !== 'active') {
+			uni.$off('lh-captcha-success', onBusSuccess)
+		}
+		// #endif
+		stopJobs()
+	})
+
+	defineExpose({ open, close })
+</script>
+
+<style>
+	/* 遮罩：dialogPage 页面流内 100% 铺满；微信端（S6）业务页挂载需 fixed 全屏 */
+	.lh-cap-mask {
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		justify-content: center;
+		align-items: center;
+		animation: lh-cap-fade 200ms ease-out;
+		/* #ifndef APP || WEB */
+		position: fixed;
+		top: 0;
+		left: 0;
+		z-index: 999;
+		/* #endif */
+	}
+
+	@keyframes lh-cap-fade {
+		from {
+			opacity: 0;
+		}
+
+		to {
+			opacity: 1;
+		}
+	}
+
+	.lh-cap-card {
+		position: relative;
+		width: 320px;
+		border-radius: var(--lh-radius, 12px);
+		background-color: var(--lh-emphasis-bg, #ffffff);
+		box-shadow: var(--lh-shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.1));
+		padding: 16px;
+		overflow: hidden;
+		transition: height 300ms ease;
+		animation: lh-cap-pop 250ms ease-out;
+	}
+
+	@keyframes lh-cap-pop {
+		from {
+			transform: scale(0.92);
+			opacity: 0;
+		}
+
+		to {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+	.lh-cap-card--loading {
+		height: 296px;
+	}
+
+	.lh-cap-card--graphic {
+		height: 296px;
+	}
+
+	.lh-cap-card--pow {
+		height: 136px;
+	}
+
+	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点（旧版不遮操作区语义） */
+	.lh-cap-opts {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		z-index: 20;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.lh-cap-opts-icon {
+		font-size: 20px;
+		color: var(--lh-fourth-color, #b5b9bd);
+		padding: 4px;
+	}
+
+	/* 中央区（loading / POW 结果） */
+	.lh-cap-zone {
+		flex: 1;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.lh-cap-zone-text {
+		margin-top: 8px;
+		font-size: 14px;
+		color: var(--lh-secondary-color, #1f2329);
+	}
+
+	.lh-cap-error {
+		flex: 1;
+		text-align: center;
+		font-size: 14px;
+		color: #f56c6c;
+	}
+
+	.lh-cap-spinner {
+		width: 24px;
+		height: 24px;
+		border: 2px solid var(--lh-active-bg, #f0f0f0);
+		border-top-color: #f7b645;
+		border-radius: 50%;
+		animation: lh-cap-rotate 0.8s linear infinite;
+	}
+
+	.lh-cap-spinner-lg {
+		width: 32px;
+		height: 32px;
+		border-width: 3px;
+	}
+
+	@keyframes lh-cap-rotate {
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	/* POW */
+	.lh-cap-pow {
+		flex: 1;
+	}
+
+	.lh-cap-pow-zone {
+		margin-top: 8px;
+	}
+
+	.lh-cap-badge {
+		width: 44px;
+		height: 44px;
+		border-radius: 50%;
+		justify-content: center;
+		align-items: center;
+		animation: lh-cap-badge-in 250ms ease-out forwards;
+	}
+
+	.lh-cap-badge-ok {
+		background-color: #5ac725;
+	}
+
+	.lh-cap-badge-no {
+		background-color: #f56c6c;
+	}
+
+	.lh-cap-badge-icon {
+		font-size: 26px;
+		color: #ffffff;
+	}
+
+	@keyframes lh-cap-badge-in {
+		from {
+			transform: scale(0.4);
+			opacity: 0;
+		}
+
+		to {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+
+	/* 底部结果填充条：从左向右铺满 */
+	.lh-cap-fill {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		height: 28px;
+		width: 0;
+		animation: lh-cap-fill 400ms ease-out forwards;
+	}
+
+	.lh-cap-fill-ok {
+		background-color: #5ac725;
+	}
+
+	.lh-cap-fill-no {
+		background-color: #f56c6c;
+	}
+
+	@keyframes lh-cap-fill {
+		from {
+			width: 0;
+		}
+
+		to {
+			width: 100%;
+		}
+	}
+
+	/* 图形类 */
+	.lh-cap-graphic {
+		flex: 1;
+	}
+
+	.lh-cap-tip {
+		font-size: 15px;
+		font-weight: bold;
+		color: var(--lh-secondary-color, #1f2329);
+		margin: 4px 0 8px 4px;
+	}
+
+	.lh-cap-click-tips {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 8px;
+	}
+
+	.lh-cap-click-label {
+		font-size: 13px;
+		color: var(--lh-secondary-color, #1f2329);
+	}
+
+	.lh-cap-click-hint {
+		width: 168px;
+		height: 32px;
+	}
+
+	.lh-cap-image-wrap {
+		width: 288px;
+		height: 180px;
+		border-radius: 6px;
+		overflow: hidden;
+		position: relative;
+	}
+
+	.lh-cap-image {
+		width: 288px;
+		height: 180px;
+	}
+
+	.lh-cap-concat {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 288px;
+		overflow: hidden;
+	}
+
+	/* 平铺条：双图并排首尾相接（x 无 background-repeat），translateX(x-288) 滚动=旧版 background-position 等效 */
+	.lh-cap-concat-strip {
+		flex-direction: row;
+		width: 576px;
+		height: 180px;
+		transform: translateX(-288px);
+	}
+
+	.lh-cap-concat-img {
+		width: 288px;
+		height: 180px;
+	}
+
+	/* SLIDER 拼图块：absolute 左起，高 180 宽自然（heightFix），拖动 translateX 驱动 */
+	.lh-cap-slider {
+		position: absolute;
+		top: 0;
+		left: 0;
+		height: 180px;
+	}
+
+	.lh-cap-slider-img {
+		height: 180px;
+	}
+
+	/* ROTATE 圆盘：容器铺满图片区双向居中——盘中心=图片层几何中心(144,90)，
+	   rotate 绕图自身中心即绕背景缺口中心（后端契约=缺口恒在正中心，无坐标字段） */
+	.lh-cap-rotate-box {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 288px;
+		height: 180px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.lh-cap-rotate-img {
+		height: 180px;
+	}
+
+
+
+	/* 结果横条（图形类，图片区底部） */
+	.lh-cap-status {
+		position: absolute;
+		left: 0;
+		bottom: 0;
+		width: 288px;
+		height: 24px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.lh-cap-status-ok {
+		background-color: #5ac725;
+	}
+
+	.lh-cap-status-no {
+		background-color: #f56c6c;
+	}
+
+	.lh-cap-status-text {
+		font-size: 12px;
+		color: #ffffff;
+	}
+
+	/* 点选蒙层与序号气泡 */
+	.lh-cap-click-mask {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 288px;
+		height: 180px;
+	}
+
+	.lh-cap-click-dot {
+		position: absolute;
+		width: 26px;
+		height: 26px;
+		border-radius: 50%;
+		background-color: #409eff;
+		border: 2px solid #ffffff;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.lh-cap-click-dot-text {
+		font-size: 14px;
+		color: #ffffff;
+	}
+
+	/* 拖动轨道 */
+	.lh-cap-track {
+		width: 288px;
+		height: 40px;
+		margin-top: 12px;
+		border-radius: var(--lh-radius-full, 9999px);
+		background-color: var(--lh-active-bg, #f0f0f0);
+		position: relative;
+		overflow: hidden;
+	}
+
+	/* 一体拖动元素：色带（328，延伸至圆钮右缘下，初始整体藏轨道左外）+圆钮叠右端，
+	   translateX 直驱整体拖入；色带右端 20px 圆角与圆钮圆弧重合=端头胶囊 */
+	.lh-cap-unit {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 328px;
+		height: 40px;
+		transform: translateX(-288px);
+	}
+
+	.lh-cap-unit-fill {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 328px;
+		height: 40px;
+		background-color: rgba(198, 168, 118, 0.5);
+		border-radius: 0 20px 20px 0;
+	}
+
+	.lh-cap-unit-thumb {
+		position: absolute;
+		top: 0;
+		left: 288px;
+		width: 40px;
+		height: 40px;
+		border-radius: var(--lh-radius-full, 9999px);
+		background-color: #b48d4d;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.lh-cap-unit-thumb-icon {
+		font-size: 18px;
+		color: rgba(255, 255, 255, 0.9);
+	}
+
+	.lh-cap-track-text {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 288px;
+		height: 40px;
+		line-height: 40px;
+		text-align: center;
+		font-size: 13px;
+		color: var(--lh-fourth-color, #b5b9bd);
+	}
+
+	/* 校验阻断层 */
+	.lh-cap-freeze {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: 10;
+	}
+
+	/* 暗色：token 引用自动适配，验证码专属色双值覆盖 */
+	@media (prefers-color-scheme: dark) {
+		.lh-cap-unit-fill {
+			background-color: rgba(101, 88, 67, 0.5);
+		}
+
+		.lh-cap-unit-thumb {
+			background-color: #9a7a40;
+		}
+
+		.lh-cap-status-ok {
+			background-color: #306317;
+		}
+
+		.lh-cap-status-no {
+			background-color: #7e2e2f;
+		}
+
+		.lh-cap-click-dot {
+			background-color: #2a6fc7;
+		}
+
+		.lh-cap-fill-ok {
+			background-color: #306317;
+		}
+
+		.lh-cap-fill-no {
+			background-color: #7e2e2f;
+		}
+	}
+</style>
