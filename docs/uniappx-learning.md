@@ -119,3 +119,134 @@ attachment 域整迁提前（S4-06，6 文件+crypto-js）→ user store 轮（1
 - **域入口三个 namespace import 包进 #ifdef**：x ts2js 流树摇行为不确定，未用平台文件及其依赖（crypto-js）不进对应端包；域内 #ifdef 符合铁律（工具类合法驻地）
 - **request↔store 循环依赖**：旧 sard 时代同款形态（两边仅函数体内惰性调用）已实证可用；pinia 在 main.ts 先于一切请求安装
 - **两处标记行纪律**（同 401 先例）：authenticationFailure 里 `webSocket.closeConnect()` 留注释待 WS 轮补；`reLaunch('/pages/login/Login')` 保留原样等 ③ 注册路由生效（本轮不可达，尖峰页无 API 调用）
+
+## 第 4 篇 · 登录页：手动键盘 hack 退役与蒸汽化样式（2026-11-14）
+
+### 本轮做了什么
+
+③登录页完整接线版（A 切面）：Login.uvue（蒸汽化+login api/remember/postLoginCheck/setting store 全接线）+ 基础件 app-input/app-button/app-dialog + tokens.scss/auth.scss + pages.json 注册 + 直迁 5 文件（crypto/remember/user-setup/setting api+store）。
+
+### 核心认知：uniapp 的键盘 hack 为何整体退役
+
+uniapp 时代键盘弹起会**缩小 webview**，fixed 元素（协议行/协议弹窗）错位，才有了手动补丁：adjust-position=false+translateY(-30%) 表单上移、caret-color transparent+延迟淡入、page{position:fixed} 滚动锁、键盘 composable（uni.onKeyboardHeightChange）驱动显隐。x 是原生渲染、键盘覆盖不推挤布局——**这批补丁全部失效化**，按用户拍板删除：input adjust-position 走默认原生上推、光标原生默认、协议行常驻底部（键盘直接盖住）。composable 整个退役后，连 x 端 onKeyboardHeightChange 的 id 制改写（on 返回 number id、offKeyboardHeightChange(id?) 收 id，iOS 4.71+）都用不上了。
+
+### ucss 能力边界（本轮实证）
+
+- **无 gap 属性、无伪类**（:not/:nth-child）→ app-space 无法实现子项间距，登录页布局直接 view+flex+margin 摊平；**无伪元素** → 旧 iconfont 的 `.icon-xxx:before{content}` 形态不可用
+- **图标路线改 uni-icons-x**（官方 uni_modules 扩展组件，插件市场 30221，非 npm）：内部只渲染一个 text 根节点，type 字符串联合类型 IDE 全量提示；图标名映射 UserOutlined→person、LockOutlined→locked
+- **样式隔离 2.0 明文**：单根组件的外部 class/style 落组件根节点（根样式传递不受隔离影响）；页面类打不进组件内部；css var 靠继承可达组件内部（继承≠class 命中，隔离不影响）→ tokens.scss 在 App.uvue 全局 style 定义 page 级变量，组件内直接引用
+- **x view 默认 flex-direction: column**（与 web div 相反），row 必须显式写
+
+### 决策记录（用户拍板）
+
+- tokens.scss 项目单独维护（--lh- 前缀避 --sar 命名空间），值源 sard 主题页（guide/theme）+npm 包 configuration.scss；不照抄全量，页面迁移按需增补。取值坑：tertiary-color 亮色=gray-600 #74787c（npm 源码 grep 出亮暗两个值没分归属，主题页核对才定）
+- H5 样式分支保留（#ifdef WEB + min(20vh,40%)），S6 WEB 端实测后再定去留——条件编译只在 WEB 构建生效，App ucss 不解析该分支
+- checkbox 用内置组件受控模式（:checked + @tap 翻转，无 change 依赖）；app-dialog 最小版=组件式 v-model:visible+confirm/cancel（sard 函数式调用场景 S2-01 再加 Promise API）
+- .uvue 里 useSlots/InputEvent 等走官方自动引入/全局类型（IDEA 可能报红=已知残留类别）
+- 向导分支暂落点：postLoginCheck 有待补全项时暂存+回首页+提示（向导页 S2-11、守卫拉回 S2-03）
+
+### 补记：组件「官方优先三档」原则（用户 review 拍板）
+
+用户修正：倾向官方提供的能力，实在没提供的再手搓。落成三档：
+1. **内置组件直接用 + class 调样式**：登录按钮删手搓 app-button，换内置 `<button type="primary" :loading>`——原生自带 loading 转圈（Android Vapor 5.21+/iOS Vapor 5.11+）、disabled、hover-class 点击态，比手搓 opacity 方案强；内置组件页面 class 直达无隔离问题；button 内裸文字合法（官方示例同款）
+2. **官方 uni_modules 扩展组件**：uni-icons-x（图标）；**app-dialog 重写为 page-container 基座**——官方内置弹层组件（iOS/Android 5.02+，position=center、自带遮罩/过渡动画/@clickoverlay），**还白赚返回拦截**（右滑手势/物理键/navigateBack 关弹层不关页面，手搓 fixed 版做不到）；组件跨端，dialogPage 不支持小程序且须 pages.json 注册独立页面（协议弹窗强耦合登录页状态，组件式更合适）
+3. **薄壳封装判据**（用户口径）：只需调 props→直接用内置；**大范围调整 css 或缺功能→封装组件**。app-input 评估=背景/高度/圆角/padding 四项 css 大改+前置图标/聚焦清除两项缺失→薄壳成立（内核=内置 input）
+
+终态：手搓组件 0 个——app-input/app-dialog 都是官方组件的薄壳。
+
+### 补记 2：npm 包准入铁律——x 打包器只吃 ESM（首次编译实战）
+
+crypto-js 引出三连死，全在 uts 打包器对**纯 CJS 包零互操作**：
+1. `import CryptoJS from 'crypto-js'` → 编译错 `"default" is not exported`（CJS 无 default 导出，打包器不包装）
+2. 改 `import * as CryptoJS` → 9 条编译警告 `"enc/AES/mode/pad" is not exported`（打包器把 `CryptoJS.AES` 属性访问当 ESM 具名导出解析，全 undefined），且**编译仍"成功"**——死在运行时：crypto-js 的 UMD 头走 global 探测分支，x 运行时 this=undefined → `TypeError: root.CryptoJS`
+3. pinia 能过是因为它自带 ESM 构建——**选 npm 包先看 package.json 的 module 字段有无 ESM 入口**
+
+解法：换 **crypto-es**（crypto-js 的 ESM 同源移植 v3.1.3）。注意**导出形态不同构**：扁平具名导出（AES/Utf8/CBC/Pkcs7/MD5/WordArray），没有 CryptoJS 聚合对象——具名导入重写，本地 node 双验证（round-trip 含中文 PASS + md5 对拍标准值 PASS）后才上真机。教训：npm 依赖进 x 工程，先本地验导出形态+回环，再上编译。
+
+### 补记 3：tokens.scss 全量化（用户拍板推翻「按需增补」）
+
+用户定调：sard 的 css 变量全量拉进项目，组件开发时暗色/圆角等全系统统一。落地：
+
+- **值源管线**：npm pack sard-uniapp → `npx sass` 编译 variables.scss/variables-dark.scss 得**字面量**（color.scale 等编译期函数被展开，如 primary-text=rgb(23.1%,43.6%,77.2%)）→ python 转换器生成 --lh-* 前缀 tokens.scss（145 亮色+42 暗色覆盖项）
+- **token 引 token 全部内联为字面量**：sard 语义变量（--sar-primary: var(--sar-blue) 等几十处）在 x 不可用（「值不可嵌套 var」限制），转换脚本递归展开
+- **暗色机制与 sard 同构**：x 蒸汽 5.25+ 支持 `@media (prefers-color-scheme: dark)`（本机 5.34 ✓），tokens.scss 双段 page 块（亮色默认+dark 覆盖）；基础色/灰度/字号/圆角不随暗色变，语义场景色（body/secondary/tertiary/fourth/emphasis/border/active/shadow/mask/disabled）暗色全覆盖
+- **命名回归 sard 原名**：早期自创 --lh-primary-color 别名废除→--lh-primary（app-dialog/auth.scss/app-input 三处消费方同步改）；--lh-button-height 进「项目补充段」（组件级不入全量段）
+- **分层**：全局 theme 变量全量进 tokens.scss；组件级变量（--lh-input-*）随组件自管
+- **app-input 引用全局化**：border→--lh-border-color、radius→--lh-rounded、duration→--lh-duration（暗色/主题调整自动生效）；placeholder-style 属性串保持字面量（var 在原生样式串不赌，暗色 placeholder 登记 P1）
+- 坑记录：转换脚本首版 name[5:] 少切一位产生 --lh-- 双横杠、dark 段 var(--sar-*) 引用未替换——两处都在自查（grep lh-- / grep ": var(--lh"）中抓出重跑
+
+### 补记 4：全局亮暗自动跟随系统（用户拍板：先全局自动，组件适配后调）
+
+三处配置：
+1. **manifest.json `app.defaultAppTheme: "auto"`**——App 平台主题开关在此（`darkmode` 节点是 web/小程序用的，App 不用）；取值 light/dark/**auto**（Android/iOS 4.18+）。auto=跟随系统；css `@media(prefers-color-scheme)` **自动跟随 appTheme 匹配**（官方明文），tokens.scss 双段无需额外 JS
+2. **theme.json**（根目录自动识别，无需 themeLocation 注册；4.18+）——只管 pages.json 的原生样式（防转场闪白/黑）：navBgColor/navTxtStyle/bgColor 三变量，亮暗双值（bgColor 对齐 tokens 的 body-bg：亮 gray-100 #F7F7F8/暗 #000）
+3. **pages.json globalStyle** 改 @ 变量引用：navigationBarTextStyle（**custom 导航页的状态栏文字色也由它管**）/navigationBarBackgroundColor/backgroundColor
+
+分层心智：theme.json=pages.json 原生层（转场瞬间）、css media=tokens 组件层（渲染后）。后续用户级主题切换（S3-08 设置页 light/dark/auto 三态）走 uni.setAppTheme，媒体查询自动跟着变。
+
+### 补记 5：app-input 暗色适配（用户点名轮，配色参考 sard dark）
+
+- **暗色 surface 色板**：卡片面亮白/暗=sar gray-900 **#242628**（sard dark emphasis-bg，黑底上的"抬升面"），input 根壳与 dialog 卡片同规则
+- **组件内 media 块可用**：`@media (prefers-color-scheme: dark)` 直接写进 .uvue 组件 style（蒸汽 5.25+），配组件级 token fallback（--lh-input-bg/--lh-dialog-bg）供主题覆盖
+- **页面背景兜底**：auth.scss `page{background-color: var(--lh-body-bg)}`（tokens 亮 gray-100/暗 black，与 theme.json bgColor 同值双保险——不赌 page view 层默认背景行为）
+- **图标色去硬编码**：uni-icons 外部 class 落根（隔离 2.0 明文）→ clear=tertiary（亮 #74787c/暗 #b5b9bd）、eye=fourth（亮 #b5b9bd/暗 #74787c）、prepend=tertiary，全走语义 token 暗色自动；内联 style 色会压过 class 色故必须去掉
+- **control 文字色本就自适应**（--lh-emphasis-color 亮 #000/暗 #fff）
+- **placeholder 保持 #b5b9bd 固定**：placeholder-style 属性串不赌 var 支持；亮暗底均可读，暗色精确适配需 JS 读 appTheme 动态换串——P1
+
+### 补记 6：app-input 通用化扩展（用户清单轮：形状/尺寸/只读禁用/maxlength/count）
+
+| prop | 实现 | 关键事实 |
+|---|---|---|
+| shape: default\|round | round→border-radius 9999rpx（根类绑定） | — |
+| size: small\|default\|large | sm→padding-y 6rpx；lg→control 字号 32rpx | 后代选择器不赌，control 独立绑类 |
+| disabled | **透传内置 input（原生 iOS 4.11+ ✓）**+置灰面/文字（--lh-disabled-* token 暗色自适应）+tool 隐藏 | 原生支持 |
+| readonly | **pointer-events: none**（x 内置 input 无 readonly，css 原生支持 iOS 4.11+）；点不进、不弹键盘 | sard 同款姿势 |
+| maxlength | 透传内置（原生 ✓，-1 不限） | 原生支持 |
+| showCount | 右侧 n/max（maxlength>0 生效），sard e(count) 简化同行版 | — |
+
+tool 显隐规则：clear 在 disabled/readonly 下隐藏；eye 在 disabled 下隐藏、readonly 保留（查看明文无害）。control 的 disabled/readonly/lg 态全部独立绑类（根→子穿透不赌）。**透传形态=组件声明同名 props 显式转发（:disabled/:maxlength），非 $attrs 魔法**。
+
+### 补记 7：背景归 pages.json（backgroundColorContent）+ 间距刻度体系（用户两问驱动）
+
+用户质疑：背景统一管理不该住 auth.scss；全局间隙统一还是页面为准？查证+定案：
+
+- **x 的 pages.json 背景属性语义陷阱**：`backgroundColor`=**只管下拉刷新露出的窗口**（无下拉刷新时无效果！蒸汽 5.25+ 才支持）——uniapp 时代的认知在此失效；**`backgroundColorContent`=页面容器背景色**（Android 4.0+/iOS 4.11+ 全端）才是页面视觉背景的正解。此前 @bgColor 绑在 backgroundColor 上=绑错属性，已改绑 backgroundColorContent
+- **单一事实源**：页面背景=pages.json（theme.json @bgColor，亮 gray-100/暗 black）——css page 兜底（auth.scss/App.uvue）删除；转场闪白/黑+渲染层全覆盖。特殊页面=页面级覆盖
+- **间距=「全局管刻度，页面管组合」**：tokens 项目补充段新增 7 档（xs 8/sm 16/md 24/lg 32/xl 40/2xl 48/3xl 64，从现有代码反推）；auth.scss 裸值全改引 token（20rpx→sm 16 取最近刻度）；特殊页面=刻度组合自由+页面级覆盖，刻度不够=评审新增，禁回头写裸数
+- auth-item 的 90rpx/24rpx 保留字面量（尺寸非间距范畴）；margin-top 40% 保留（布局百分比）
+- 组件内部微调值（8/10/12rpx 级）本轮未 token 化——统一推进时再收，避免过度工程
+
+### 补记 8：圆角三档制（用户两问收敛：全站统一+小圆角组件存在性）
+
+用户问全站圆角统一+五档意义。结论：**小组件天生小圆角确实存在**（圆角≈高度 20-30% 视觉最自然；高度 20px 的 tag 用 12px 圆角=60% 近胶囊显鼓），对应后续迁移的 dict-tag(S4-08)/badge(S2-01)/缩略图(S3-04)——但五档是组件库视角（几十组件各有比例），应用视角三档够：
+
+- **--lh-radius: 12px**（主：卡片/按钮/input/dialog）+ **--lh-radius-sm: 4px**（小：tag/badge/缩略图）+ **--lh-radius-full: 9999px**（胶囊固定不参与主题）
+- 删 sard 五档刻度（rounded-xs..xl/full）——留着=第二套体系早晚误用（某处 --lh-rounded-sm 不跟全局）
+- 消费方 6 处改引（input 根/round、dialog 卡/按钮、auth-item、auth-btn），残留硬编码 grep=0；统一值 12px=auth 真机已确认观感（app-input 默认 6px 随之拉齐）
+
+### 补记 9：间距档位用途注释（用户问屏幕边距/卡片间隔惯例）
+
+七档各挂用途：lg 16px=屏幕两侧边距/卡片内边距/标准区块间隔（Material 16dp/HIG 16-20pt 惯例）、md 12px=紧凑卡片间隔；auth 页 padding 24px(2xl)=特殊居中布局页的页面级覆盖实例，与「常规列表页边距=lg」不冲突。
+
+### 补记 10：全局工具类层启动（用户提议，第三块拼图）
+
+样式三层补全：tokens=值域、页面 scss=专属布局、**common.scss=跨页面高频组合工具类**（App.uvue 全局引入，页面可引用全局 class=隔离 2.0 明文）。克制原则：出现一个抽一个，不做 atomic 全集（类名爆炸违背 token 纪律）。首个成员 .page-padding（padding: 0 var(--lh-gap-lg)）。auth-body 边距按用户拍板收窄 24px→16px(lg)；尖峰页改挂 page-padding 验证全局工具类链路。
+
+### 补记 11：app-dialog 平台聚合（用户拍板：插槽退化文本，App=dialogPage/MP+WEB=page-container）
+
+架构=条件编译铁律标准形态（视图分叉双实现+入口按平台引）：
+- **入口 API 统一文本 props**（visible/title/desc/cancelText/confirmText）——插槽跨 dialogPage 页面无法传递，用户拍板退化；协议弹窗 desc 里的行内链接交互随之丢弃（本来是 toast 占位）
+- **APP=dialogPage**：pages/dialog/dialog.uvue（蒙层自绘+卡片，框架背景固定透明铺满）；通信=url query 带参（encodeURIComponent）+uni.$emit('lh-dialog-result') 回传；**收起单点化**=页面只 $emit，入口 watch(visible=false)→closeDialogPage(openedDialogPage) 统一关（dialogPage 页面内无参 closeDialogPage 关自己语义存疑，绕开）；back 键=取消语义（onBackPress emit+return true）
+- **MP/WEB=page-container 组件式**（原实现，template 渲染 title/desc 文本）
+- 分叉落点：template #ifdef APP 空 view / #ifndef APP page-container 结构；script #ifdef APP watch+$on 逻辑 / #ifndef APP 直 emit；style #ifndef APP 包裹
+- 语义要点：dialogPage 蒙层页面自绘（模态=蒙层不响应点击）；蒸汽下页面默认嵌 scroll-view（注册配 disableScroll:true）；dialogPage 不进页面栈（getCurrentPages 拿不到，事件总线是唯一回传通道）
+- 消费方：Login/index 插槽→props，孤儿样式清理
+
+### 补记 12：app-dialog 退役，弹窗采纳 uni.showModal（用户真机对比拍板）
+
+尖峰页并排对比（app-dialog 聚合 vs uni.showModal）后用户拍板：**showModal 样式够好+官方维护+全端一个 API+暗色系统级自动 → 采纳原生，app-dialog 退役**。
+
+- **删**：components/app-dialog（page-container/dialogPage 双实现聚合）、pages/dialog/dialog.uvue、pages.json 注册、index 两张测试卡、Login 协议弹窗组件引用与 protocolDialogVisible 状态
+- **换**：Login.openProtocolDialog 直调 `uni.showModal`（title/content/cancelText「不同意」/confirmText「同意」/cancelColor tertiary/confirmColor 主题蓝，success 回调分流 handleProtocolConfirm/Cancel）——pendingProtocolAction 确认后续执行链路完整保留
+- **知识沉淀**：uni.showModal 内部就是官方 dialogPage 封装（返回 UniPage 也是 x 增强）；能力面=文案/双按钮/showCancel/按钮色/editable+placeholderText 输入弹窗（x 增强，S3 场景备用）；**容器视觉（宽度/圆角/遮罩/动画）不可定制**——那是 app-dialog 聚合方案的存在意义，方案已留档（dialogPage 文本 props 聚合+收起单点化+back 键取消），真出现富内容/容器定制需求按档重建
+- S2-01 弹窗基础件计划更新：app-dialog 退役 → **showConfirm（showModal 的 Promise 封装）**，S3 注销/改密确认直接用

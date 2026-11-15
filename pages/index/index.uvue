@@ -1,5 +1,5 @@
 <template>
-	<view class="page">
+	<view class="page-padding">
 		<text class="title">P0 尖峰验证</text>
 		<view class="card">
 			<text class="label">V1 · Pinia（npm 依赖 + 组合式 store）</text>
@@ -11,6 +11,10 @@
 			<text class="value">BASE_API = {{ baseUrl }}</text>
 			<text class="value">NODE_ENV = {{ nodeEnv }}</text>
 		</view>
+		<view class="card">
+			<text class="label">导航 · 登录页跳转（③ 联调入口）</text>
+			<button class="btn" type="primary" @tap="goLogin">前往登录页</button>
+		</view>
 	</view>
 </template>
 
@@ -21,38 +25,38 @@ import { BASE_API, IS_DEV } from '@/utils/env'
 const counter = useCounterStore()
 const baseUrl = BASE_API
 const nodeEnv = IS_DEV ? 'development' : 'production'
+
+const goLogin = () => {
+	uni.navigateTo({ url: '/pages/login/Login' })
+}
 </script>
 
 <style>
-	.page {
-		padding: 24rpx;
-	}
-
 	.title {
-		font-size: 36rpx;
+		font-size: 18px;
 		font-weight: bold;
 		color: #333333;
 	}
 
 	.card {
-		margin-top: 24rpx;
-		padding: 24rpx;
+		margin-top: 12px;
+		padding: 12px;
 		background-color: #f5f5f5;
-		border-radius: 12rpx;
+		border-radius: 6px;
 	}
 
 	.label {
-		font-size: 26rpx;
+		font-size: 13px;
 		color: #999999;
 	}
 
 	.value {
-		margin-top: 12rpx;
-		font-size: 28rpx;
+		margin-top: 6px;
+		font-size: 14px;
 		color: #333333;
 	}
 
 	.btn {
-		margin-top: 16rpx;
+		margin-top: 8px;
 	}
 </style>
