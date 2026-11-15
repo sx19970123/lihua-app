@@ -1,6 +1,6 @@
 <template>
 	<view class="app-checkbox" :class="{ 'app-checkbox-pressed': pressed, 'app-checkbox-grouped': !!groupCtx }"
-		@click="onClick" @touchstart="pressed = true" @touchend="pressed = false" @touchcancel="pressed = false">
+		@click.stop="onClick" @touchstart="pressed = true" @touchend="pressed = false" @touchcancel="pressed = false">
 		<view class="app-checkbox-box" :class="{
 			'app-checkbox-box-checked': isChecked,
 			'app-checkbox-box-disabled': disabled

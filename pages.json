@@ -7,6 +7,13 @@
 			}
 		},
 		{
+			"path": "pages/login/Login",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": true 
+			}
+		},
+		{
 			"path": "pages/demo/demo",
 			"style": {
 				"navigationBarTitleText": "组件示例"

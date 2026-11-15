@@ -269,3 +269,28 @@ sard checkbox 真实形态拆解（源码）：**不是自绘框+勾叠层，是
 
 - group 模式下 checkbox 不传 checked（受控于集合）触发 Missing required prop warn——`checked?: boolean` 修正（group 分支不读该 prop，独立模式调用方均传）
 - **demo 页未来结构**（用户规划）：个人中心总入口（list 组件，S2-01）→ 二级菜单（title=组件名，list）→ 组件示例详情（checkbox/input 等）。当前平铺单页=临时形态，list 组件到位后重构
+
+### 补记 17：登录页结构轻对齐 web（用户提出领域工厂对齐+多登录方式预判）
+
+web 登录结构范式=外壳层 initXxx 工厂编排（initChangeComponent/initUserSetup）+领域子组件（Login/Register）。x 版差异：app 的组件切换=页面导航（Register 独立页），外壳层的 app 形态=登录域页面编排（未来微信/手机号登录=页面切换编排需求，登记不实现）。
+
+本轮轻对齐：抽 **initPostLoginCheck 工厂块**（对齐 web initUserSetup 语义：校验项获取+routeAfterCheck 向导/首页分支），handleLogin 成功分支只剩一行 `await routeAfterCheck()`——四工厂变五，行为零变化。**重对齐（外壳/领域组件拆分）不适用**：x 版无组件切换外壳需求。
+
+### 补记 18：登录页 init 工厂对齐 web skill 规范（用户读 skill 指出）
+
+**lihua-web skill 第 17/18 条 = 本项目页面状态组织的正式规范**（2026-09-03/09-24 定）：「页面状态按职责分组成 initXxx() 工厂——类型定义、状态、方法、**watch 声明**在工厂内，return 导出，setup 顶层解构消费；顶层不出现散装业务函数；跨工厂依赖经顶层解构名引用（**后声明的工厂可用先解构的变量**）」。
+
+Login.uvue 按"顶层零散装"重构，六工厂+声明顺序（依赖决定）：
+1. initPostLoginCheck（无跨厂依赖）
+2. initProtocol（key 状态/弹窗/取消/确认/to 协议页跳转——协议域完整化，toAgreement/toPrivacy 归位）
+3. initLogin（checkLoginData/handleLogin——引用 checkProtocol/openProtocolDialog ✓ 前解构）
+4. initRememberMe（写 loginData ✓ 前解构）
+5. initCaptcha（serverConnectionFailed 挪入+handleLoginClick 分发——引用 checkLoginData/handleLogin ✓）
+6. initRegister（isRegistrationEnable/toRegister——引用 checkProtocol/openProtocolDialog ✓）
+7. initEntry（onRegisterSuccess/reload/onMounted/onUnmounted——生命周期声明进工厂 ✓，引用三厂导出）
+
+解构依赖顺序是这类重构的硬约束：被引用者先声明。行为零变化。
+
+### 补记 19：安全区避让独立工具类 .safe-top（用户架构拍板）
+
+**分层原则=安全区语义与页面布局解耦**：common.scss 新增 `.safe-top { padding-top: var(--status-bar-height) }`（custom 导航页最外层挂载；padding 实现=等价 margin 且无父子折叠风险；Web 端变量为 0 天然退化）。auth-body 的 margin-top 40% 弃用（按页宽解析在横屏/iPad 分屏暴涨）改 120px 净距（状态栏由外层管）。MP 分支同步 120px（胶囊行 44px+状态栏 < 120px 安全区内无冲突）；WEB 分支保留 min(20vh,40%)（浏览器无状态栏，safe-top 天然退化）。内置变量 --status-bar-height 为官方 custom 导航推荐用法（App 4.61+ 自动响应变化）。

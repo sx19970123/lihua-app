@@ -2,8 +2,8 @@
 	"name": "lihua-app",
 	"appid": "__UNI__78B419C",
 	"description": "",
-	"versionName": "1.0.0",
-	"versionCode": "100",
+	"versionName": "1.0.1",
+	"versionCode": "101",
 	"uni-app-x": {
 		"vapor": true,
 		"styleIsolationVersion": "2",

@@ -1,0 +1,112 @@
+/* 登录|注册页样式（蒸汽版：BEM 单类，后代/连写选择器不赌）。
+   页面背景统一由 pages.json backgroundColorContent（theme.json @bgColor）管理，页面级不重复声明。
+   间距一律引 tokens 刻度（--lh-gap-*），禁裸魔法数 */
+.auth-body {
+	/* 左右边距由全局工具类 .page-padding 提供（模板并列挂）；
+	   顶部间距=状态栏（外层 .safe-top）之下的净距，40% 按页宽解析在横屏/分屏暴涨故弃用 */
+	/* #ifdef APP || MP-WEIXIN */
+	margin-top: 80px;
+	/* #endif */
+	/* #ifdef WEB */
+	/* 竖向百分比按父宽解析，宽视口下表单会被推出视口；取视口高与原值较小者封顶（S6 WEB 端实测后再定去留） */
+	margin-top: min(20vh, 40%);
+	/* #endif */
+}
+
+.auth-content {
+	width: 100%;
+}
+
+.auth-title {
+	font-size: var(--lh-text-2xl);
+	font-weight: bold;
+	line-height: var(--lh-leading-tight);
+	color: var(--lh-emphasis-color);
+	margin-bottom: var(--lh-gap-lg);
+}
+
+/* 断连提示与注册入口互斥单槽（防跳动）：外层定高等于按钮行，状态切换零位移 */
+.tip-slot {
+	height: var(--lh-button-height);
+	justify-content: center;
+	align-items: flex-start;
+	margin-bottom: var(--lh-gap-sm);
+}
+
+/* 表单项与登录按钮的间距包裹（间距属页面布局，组件根隔离不承接页面类内部样式） */
+.auth-field {
+	margin-top: var(--lh-gap-xl);
+}
+
+/* 登录页输入卡片覆盖：隔离 2.0 单根组件外部 class 落根节点（官方明文），覆盖组件默认高度圆角 */
+.auth-item {
+	height: 45px;
+	border-radius: var(--lh-radius-full);
+}
+
+/* 前置图标（uni-icons 单 text 根落 class）：tertiary 色自适应暗色 */
+.auth-icon {
+	font-size: 18px;
+	color: var(--lh-tertiary-color);
+}
+
+.login-btn-wrap {
+	margin-top: var(--lh-gap-3xl);
+}
+
+/* 内置 button 覆盖：对齐登录页视觉（type=primary 自带 loading 转圈/点击态） */
+.auth-btn {
+	width: 100%;
+	height: 45px;
+	border-radius: var(--lh-radius-full);
+	background-color: var(--lh-primary);
+	font-size: 16px;
+	color: #ffffff;
+}
+
+.remember-row {
+	margin-top: var(--lh-gap-xl);
+	flex-direction: row;
+	align-items: center;
+}
+
+.reg-row {
+	flex-direction: row;
+	align-items: center;
+}
+
+.text-font {
+	font-size: var(--lh-text-base);
+}
+
+.text-btn {
+	font-size: var(--lh-text-base);
+	color: var(--lh-primary);
+	margin-left: var(--lh-gap-xs);
+}
+
+.err-msg {
+	color: var(--lh-danger);
+}
+
+/* 协议行常驻底部（x 端键盘覆盖不推挤布局，无需键盘联动显隐） */
+.auth-protocol {
+	position: fixed;
+	bottom: var(--lh-gap-3xl);
+	left: 0;
+	right: 0;
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+}
+
+.protocol-row {
+	flex-direction: row;
+	align-items: center;
+}
+
+.protocol-text {
+	margin-left: var(--lh-gap-xs);
+	color: var(--lh-tertiary-color);
+	font-size: var(--lh-text-base);
+}

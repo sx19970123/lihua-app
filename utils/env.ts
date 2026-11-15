@@ -1,6 +1,6 @@
 // 环境地址切换（uni-app x 仅支持 NODE_ENV 两态，编译期摇树死分支）
-const DEV_API = 'http://192.168.31.223:8085'
-const DEV_WS = 'ws://192.168.31.223:8085/ws-connect'
+const DEV_API = 'http://192.168.31.240:8085'
+const DEV_WS = 'ws://192.168.31.240:8085/ws-connect'
 const PROD_API = 'https://lihua.xyz/prod-api'
 const PROD_WS = 'wss://lihua.xyz/ws-connect'
 

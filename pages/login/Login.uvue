@@ -1,0 +1,383 @@
+<template>
+	<view class="safe-top">
+		<view class="auth-body page-padding">
+			<view class="auth-content">
+				<text class="auth-title">欢迎登录狸花猫</text>
+				<!-- 断连提示与注册入口互斥单槽（防跳动）：外层定高，状态切换零位移 -->
+				<view class="tip-slot">
+					<text class="text-font err-msg" v-if="serverConnectionFailed" @click="reload">连接服务器失败，点击重试</text>
+					<view class="reg-row" v-else-if="isRegistrationEnable">
+						<text class="text-font">没有账号？</text>
+						<text class="text-btn" @click="toRegister">快速注册</text>
+					</view>
+				</view>
+
+				<view class="auth-field">
+					<app-input class="auth-item" placeholder="用户名" v-model="loginData.username" clearable>
+						<template #prepend>
+							<uni-icons class="auth-icon" type="person" />
+						</template>
+					</app-input>
+				</view>
+
+				<view class="auth-field">
+					<app-input class="auth-item" placeholder="密码" password v-model="loginData.password" clearable>
+						<template #prepend>
+							<uni-icons class="auth-icon" type="locked" />
+						</template>
+					</app-input>
+				</view>
+
+				<view class="remember-row">
+					<app-checkbox v-model:checked="enableRememberMe" label="记住账号" />
+				</view>
+
+				<view class="login-btn-wrap">
+					<button class="auth-btn" type="primary" :loading="loginLoading" @click="handleLoginClick">登 录</button>
+				</view>
+			</view>
+
+			<!-- 协议行常驻底部：x 端键盘覆盖不推挤布局，无需键盘联动显隐。
+			     整行为点击区（勾选/取消），仅两个链接文字 @click.stop 走跳转不参与勾选 -->
+			<view class="auth-protocol">
+				<view class="protocol-row" @click="toggleProtocol">
+					<app-checkbox v-model:checked="checkProtocol" />
+					<text class="protocol-text">我已阅读并同意</text>
+					<text class="text-btn" @click.stop="toUserAgreement">用户协议</text>
+					<text class="protocol-text">与</text>
+					<text class="text-btn" @click.stop="toPrivacyPolicy">隐私政策</text>
+				</view>
+			</view>
+
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+import { useSettingStore } from '@/stores/setting'
+import type { LoginType } from '@/api/system/authentication/type/login-type'
+import { toast, toastRequestError } from '@/utils/toast'
+import { rememberMe, getRememberedInfo } from '@/helpers/remember'
+import { setToken, removeToken } from '@/helpers/token'
+import { setData as setUserSetupData, clearData as clearUserSetupData } from '@/helpers/user-setup'
+import { queryPostLoginCheckData } from '@/api/system/profile/profile'
+import { login } from "@/api/system/authentication/authentication"
+import AppInput from '@/components/app-input/app-input.uvue'
+import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+
+type ProtocolPendingAction = (() => void | Promise<void>) | null
+
+const settingStore = useSettingStore()
+
+/**
+ * 登录相关
+ */
+const initLogin = () => {
+	const loginData = ref<LoginType>({username: '', password: ''})
+	const loginLoading = ref<boolean>(false)
+
+	// 检查登录信息是否填写完整
+	const checkLoginData = (afterAgree?: () => void | Promise<void>) => {
+		const data = loginData.value
+
+		if (!data.username) {
+			toast("请输入用户名")
+			return false
+		}
+
+		if (!data.password) {
+			toast("请输入密码")
+			return false
+		}
+
+		if (!checkProtocol.value) {
+			openProtocolDialog(afterAgree)
+			return false
+		}
+
+		return true
+	}
+
+	// 用户登录
+	const handleLogin = async (captchaVerification?: string) => {
+		// 检查表单是否填写完整
+		if (!checkLoginData(() => handleLogin(captchaVerification))) {
+			return
+		}
+
+		try {
+			loginLoading.value = true
+			loginData.value.captchaVerification = captchaVerification
+			const resp = await login(loginData.value)
+			// 登录成功
+			if (resp.code === 200) {
+				setToken(resp.data)
+				// 处理记住账号
+				handleRememberMe()
+				// 登录后校验编排：失败已回滚登录态留在登录页，成功已导航
+				await routeAfterCheck()
+			} else {
+				toast(resp.msg)
+			}
+		} catch (err) {
+			// 凭据错误(401)请求层已 toast 且不再跳转，此处兜底提示其余失败（网络异常等）并保留表单已输入内容
+			console.error(err)
+			toastRequestError(err)
+		} finally {
+			loginLoading.value = false
+		}
+	}
+
+	return { loginData, loginLoading, checkLoginData, handleLogin }
+}
+
+const { loginData, loginLoading, checkLoginData, handleLogin } = initLogin()
+
+/**
+ * 记住我相关
+ */
+const initRememberMe = () => {
+	const enableRememberMe = ref<boolean>(false)
+
+	// 获取记住我信息
+	const initRememberMeInfo = () => {
+		const rememberedInfo = getRememberedInfo()
+		if (rememberedInfo) {
+			enableRememberMe.value = true
+			loginData.value = rememberedInfo
+		} else {
+			enableRememberMe.value = false
+		}
+	}
+
+	// 处理记住我
+	const handleRememberMe = () => {
+		const {username, password} = loginData.value
+		rememberMe(enableRememberMe.value, username, password)
+	}
+
+	return { enableRememberMe, initRememberMeInfo, handleRememberMe }
+}
+
+const { enableRememberMe, initRememberMeInfo, handleRememberMe } = initRememberMe()
+
+/**
+ * 验证码相关
+ */
+const initCaptcha = () => {
+	// 是否启用验证码（取自设置 store）
+	const isEnableCaptcha = computed(() => settingStore.enableCaptcha)
+	// 基础设置拉取失败态（断连提示源，重试入口=reload）
+	const serverConnectionFailed = ref<boolean>(false)
+
+	// 拉取基础设置（验证码/注册开关），失败置连接失败态供重试
+	const captcha = async () => {
+		try {
+			await settingStore.initBaseSetting()
+			serverConnectionFailed.value = false
+		} catch(err) {
+			console.error("captcha 拉取失败===>", err)
+			serverConnectionFailed.value = true
+		}
+	}
+
+	// 打开验证码
+	const openCaptcha = () => {
+		// 检查表单是否填写完整
+		if (!checkLoginData(() => openCaptcha())) {
+			return
+		}
+		// Captcha 组件未迁移（④压轴）：表单完整但验证码未就绪，占位提示
+		toast('验证码待迁移，登录暂不可用')
+	}
+
+	// 登录按钮点击分发：验证码开启走验证码链路
+	const handleLoginClick = () => {
+		if (isEnableCaptcha.value) {
+			openCaptcha()
+		} else {
+			handleLogin()
+		}
+	}
+
+	// 断连重试编排：重拉设置+回显 remember/协议状态+重挂注册成功事件
+	const reload = () => {
+		uni.$off('registerSuccess', onRegisterSuccess)
+		captcha()
+		initRememberMeInfo()
+		initProtocolStatus()
+		uni.$on('registerSuccess', onRegisterSuccess)
+	}
+
+	return { isEnableCaptcha, serverConnectionFailed, captcha, reload, handleLoginClick }
+}
+
+const { isEnableCaptcha, serverConnectionFailed, captcha, reload, handleLoginClick } = initCaptcha()
+
+/**
+ * 注册相关
+ */
+const initRegister = () => {
+	// 是否启用用户注册（取自设置 store）
+	const isRegistrationEnable = computed(() => settingStore.enableSignUp)
+
+	// 前往注册
+	const toRegister = () => {
+		if (!checkProtocol.value) {
+			openProtocolDialog(toRegister)
+			return
+		}
+		// Register 页未迁移（P1 同模式复制）
+		toast('注册页待迁移')
+	}
+
+	// 监听注册成功返回数据
+	const onRegisterSuccess = (username: string) => {
+		loginData.value = {username, password: ''}
+		rememberMe(false)
+		enableRememberMe.value = false
+		nextTick(() => toast("注册成功，用户名已自动代入", 2500))
+	}
+
+	return { isRegistrationEnable, toRegister, onRegisterSuccess }
+}
+
+const { isRegistrationEnable, toRegister, onRegisterSuccess } = initRegister()
+
+/**
+ * 登录后校验编排（对齐 web index.vue 的 initUserSetup 块：校验项获取→向导/首页分支）
+ */
+const initPostLoginCheck = () => {
+	// 登录后校验待补全项：null 表示校验失败（超时/异常），与空数组（无需补全）区分
+	const getPostLoginCheckItems = async (): Promise<string[] | null> => {
+		try {
+			const resp = await queryPostLoginCheckData()
+			return resp.code === 200 ? (resp.data ?? []) : null
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
+			return null
+		}
+	}
+
+	// 校验通过后的去向：失败回滚登录态留在登录页（登录流程原子性，防止跳过信息补全进首页），
+	// 有待补全项进初始设置向导，无则清历史残留进首页。返回 false=校验失败已回滚
+	const routeAfterCheck = async (): Promise<boolean> => {
+		const checkItems = await getPostLoginCheckItems()
+		if (checkItems === null) {
+			removeToken()
+			return false
+		}
+		if (checkItems.length > 0) {
+			// 向导页未迁移（S2-11）：暂存待补全项回首页，向导迁入后由路由守卫拉回（S2-03 接线）
+			setUserSetupData(checkItems)
+			toast('存在 ' + checkItems.length + ' 项待补全信息，向导页迁移后生效')
+			uni.reLaunch({ url: '/pages/index/index' })
+		} else {
+			clearUserSetupData()
+			uni.reLaunch({ url: '/pages/index/index' })
+		}
+		return true
+	}
+
+	return { routeAfterCheck }
+}
+
+const { routeAfterCheck } = initPostLoginCheck()
+
+/**
+ * 用户协议相关
+ */
+const initProtocol = () => {
+	// 缓存key常量
+	const key = "lihua_protocol"
+	const checkProtocol = ref<boolean>(false)
+	let pendingProtocolAction: ProtocolPendingAction = null
+
+	// 缓存用户协议勾选状态
+	const cacheProtocol = () => {
+		if (checkProtocol.value) {
+			uni.setStorageSync(key, checkProtocol.value)
+		} else {
+			uni.removeStorageSync(key)
+		}
+	}
+
+	// 回显用户协议勾选状态
+	const initProtocolStatus = () => {
+		checkProtocol.value = !!uni.getStorageSync(key)
+	}
+
+	// 打开协议确认弹窗（uni.showModal 原生 dialogPage 实现），并记录确认后需要继续执行的动作
+	const openProtocolDialog = (action?: () => void | Promise<void>) => {
+		pendingProtocolAction = action || null
+		uni.showModal({
+			title: "请同意协议",
+			content: "我已阅读并同意用户协议与隐私政策",
+			cancelText: "不同意",
+			confirmText: "同意",
+			cancelColor: "#74787c",
+			confirmColor: "#3b82f6",
+			success: (res) => {
+				if (res.confirm) {
+					handleProtocolConfirm()
+				} else {
+					handleProtocolCancel()
+				}
+			}
+		})
+	}
+
+	// 取消协议确认
+	const handleProtocolCancel = () => {
+		pendingProtocolAction = null
+	}
+
+	// 同意协议后继续执行触发弹窗前的操作
+	const handleProtocolConfirm = () => {
+		checkProtocol.value = true
+		cacheProtocol()
+
+		const action = pendingProtocolAction
+		pendingProtocolAction = null
+		if (action) {
+			void action()
+		}
+	}
+
+	// 前往隐私政策
+	const toPrivacyPolicy = () => {
+		// 协议页未迁移（原分包页随拍平方案 S6 后重排）
+		toast('协议页待迁移')
+	}
+
+	// 前往用户协议
+	const toUserAgreement = () => {
+		// 协议页未迁移（原分包页随拍平方案 S6 后重排）
+		toast('协议页待迁移')
+	}
+
+	// 整行点击翻转勾选（行内仅两个链接文字 .stop 走跳转）
+	const toggleProtocol = () => {
+		checkProtocol.value = !checkProtocol.value
+		cacheProtocol()
+	}
+
+	return { checkProtocol, openProtocolDialog, cacheProtocol, initProtocolStatus, handleProtocolConfirm, toggleProtocol, toUserAgreement, toPrivacyPolicy }
+}
+
+const { checkProtocol, openProtocolDialog, cacheProtocol, initProtocolStatus, handleProtocolConfirm, toggleProtocol, toUserAgreement, toPrivacyPolicy } = initProtocol()
+
+// 生命周期（skill 约定：不进工厂，留 setup 顶层引用工厂产物）
+onMounted(() => {
+	reload()
+})
+
+onUnmounted(() => {
+	uni.$off('registerSuccess', onRegisterSuccess)
+})
+</script>
+
+<style lang="scss">
+@import "@/styles/auth.scss";
+</style>

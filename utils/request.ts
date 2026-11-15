@@ -101,6 +101,7 @@ const request = <T>(config: RequestConfig): Promise<ResponseType<T>> => {
 				after<T>(res.statusCode, res.data, resolve, reject)
 			},
 			fail: (err) => {
+				console.error("请求失败===>", err)
 				reject(new ResponseError(500, err.errMsg))
 			}
 		})
@@ -139,6 +140,7 @@ export const attachmentUpload = <T>(config: {url: string, filePath: string, name
 				}
 			},
 			fail: (err) => {
+				console.error("请求失败===>", err)
 				reject(new ResponseError(500, err.errMsg))
 			}
 		})
