@@ -1,10 +1,16 @@
 <template>
-	<view v-if="visible" class="lh-cap-mask" @touchmove="onMaskTouchMove">
+	<view v-if="visible" class="lh-cap-mask" :class="{ 'lh-cap-mask--in': entered }" @touchmove="onMaskTouchMove">
 		<view class="lh-cap-card" :class="sizeClass">
-			<!-- 右上操作区：POW 无刷新入口（自动流程） -->
-			<view class="lh-cap-opts" v-if="!captchaLoading && !loadingError">
+			<!-- 右上操作区：POW 无刷新入口（自动流程）；滑切/加载中淡出（常驻节点 opacity 过渡，v-if 无法过渡） -->
+			<view class="lh-cap-opts" :class="{ 'lh-cap-opts--show': optsVisible }">
 				<uni-icons v-if="type !== 'POW'" class="lh-cap-opts-icon" type="refreshempty" @click="refresh(false)" />
 				<uni-icons class="lh-cap-opts-icon" type="closeempty" @click="close()" />
+			</view>
+
+			<!-- 切换期间中央 loading：仅滑出+等响应阶段显示，滑入即藏免遮挡 -->
+			<view v-if="slidePhase === 'out'" class="lh-cap-switch-loading">
+				<view class="lh-cap-spinner"></view>
+				<text class="lh-cap-zone-text">正在加载...</text>
 			</view>
 
 			<!-- 加载 / 错误 -->
@@ -14,8 +20,8 @@
 			</view>
 			<text v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">{{ loadingError }}，点击重试</text>
 
-			<!-- 工作量证明（POW）：滑动触发 → 挖矿 → 对勾/红叉 + 底部填充 -->
-			<view v-else-if="type === 'POW'" class="lh-cap-pow">
+			<!-- 工作量证明（POW）：滑动触发 → 挖矿 → 对勾/红叉 + 底部填充；:key 换码重建防 transform 残留 -->
+			<view v-else-if="type === 'POW'" :key="'pow-' + captchaId" class="lh-cap-pow" :class="slideClass">
 				<text class="lh-cap-tip">安全校验</text>
 				<view v-if="powPhase === 'slide'" class="lh-cap-track">
 					<text class="lh-cap-track-text">按住滑块，拖到最右</text>
@@ -40,11 +46,10 @@
 				<view v-else-if="powPhase === 'fail'" class="lh-cap-fill lh-cap-fill-no"></view>
 			</view>
 
-			<!-- 图形四类型 -->
-			<view v-else class="lh-cap-graphic">
+				<!-- 图形四类型；:key 换码重建防 transform 残留 -->
+				<view v-else :key="'graphic-' + captchaId" class="lh-cap-graphic" :class="slideClass">
 				<text class="lh-cap-tip">{{ type === 'WORD_IMAGE_CLICK' ? '请依次点击文字' : '拖动滑块完成拼图' }}</text>
 				<view v-if="type === 'WORD_IMAGE_CLICK'" class="lh-cap-click-tips">
-					<text class="lh-cap-click-label">请依次点击:</text>
 					<image class="lh-cap-click-hint" :src="sliderImage" mode="scaleToFill" />
 				</view>
 				<view class="lh-cap-image-wrap">
@@ -121,6 +126,10 @@
 	const DRAG_END = CONTENT_WIDTH - THUMB_SIZE
 
 	const visible = ref<boolean>(false)
+	// 进场态：Vapor 无 animation-fill-mode，animation 插入帧会闪终态；改初始即起点+class 切换过渡
+	const entered = ref<boolean>(false)
+	// 刷新切换相位：out=旧内容右滑出，in=新容器（:key 重建）首帧停左侧待滑入
+	const slidePhase = ref<'idle' | 'out' | 'in'>('idle')
 	const captchaLoading = ref<boolean>(false)
 	const loadingError = ref<string>()
 	const type = ref<CaptchaResponseData['type']>()
@@ -158,6 +167,8 @@
 
 	const clamp = (v : number, min : number, max : number) : number => v < min ? min : v > max ? max : v
 
+	const sleep = (ms : number) : Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
+
 	// 图块宽度兜底：响应缺 templateImageWidth/Height 时（部分类型不返回），用加载后自然比例算
 	const onPieceLoad = (e : ImageLoadEvent) => {
 		if (pieceWidth.value > 0) {
@@ -180,6 +191,10 @@
 		}
 		// #endif
 		visible.value = true
+		// 渲染出起点态（遮罩透明/卡片缩小）后下一拍再切进场态，触发 transition 渐入
+		nextTick(() => {
+			entered.value = true
+		})
 		getCaptcha()
 	}
 
@@ -203,6 +218,8 @@
 	}
 
 	const resetState = () => {
+		entered.value = false
+		slidePhase.value = 'idle'
 		type.value = undefined
 		captchaId.value = ''
 		trackArr.value = []
@@ -226,11 +243,18 @@
 
 	// ---------- 取码 ----------
 
-	const getCaptcha = async () => {
-		captchaLoading.value = true
+	// slide=true 走滑切流：旧内容右滑出与请求并行 → 换数据（:key 重建容器）→ 新内容从左滑入；
+	// Vapor 端 class 切换替换 animation 不可靠（终态残留卡右侧），全部改 transition+节点重建
+	const getCaptcha = async (slide : boolean = false) => {
+		if (slide) {
+			slidePhase.value = 'out'
+		} else {
+			captchaLoading.value = true
+		}
 		loadingError.value = undefined
 		try {
-			const resp = await getCaptchaData()
+			const job = getCaptchaData()
+			const resp = slide ? (await Promise.all([job, sleep(300)]))[0] : await job
 			if (resp.code !== 200 || !resp.data) {
 				throw new Error(`code=${resp.code}`)
 			}
@@ -264,6 +288,23 @@
 		}
 		// 同类型刷新时轨道节点不重建，直驱位移显式归位
 		resetVisual()
+		if (slide) {
+			// 失败直接回 idle 露错误态；成功：容器以 prep 态（左侧外）重建，移除 class 由 transition 滑入
+			if (loadingError.value) {
+				slidePhase.value = 'idle'
+				return
+			}
+			slidePhase.value = 'in'
+			await nextTick()
+			slidePhase.value = 'idle'
+			await sleep(300)
+			// 点选：滑入静止后量蒙层（动画中量绝对坐标带偏移必错）
+			if (type.value === 'WORD_IMAGE_CLICK') {
+				await nextTick()
+				await measureMask()
+			}
+			return
+		}
 		// 点选：内容渲染完成后量蒙层绝对位置（轨迹换算基准），失败按 0 兜底（轨迹偏移可容忍一次刷新）
 		if (!loadingError.value && type.value === 'WORD_IMAGE_CLICK') {
 			await nextTick()
@@ -601,8 +642,9 @@
 		clickCount.value = 0
 		trackArr.value = []
 		powPhase.value = 'slide'
-		if (!isClose && !captchaLoading.value) {
-			getCaptcha()
+		// 切换动画进行中不重入；已有内容时走滑切流（含 POW/验证失败自动刷新），首开/错误重试走全卡 loading
+		if (!isClose && !captchaLoading.value && slidePhase.value === 'idle') {
+			getCaptcha(type.value !== undefined && !loadingError.value)
 		}
 	}
 
@@ -616,11 +658,26 @@
 	})
 
 	const sizeClass = computed(() : string => {
+		let cls = ''
 		if (captchaLoading.value || loadingError.value) {
-			return 'lh-cap-card--loading'
+			cls = 'lh-cap-card--loading'
+		} else {
+			cls = type.value === 'POW' ? 'lh-cap-card--pow' : 'lh-cap-card--graphic'
 		}
-		return type.value === 'POW' ? 'lh-cap-card--pow' : 'lh-cap-card--graphic'
+		if (entered.value) {
+			cls += ' lh-cap-card--in'
+		}
+		return cls
 	})
+
+	const slideClass = computed(() : string => {
+		if (slidePhase.value === 'out') {
+			return 'lh-cap-slide-out'
+		}
+		return slidePhase.value === 'in' ? 'lh-cap-slide-prep' : ''
+	})
+
+	const optsVisible = computed(() : boolean => !captchaLoading.value && !loadingError.value && slidePhase.value === 'idle')
 
 	// ---------- 生命周期 ----------
 
@@ -659,7 +716,8 @@
 		background-color: rgba(0, 0, 0, 0.5);
 		justify-content: center;
 		align-items: center;
-		animation: lh-cap-fade 200ms ease-out;
+		opacity: 0;
+		transition: opacity 200ms ease-out;
 		/* #ifndef APP || WEB */
 		position: fixed;
 		top: 0;
@@ -668,14 +726,8 @@
 		/* #endif */
 	}
 
-	@keyframes lh-cap-fade {
-		from {
-			opacity: 0;
-		}
-
-		to {
-			opacity: 1;
-		}
+	.lh-cap-mask--in {
+		opacity: 1;
 	}
 
 	.lh-cap-card {
@@ -683,23 +735,16 @@
 		width: 320px;
 		border-radius: var(--lh-radius, 12px);
 		background-color: var(--lh-emphasis-bg, #ffffff);
-		box-shadow: var(--lh-shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.1));
+		/* 浮层软影：单层大弥散中等透明度 */
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 		padding: 16px;
 		overflow: hidden;
-		transition: height 300ms ease;
-		animation: lh-cap-pop 250ms ease-out;
+		transform: scale(0.92);
+		transition: height 300ms ease, transform 250ms ease-out;
 	}
 
-	@keyframes lh-cap-pop {
-		from {
-			transform: scale(0.92);
-			opacity: 0;
-		}
-
-		to {
-			transform: scale(1);
-			opacity: 1;
-		}
+	.lh-cap-card--in {
+		transform: scale(1);
 	}
 
 	.lh-cap-card--loading {
@@ -722,6 +767,14 @@
 		z-index: 20;
 		flex-direction: row;
 		align-items: center;
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 200ms ease;
+	}
+
+	.lh-cap-opts--show {
+		opacity: 1;
+		pointer-events: auto;
 	}
 
 	.lh-cap-opts-icon {
@@ -774,6 +827,7 @@
 	/* POW */
 	.lh-cap-pow {
 		flex: 1;
+		transition: transform 300ms ease-out;
 	}
 
 	.lh-cap-pow-zone {
@@ -845,6 +899,29 @@
 	/* 图形类 */
 	.lh-cap-graphic {
 		flex: 1;
+		transition: transform 300ms ease-out;
+	}
+
+	/* 刷新滑切：旧内容右滑出 / 新内容（:key 重建）首帧停左侧再滑入；
+		位移显式 px（Vapor 百分比不可靠）；滑距 320=容器起点16+宽288+余量16，确保完全出卡片可视区 */
+	.lh-cap-slide-out {
+		transform: translateX(320px);
+	}
+
+	.lh-cap-slide-prep {
+		transform: translateX(-320px);
+	}
+
+	.lh-cap-switch-loading {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		z-index: 15;
 	}
 
 	.lh-cap-tip {
@@ -857,13 +934,7 @@
 	.lh-cap-click-tips {
 		flex-direction: row;
 		align-items: center;
-		justify-content: space-between;
 		margin-bottom: 8px;
-	}
-
-	.lh-cap-click-label {
-		font-size: 13px;
-		color: var(--lh-secondary-color, #1f2329);
 	}
 
 	.lh-cap-click-hint {
@@ -936,6 +1007,7 @@
 
 
 	/* 结果横条（图形类，图片区底部） */
+	/* 结果横条：层级高于点选序号/蒙层与校验阻断层（z10）；自然态=上滑动画起点（下缘外），防插入闪现 */
 	.lh-cap-status {
 		position: absolute;
 		left: 0;
@@ -944,6 +1016,15 @@
 		height: 24px;
 		justify-content: center;
 		align-items: center;
+		z-index: 11;
+		transform: translateY(24px);
+		animation: lh-cap-status-up 200ms ease-out forwards;
+	}
+
+	@keyframes lh-cap-status-up {
+		to {
+			transform: translateY(0);
+		}
 	}
 
 	.lh-cap-status-ok {

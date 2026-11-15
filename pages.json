@@ -24,7 +24,8 @@
 			"path": "pages/captcha/captcha",
 			"style": {
 				"navigationStyle": "custom",
-				"disableScroll": true
+				"disableScroll": true,
+				"backgroundColorContent": "transparent"
 			}
 		}
 		// #endif
