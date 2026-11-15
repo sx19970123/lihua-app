@@ -1,4 +1,4 @@
-import { MineSlice } from '../interface.uts'
+import { MineSlice, PrepareEngine, EngineName } from '../interface.uts'
 import { PowMiner } from 'uts.sdk.modules.lihuaPow'
 
 /**
@@ -11,4 +11,15 @@ export const mineSlice : MineSlice = function (saltHex : string, targetHex : str
         return -2
     }
     return PowMiner.mineSliceKotlin(saltHex, targetHex, start, maxTries)
+}
+
+/**
+ * 原生引擎恒就绪
+ */
+export const prepareEngine : PrepareEngine = function () : Promise<boolean> {
+    return Promise.resolve(true)
+}
+
+export const engineName : EngineName = function () : string {
+    return "native"
 }

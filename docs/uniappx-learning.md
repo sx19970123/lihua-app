@@ -316,3 +316,13 @@ Login.uvue 按"顶层零散装"重构，六工厂+声明顺序（依赖决定）
 2. **对拍验证脚本要防「低难度首命中失真」**——以 digest(nonce) 前 N 位构造 target 时，低难度（如 1 位 hex=1/16 命中率）下构造 nonce 之前天然存在更早命中者，mineSlice「首命中」语义返回更小值是正确行为却被误判 FAIL；验证须用高难度（8 位=1/2³² 前例命中可忽略）+双断言（返回值 digest 真匹配 target）
 
 **微信 iOS 真机纯 JS POW 水位 ≈15s**（26 万次哈希，~17k H/s，JSCore 无 JIT）——已知物理水位非 bug；处置=S6 验证码分端配置（3.1.0 已有能力）：小程序端不配 POW 配图形验证码，或服务端下发低难度 powParam。wx worker 旧方案只保 UI 不卡不缩时长，不作主案。对比 App UTS 原生 220ms=**70 倍差距**，是原生路线价值的实测注脚。
+
+### 补记 22：POW 引擎四端定态 + 小程序无 WASM 实锤 + 两个工程教训（④ 尖峰 wasm 优化轮）
+
+**引擎四端定态**（插件目录显式对称，无根回退）：app-android=Kotlin MessageDigest（~1300ms 骁龙660）/ app-ios=Swift CryptoKit（80-220ms）/ **web=hash-wasm**（浏览器恒有 WebAssembly，node 参考 8800 万 H/s，插件唯一 import 处）/ **mp-weixin=恒纯 JS**（iOS 真机 ~15s，分端配置规避）。
+
+**小程序逻辑层全线无 WebAssembly（实锤定案）**：hash-wasm 自身环境探测抛 `WebAssembly is not supported in this environment!`（stack=createSHA256→WASMInterface），iOS/Android/**开发者工具模拟环境**一致无此全局——旧仓「小程序 iOS 无 WASM」扩展为全端无，平台级事实不可修。连带定案：**wx.createWorker 上限 1 个=并行计算不可行**（worker 只保 UI 不缩时长，同引擎同吞吐）；小程序 POW 提速唯一出路=端配置（分端配置不配 POW / 降难度参数），客户端已无事可做。
+
+**工程教训一（writer 串扰 bug）**：同文件内 wasm 段（55B BUF）与纯 JS 段（64B BLOCK）曾共用一套 writeAscii/writeNonce——回退 JS 时盐值写进 BUF 而 compress 读 BLOCK，digest 全错对拍必炸。**两段各持缓冲就各配一套 writer，勿为省行数合并**（旧仓两文件各自带 writer 正是此意）。
+
+**工程教训二（回退路径按回退形态测）**：wasm 链首轮本地验证先跑 prepareEngine 再测——wasm 分支全过而回退分支从未真正执行，串扰 bug 漏网到真机。**回退路径必须以「不初始化加速引擎」的形态单独跑 harness**。

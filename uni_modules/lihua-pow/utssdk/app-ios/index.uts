@@ -1,4 +1,4 @@
-import { MineSlice } from '../interface.uts'
+import { MineSlice, PrepareEngine, EngineName } from '../interface.uts'
 
 /**
  * 分片挖矿：CryptoKit 实现
@@ -10,4 +10,15 @@ export const mineSlice : MineSlice = function (saltHex : string, targetHex : str
         return -2
     }
     return PowMiner.mineSliceSwift(saltHex = saltHex, targetHex = targetHex, start = start, maxTries = maxTries)
+}
+
+/**
+ * 原生引擎恒就绪
+ */
+export const prepareEngine : PrepareEngine = function () : Promise<boolean> {
+    return Promise.resolve(true)
+}
+
+export const engineName : EngineName = function () : string {
+    return "native"
 }

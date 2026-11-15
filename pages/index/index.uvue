@@ -22,6 +22,7 @@
 		<view class="card">
 			<text class="label">POW · UTS 原生挖矿端到端（④ 尖峰：对拍→取码→挖矿→提交）</text>
 			<text class="value">状态：{{ powState }}</text>
+			<text class="value">引擎：{{ powEngine }}</text>
 			<text class="value">进度：{{ powProgress }}</text>
 			<text class="value">耗时：{{ powTiming }}</text>
 			<text class="value">对拍：{{ powCrossCheck }}</text>
@@ -35,7 +36,7 @@ import { useCounterStore } from '@/stores/counter'
 import { BASE_API, IS_DEV } from '@/utils/env'
 import { getCaptchaData, check } from '@/api/system/captcha/captcha'
 import { sha256Hex, mineSlice as mineSliceJs, prngHex } from '@/utils/pow/sha256'
-import { mineSlice } from '@/uni_modules/lihua-pow'
+import { mineSlice, prepareEngine, engineName } from '@/uni_modules/lihua-pow'
 
 const counter = useCounterStore()
 const baseUrl = BASE_API
@@ -54,6 +55,7 @@ const powState = ref('未执行')
 const powProgress = ref('—')
 const powTiming = ref('—')
 const powCrossCheck = ref('—')
+const powEngine = ref('—')
 const powRunning = ref(false)
 const SLICE_TRIES = 50000
 
@@ -71,11 +73,16 @@ const runPow = async () => {
 		return
 	}
 	powRunning.value = true
-	powState.value = '对拍自检中...'
+	powState.value = '引擎准备...'
 	powProgress.value = '—'
 	powTiming.value = '—'
 	powCrossCheck.value = '—'
+	powEngine.value = '—'
 	try {
+		// 引擎准备：App=原生恒就绪；Web/微信=wasm 可用则加速，否则纯 JS 回退
+		await prepareEngine()
+		powEngine.value = engineName()
+
 		// 对拍：以真实摘要构造必然命中的 target，JS/UTS 两引擎必须返回同一 nonce
 		const probeSalt = 'e5f60718a1b2c3d4'
 		const probeNonce = 12345

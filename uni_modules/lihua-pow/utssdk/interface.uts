@@ -4,3 +4,13 @@
  * 与 utils/pow/sha256.ts 纯 JS 版同签名同语义（真机对拍基准）
  */
 export type MineSlice = (saltHex : string, targetHex : string, start : number, maxTries : number) => number
+
+/**
+ * 引擎准备：初始化加速引擎（wasm）；返回 false=环境不支持，已回退纯 JS
+ */
+export type PrepareEngine = () => Promise<boolean>
+
+/**
+ * 当前引擎名（native=App 原生 / wasm=WebAssembly 加速 / js=纯 JS 回退）
+ */
+export type EngineName = () => string
