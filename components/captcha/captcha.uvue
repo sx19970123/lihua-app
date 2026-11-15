@@ -22,30 +22,26 @@
 				</view>
 				<text v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">{{ loadingError }}，点击重试</text>
 
-				<!-- 工作量证明（POW）：滑动触发 → 挖矿 → 对勾/红叉 + 底部填充；:key 换码重建防 transform 残留 -->
+				<!-- 工作量证明（POW）：轨道全程保留——滑动→挖矿（钮变 spinner）→彩带结果；:key 换码重建防 transform 残留 -->
 				<view v-else-if="type === 'POW'" :key="'pow-' + captchaId" class="lh-cap-pow" :class="slideClass">
 					<text class="lh-cap-tip">安全校验</text>
-					<view v-if="powPhase === 'slide'" class="lh-cap-track">
-						<text class="lh-cap-track-text">按住滑块，拖到最右</text>
+					<view class="lh-cap-track">
+						<text class="lh-cap-track-text">{{ powPhase === 'slide' ? '按住滑块，拖到最右' : '正在验证...' }}</text>
+						<!-- 结果彩带：从左向右铺满轨道，文案铺满后淡入 -->
+						<view v-if="powPhase === 'success' || powPhase === 'fail'"
+							class="lh-cap-ribbon" :class="powPhase === 'success' ? 'lh-cap-ribbon-ok' : 'lh-cap-ribbon-no'">
+							<text class="lh-cap-ribbon-text">{{ powPhase === 'success' ? '验证成功' : powFailMsg }}</text>
+						</view>
 						<view class="lh-cap-unit" ref="powUnitEl" @touchstart="onPowTouchStart"
 							@touchmove="onPowTouchMove" @touchend="onPowTouchEnd" @touchcancel="onPowTouchCancel">
-							<view class="lh-cap-unit-fill"></view>
-							<view class="lh-cap-unit-thumb">
-								<uni-icons class="lh-cap-unit-thumb-icon" type="arrow-right" />
+							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-fill"></view>
+							<!-- 结果期彩带铺满轨道，滑块随之隐藏（拖到中途时钮杵在彩带上观感怪） -->
+							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-thumb">
+								<view v-if="powPhase === 'mining'" class="lh-cap-thumb-spinner"></view>
+								<uni-icons v-else class="lh-cap-unit-thumb-icon" type="arrow-right" />
 							</view>
 						</view>
 					</view>
-					<view v-else class="lh-cap-zone lh-cap-pow-zone">
-						<view v-if="powPhase === 'mining'" class="lh-cap-spinner lh-cap-spinner-lg"></view>
-						<view v-else class="lh-cap-badge" :class="powPhase === 'success' ? 'lh-cap-badge-ok' : 'lh-cap-badge-no'">
-							<uni-icons class="lh-cap-badge-icon"
-								:type="powPhase === 'success' ? 'checkmarkempty' : 'closeempty'" />
-						</view>
-						<text class="lh-cap-zone-text">{{ powCenterText }}</text>
-					</view>
-					<!-- 底部结果填充条：从左向右铺满后关闭/刷新 -->
-					<view v-if="powPhase === 'success'" class="lh-cap-fill lh-cap-fill-ok"></view>
-					<view v-else-if="powPhase === 'fail'" class="lh-cap-fill lh-cap-fill-no"></view>
 				</view>
 
 					<!-- 图形四类型；:key 换码重建防 transform 残留 -->
@@ -71,8 +67,9 @@
 							<image class="lh-cap-slider-img" :style="{ width: (pieceWidth || 180) + 'px' }"
 								:src="sliderImage" mode="scaleToFill" @load="onPieceLoad" />
 						</view>
-						<!-- 结果横条（图形类沿用旧形态，底部弹出） -->
-						<view v-if="showResult" class="lh-cap-status" :class="resultOk ? 'lh-cap-status-ok' : 'lh-cap-status-no'">
+						<!-- 结果横条：仅点选（无轨道）沿用图片底部滑入形态 -->
+						<view v-if="showResult && type === 'WORD_IMAGE_CLICK'" class="lh-cap-status"
+							:class="resultOk ? 'lh-cap-status-ok' : 'lh-cap-status-no'">
 							<text class="lh-cap-status-text">{{ resultMsg }}</text>
 						</view>
 						<!-- 点选蒙层：touchend 取坐标（click 事件无可靠坐标） -->
@@ -84,12 +81,18 @@
 						</view>
 					</view>
 					<view v-if="type !== 'WORD_IMAGE_CLICK'" class="lh-cap-track">
-						<text class="lh-cap-track-text">向右拖动完成验证</text>
+						<text class="lh-cap-track-text">{{ verifying ? '正在验证...' : '向右拖动完成验证' }}</text>
+						<!-- 结果彩带：从左向右铺满轨道，文案铺满后淡入 -->
+						<view v-if="showResult" class="lh-cap-ribbon" :class="resultOk ? 'lh-cap-ribbon-ok' : 'lh-cap-ribbon-no'">
+							<text class="lh-cap-ribbon-text">{{ resultMsg }}</text>
+						</view>
 						<view class="lh-cap-unit" ref="dragUnitEl" @touchstart="onDragStart"
 							@touchmove="onDragMove" @touchend="onDragEnd" @touchcancel="onDragCancel">
-							<view class="lh-cap-unit-fill"></view>
-							<view class="lh-cap-unit-thumb">
-								<uni-icons class="lh-cap-unit-thumb-icon" type="arrow-right" />
+							<view v-if="!showResult" class="lh-cap-unit-fill"></view>
+							<!-- 结果期彩带铺满轨道，滑块随之隐藏（拖到中途时钮杵在彩带上观感怪） -->
+							<view v-if="!showResult" class="lh-cap-unit-thumb">
+								<view v-if="verifying" class="lh-cap-thumb-spinner"></view>
+								<uni-icons v-else class="lh-cap-unit-thumb-icon" type="arrow-right" />
 							</view>
 						</view>
 					</view>
@@ -262,11 +265,9 @@
 				throw new Error(`code=${resp.code}`)
 			}
 			const d = resp.data
-			// 滑切：赋值前先切 in，新容器（:key 重建）首渲染即 prep 左外态；
-			// 若首渲染带 out 再切 in，+320→-320 会被容器 transition 过渡成从右往左横穿
-			if (slide) {
-				slidePhase.value = 'in'
-			}
+			// 赋值前切 in：容器首渲染（打开=v-if 切入/滑切=:key 重建）即 prep 左外态，统一左滑入场；
+			// 滑切流若首渲染带 out 再切 in，位移跳变会被容器 transition 过渡成从右往左横穿
+			slidePhase.value = 'in'
 			type.value = d.type
 			captchaId.value = d.id
 			backgroundImage.value = d.backgroundImage ?? ''
@@ -311,6 +312,12 @@
 				await measureMask()
 			}
 			return
+		}
+		// 打开流：内容（prep 态已渲染）左滑入场，静止后补点选量测（动画中量绝对坐标带偏移必错）
+		if (!loadingError.value) {
+			await nextTick()
+			slidePhase.value = 'idle'
+			await sleep(300)
 		}
 		// 点选：内容渲染完成后量蒙层绝对位置（轨迹换算基准），失败按 0 兜底（轨迹偏移可容忍一次刷新）
 		if (!loadingError.value && type.value === 'WORD_IMAGE_CLICK') {
@@ -657,13 +664,6 @@
 
 	// ---------- 视图派生 ----------
 
-	const powCenterText = computed(() : string => {
-		if (powPhase.value === 'mining') {
-			return '正在验证'
-		}
-		return powPhase.value === 'success' ? '验证成功' : powFailMsg.value
-	})
-
 	const sizeClass = computed(() : string => {
 		let cls = ''
 		if (captchaLoading.value || loadingError.value) {
@@ -819,12 +819,6 @@
 		animation: lh-cap-rotate 0.8s linear infinite;
 	}
 
-	.lh-cap-spinner-lg {
-		width: 32px;
-		height: 32px;
-		border-width: 3px;
-	}
-
 	@keyframes lh-cap-rotate {
 		to {
 			transform: rotate(360deg);
@@ -845,70 +839,59 @@
 		transition: transform 300ms ease-out;
 	}
 
-	.lh-cap-pow-zone {
-		margin-top: 8px;
-	}
-
-	.lh-cap-badge {
-		width: 44px;
-		height: 44px;
-		border-radius: 50%;
+	/* 轨道结果彩带：从左向右铺满（显式 px），文案铺满后淡入（自然态=动画起点防插入闪现）；
+		右端 20px 圆头=滚动推进的圆头、铺满时与轨道右端圆弧贴合（同金带端头形态） */
+	.lh-cap-ribbon {
+		position: absolute;
+		top: 0;
+		left: 0;
+		height: 40px;
+		width: 0;
+		border-radius: 0 20px 20px 0;
 		justify-content: center;
 		align-items: center;
-		animation: lh-cap-badge-in 250ms ease-out forwards;
+		animation: lh-cap-ribbon 250ms ease-out forwards;
 	}
 
-	.lh-cap-badge-ok {
+	.lh-cap-ribbon-ok {
 		background-color: #5ac725;
 	}
 
-	.lh-cap-badge-no {
+	.lh-cap-ribbon-no {
 		background-color: #f56c6c;
 	}
 
-	.lh-cap-badge-icon {
-		font-size: 26px;
+	.lh-cap-ribbon-text {
+		font-size: 13px;
 		color: #ffffff;
+		opacity: 0;
+		animation: lh-cap-ribbon-text 300ms ease 250ms forwards;
 	}
 
-	@keyframes lh-cap-badge-in {
-		from {
-			transform: scale(0.4);
-			opacity: 0;
-		}
-
-		to {
-			transform: scale(1);
-			opacity: 1;
-		}
-	}
-
-	/* 底部结果填充条：从左向右铺满 */
-	.lh-cap-fill {
-		position: absolute;
-		left: 0;
-		bottom: 0;
-		height: 28px;
-		width: 0;
-		animation: lh-cap-fill 400ms ease-out forwards;
-	}
-
-	.lh-cap-fill-ok {
-		background-color: #5ac725;
-	}
-
-	.lh-cap-fill-no {
-		background-color: #f56c6c;
-	}
-
-	@keyframes lh-cap-fill {
+	@keyframes lh-cap-ribbon {
 		from {
 			width: 0;
 		}
 
 		to {
-			width: 100%;
+			width: 288px;
 		}
+	}
+
+	@keyframes lh-cap-ribbon-text {
+		to {
+			opacity: 1;
+		}
+	}
+
+	/* 滑块钮验证态：挖矿中白圈 spinner（结果期滑块整体隐藏，见 template） */
+	.lh-cap-thumb-spinner {
+		width: 20px;
+		height: 20px;
+		border: 2px solid rgba(255, 255, 255, 0.35);
+		border-top-color: #ffffff;
+		border-radius: 50%;
+		animation: lh-cap-rotate 0.8s linear infinite;
 	}
 
 	/* 图形类 */
@@ -1175,11 +1158,11 @@
 			background-color: #2a6fc7;
 		}
 
-		.lh-cap-fill-ok {
+		.lh-cap-ribbon-ok {
 			background-color: #306317;
 		}
 
-		.lh-cap-fill-no {
+		.lh-cap-ribbon-no {
 			background-color: #7e2e2f;
 		}
 	}
