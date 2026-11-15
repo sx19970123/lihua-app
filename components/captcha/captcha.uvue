@@ -163,6 +163,8 @@
 	const heightFlip = ref<boolean>(false)
 	// 刷新切换相位：out=旧内容右滑出，in=新容器（:key 重建）首帧停左侧待滑入
 	const slidePhase = ref<'idle' | 'out' | 'in'>('idle')
+	// 滑入动画放行标志：容器渲染稳定后再挂动画 class（延后启动防首帧渲染拥塞吃动画）
+	const contentAnim = ref<boolean>(false)
 	const captchaLoading = ref<boolean>(false)
 	const loadingError = ref<string>()
 	const type = ref<CaptchaResponseData['type']>()
@@ -255,6 +257,7 @@
 	const resetState = () => {
 		entered.value = false
 		slidePhase.value = 'idle'
+		contentAnim.value = false
 		heightAnim.value = ''
 		type.value = undefined
 		captchaId.value = ''
@@ -282,13 +285,15 @@
 	// slide=true 走滑切流：旧内容右滑出与请求并行 → 换数据（:key 重建容器）→ 新内容从左滑入；
 	// Vapor 端 class 切换替换 animation 不可靠（终态残留卡右侧），全部改 transition+节点重建
 	const getCaptcha = async (slide : boolean = false) => {
-		const prevHeight = (captchaLoading.value || loadingError.value) ? 296 : (type.value === 'POW' ? 136 : 296)
+		const prevHeight = (captchaLoading.value || loadingError.value) ? 298 : (type.value === 'POW' ? 136 : 298)
 		if (slide) {
 			slidePhase.value = 'out'
 			// #ifndef MP-WEIXIN
 			// 滑出直驱（与滑块回弹同构）：class 切换驱动的 transform 过渡在 Vapor 端跳变，不可用
 			contentEl.value?.style.setProperty('transform', 'translateX(288px)')
 			// #endif
+			// 新容器以无动画 class 出生（渲染稳定后滑切尾再放行）
+			contentAnim.value = false
 		} else {
 			captchaLoading.value = true
 		}
@@ -303,7 +308,7 @@
 			// POW↔图形跨高：高度动画在空窗期独占播放（交替 class 强制重建——card 常驻节点同 class 复挂
 			// 在 Vapor 不重触发动画，首开连贯后续跳变的根因）；播完经赋值帧（静态类切目标高度=填充值）摘除，
 			// 滑入期间 card 无活跃 animation（父级动画层会吞子容器 transition——安卓滑入丢失根因）
-			const targetHeight = (d.type === 'POW') ? 136 : 296
+			const targetHeight = (d.type === 'POW') ? 136 : 298
 			const crossHeight = slide && targetHeight !== prevHeight
 			if (crossHeight) {
 				heightFlip.value = !heightFlip.value
@@ -354,11 +359,13 @@
 				slidePhase.value = 'idle'
 				return
 			}
+			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放（延后启动防首帧渲染拥塞吃动画；
+			// 后挂 animation 在安卓有 heightAnim 交替 class 先例；idle 沿用不摘——forwards 终态 0，
+			// 摘除回落静态起点 -288 会跳回左外）
 			await nextTick()
-			// 等一帧余量确保 prep 首帧绘制，再直驱 0 播放滑入
-			await sleep(50)
+			await sleep(80)
 			// #ifndef MP-WEIXIN
-			contentEl.value?.style.setProperty('transform', 'translateX(0px)')
+			contentAnim.value = true
 			// #endif
 			slidePhase.value = 'idle'
 			await sleep(300)
@@ -371,11 +378,13 @@
 		}
 		// 打开流：内容（prep 态已渲染）左滑入场，静止后补点选量测（动画中量绝对坐标带偏移必错）
 		if (!loadingError.value) {
+			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放（延后启动防首帧渲染拥塞吃动画；
+			// 后挂 animation 在安卓有 heightAnim 交替 class 先例；idle 沿用不摘——forwards 终态 0，
+			// 摘除回落静态起点 -288 会跳回左外）
 			await nextTick()
-			// 等一帧余量确保 prep 首帧绘制，再直驱 0 播放滑入
-			await sleep(50)
+			await sleep(80)
 			// #ifndef MP-WEIXIN
-			contentEl.value?.style.setProperty('transform', 'translateX(0px)')
+			contentAnim.value = true
 			// #endif
 			slidePhase.value = 'idle'
 			await sleep(300)
@@ -751,7 +760,13 @@
 		return slidePhase.value === 'out' ? 'lh-cap-mp-out' : 'lh-cap-mp-in'
 		// #endif
 		// #ifndef MP-WEIXIN
-		return ''
+		// App：滑入 keyframes（from -288=静态起点一致）；动画 class 由 contentAnim 延后挂载
+		// （出生帧与数据渲染解耦防首帧拥塞吃动画）；idle/滑切全程沿用不摘（forwards 终态 0，
+		// 摘除回落静态 -288 会跳回左外）；滑出走 setProperty 直驱（复挂场景 keyframes 不可靠）
+		if (slidePhase.value === 'out') {
+			return ''
+		}
+		return contentAnim.value ? 'lh-cap-slide-in' : ''
 		// #endif
 	})
 
@@ -828,11 +843,11 @@
 	}
 
 	.lh-cap-card--loading {
-		height: 296px;
+		height: 298px;
 	}
 
 	.lh-cap-card--graphic {
-		height: 296px;
+		height: 298px;
 	}
 
 	.lh-cap-card--pow {
@@ -860,7 +875,7 @@
 
 	@keyframes lh-cap-h-shrink-a {
 		from {
-			height: 296px;
+			height: 298px;
 		}
 
 		to {
@@ -870,7 +885,7 @@
 
 	@keyframes lh-cap-h-shrink-b {
 		from {
-			height: 296px;
+			height: 298px;
 		}
 
 		to {
@@ -884,7 +899,7 @@
 		}
 
 		to {
-			height: 296px;
+			height: 298px;
 		}
 	}
 
@@ -894,7 +909,7 @@
 		}
 
 		to {
-			height: 296px;
+			height: 298px;
 		}
 	}
 
@@ -914,6 +929,22 @@
 	.lh-cap-opts--show {
 		opacity: 1;
 		pointer-events: auto;
+	}
+
+	/* App/Web 滑入：keyframes 插入即播（from 与静态 style 起点一致无闪），安卓 transition 激活窗口
+		对新建节点不可靠【诊断实证】，animation 声明路径为彩带/高度动画同款零故障先例 */
+	.lh-cap-slide-in {
+		animation: lh-cap-slide-in 300ms ease-out forwards;
+	}
+
+	@keyframes lh-cap-slide-in {
+		from {
+			transform: translateX(-288px);
+		}
+
+		to {
+			transform: translateX(0);
+		}
 	}
 
 	/* #ifdef MP-WEIXIN */
@@ -1329,4 +1360,53 @@
 			background-color: #7e2e2f;
 		}
 	}
+
+	/*
+	 * ============================================================
+	 * 动效实现坑档案（2026-11 真机实测结论，鸿蒙版开发前必读）
+	 * ============================================================
+	 * 当前平台终态：App(iOS/Android Vapor)=静态 style 起点 -288 + 滑入 keyframes 延后挂载 +
+	 *   滑出 setProperty 直驱；微信(VDOM)=keyframes class 三态(mp-out/mp-in)；点选量测走
+	 *   ownerPage/ownerInstance getElementById。
+	 *
+	 * 【Vapor 端（App 双端）】
+	 * 1. animation-fill-mode 的 backwards/both 不支持（仅 forwards）——animation 插入节点
+	 *    会先闪一帧自然终态。插入型动画必须「自然态=动画起点」：静态 style 起点，或 keyframes
+	 *    from 与自然态一致。
+	 * 2. class 切换驱动的 transform transition 不可靠：常驻节点同 class 复挂不重触发动画
+	 *    （解法=双 class 交替 a/b 强制值变化）；新建节点 class 变化跳变/吞动画。
+	 * 3. height/width 的 transition 三路全灭（class 挂载/:style 绑定/setProperty 直驱均不触发）；
+	 *    但 @keyframes 动画宽高 5.31+ 可行（h-shrink/h-grow 实证）。
+	 * 4. 安卓新建节点存在 transition 激活窗口：首绘后短窗内 setProperty 改值不触发过渡
+	 *    （iOS 无此窗；诊断实证 ref/起点/调用全正常仍不播）——动画一律走 keyframes class 声明，
+	 *    不走「起点态+改值触发 transition」。
+	 * 5. 动画 class 与数据赋值同帧挂载，首帧渲染拥塞（图片解码/分支切换）会吃掉动画前段
+	 *    →不连贯。动画 class 延后挂载（nextTick+80ms，渲染稳定后放行，contentAnim 标志）。
+	 * 6. 父级活跃 animation 会吞子容器的 transition（跨高滑切时 card 高度动画期间滑入丢失）
+	 *    →高度动画与滑入串行，不在同一时间窗共存。
+	 * 7. 动态绑定（:class/:style 三元）在安卓新节点首帧应用滞后，闪一帧自然态→静态 style
+	 *    属性（DOM 创建即生效）做起点锚。注意：微信端 mp-in 的触发依赖该静态 style 属性存在
+	 *    （删除后微信动画消失，机制未明，两端模板保持共享勿拆）。
+	 * 8. transform 位移显式 px（百分比基准不可靠）；关键常量：内容区 288、滑距 288、
+	 *    卡片高 298（图形/加载）/136（POW）——图形内容实高 297，盒子小于内容会静默裁切
+	 *    （曾致轨道被裁 1px，勿改回 296）。
+	 *
+	 * 【微信小程序端（VDOM 渲染，与 Vapor 行为不同）】
+	 * 9. 同分支 :key 重建 diff 不可靠（复用容器）：绑定值 out→in 跳变被 transition 过渡成
+	 *    横穿卡片。滑切动画用 keyframes class 声明即播（mp-out/mp-in），与节点复用解耦。
+	 * 10. pointer-events 在 WXSS 不生效；uni-icons 组件的 click 转发不可靠（点击挂外层 view）。
+	 * 11. selectorQuery/uni.getElementById 在业务页可用，但本组件量测走缓存实例
+	 *    （getCurrentInstance 异步上下文返回 null，onMounted 缓存 ownerInstance/ownerPage）。
+	 * 12. height transition 在微信浏览器内核天然可用（POW↔图形高度动画白赚）。
+	 *
+	 * 【通用】
+	 * 13. 滑距 288=内容区宽，裁切层 lh-cap-clip（overflow hidden，padding 内缘）保证内容
+	 *     碰边即消失；层级（低→高）：卡片背景 < 切换 loading(z1) < 内容裁切层(z2) <
+	 *     freeze 阻断(z10) < 结果横条(z11) < 操作区(z20)。
+	 * 14. POW 挖矿中刷新保持可用：stopJobs 取消标志在挖矿片间生效，无泄漏；慢平台真解法=
+	 *     分端配置（小程序端不配 POW，3.1.0 后台已支持）。
+	 * 15. 鸿蒙（Vapor）预期缺口（未验证，届时逐条实测）：@keyframes 兼容表标 x（仅 transition
+	 *     可用）→本文 keyframes 方案若不可用，回退方案=requestAnimationFrame 全端支持，
+	 *     JS 逐帧补间 setProperty；app-harmony 插件目录留白。
+	 */
 </style>
