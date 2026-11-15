@@ -361,10 +361,10 @@
 			}
 			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放（延后启动防首帧渲染拥塞吃动画；
 			// 后挂 animation 在安卓有 heightAnim 交替 class 先例；idle 沿用不摘——forwards 终态 0，
-			// 摘除回落静态起点 -288 会跳回左外）
-			await nextTick()
-			await sleep(80)
+			// 摘除回落静态起点 -288 会跳回左外）。勿换 requestAnimationFrame：实测炸流程白屏
 			// #ifndef MP-WEIXIN
+			await nextTick()
+			await sleep(32)
 			contentAnim.value = true
 			// #endif
 			slidePhase.value = 'idle'
@@ -380,10 +380,10 @@
 		if (!loadingError.value) {
 			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放（延后启动防首帧渲染拥塞吃动画；
 			// 后挂 animation 在安卓有 heightAnim 交替 class 先例；idle 沿用不摘——forwards 终态 0，
-			// 摘除回落静态起点 -288 会跳回左外）
-			await nextTick()
-			await sleep(80)
+			// 摘除回落静态起点 -288 会跳回左外）。勿换 requestAnimationFrame：实测炸流程白屏
 			// #ifndef MP-WEIXIN
+			await nextTick()
+			await sleep(32)
 			contentAnim.value = true
 			// #endif
 			slidePhase.value = 'idle'
@@ -934,7 +934,7 @@
 	/* App/Web 滑入：keyframes 插入即播（from 与静态 style 起点一致无闪），安卓 transition 激活窗口
 		对新建节点不可靠【诊断实证】，animation 声明路径为彩带/高度动画同款零故障先例 */
 	.lh-cap-slide-in {
-		animation: lh-cap-slide-in 300ms ease-out forwards;
+		animation: lh-cap-slide-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 	}
 
 	@keyframes lh-cap-slide-in {
@@ -1381,7 +1381,9 @@
 	 *    （iOS 无此窗；诊断实证 ref/起点/调用全正常仍不播）——动画一律走 keyframes class 声明，
 	 *    不走「起点态+改值触发 transition」。
 	 * 5. 动画 class 与数据赋值同帧挂载，首帧渲染拥塞（图片解码/分支切换）会吃掉动画前段
-	 *    →不连贯。动画 class 延后挂载（nextTick+80ms，渲染稳定后放行，contentAnim 标志）。
+	 *    →不连贯。动画 class 延后挂载（nextTick+32ms 两帧，contentAnim 标志）。
+	 *    勿换 requestAnimationFrame：uni.requestAnimationFrame 实测调用即炸流程（dialogPage
+	 *    透明页零内容白屏无报错，机制未明），固定 timeout 是实测可用形态。
 	 * 6. 父级活跃 animation 会吞子容器的 transition（跨高滑切时 card 高度动画期间滑入丢失）
 	 *    →高度动画与滑入串行，不在同一时间窗共存。
 	 * 7. 动态绑定（:class/:style 三元）在安卓新节点首帧应用滞后，闪一帧自然态→静态 style
