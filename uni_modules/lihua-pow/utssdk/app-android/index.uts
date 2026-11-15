@@ -1,0 +1,14 @@
+import { MineSlice } from '../interface.uts'
+import { PowMiner } from 'uts.sdk.modules.lihuaPow'
+
+/**
+ * 分片挖矿：原生 MessageDigest 实现
+ */
+export const mineSlice : MineSlice = function (saltHex : string, targetHex : string, start : number, maxTries : number) : number {
+    if (targetHex.length * 4 > 32) {
+        // UTS 函数类型无 throws 标注，超范围以 -2 哨兵返回（JS 版为 throw，调用方难度恒 ≤8 不可达）
+        console.error("POW 难度超出支持范围")
+        return -2
+    }
+    return PowMiner.mineSliceKotlin(saltHex, targetHex, start, maxTries)
+}

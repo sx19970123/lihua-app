@@ -3,7 +3,7 @@
 	"appid": "__UNI__78B419C",
 	"description": "",
 	"versionName": "1.0.1",
-	"versionCode": "101",
+	"versionCode": "102",
 	"uni-app-x": {
 		"vapor": true,
 		"styleIsolationVersion": "2",

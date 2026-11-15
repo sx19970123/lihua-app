@@ -19,12 +19,23 @@
 			<text class="label">导航 · 组件示例（E 轮后入个人中心）</text>
 			<button class="btn" type="primary" @tap="goDemo">前往组件示例</button>
 		</view>
+		<view class="card">
+			<text class="label">POW · UTS 原生挖矿端到端（④ 尖峰：对拍→取码→挖矿→提交）</text>
+			<text class="value">状态：{{ powState }}</text>
+			<text class="value">进度：{{ powProgress }}</text>
+			<text class="value">耗时：{{ powTiming }}</text>
+			<text class="value">对拍：{{ powCrossCheck }}</text>
+			<button class="btn" type="primary" :loading="powRunning" :disabled="powRunning" @tap="runPow">取码→挖矿→提交</button>
+		</view>
 	</view>
 </template>
 
 <script setup lang="ts">
 import { useCounterStore } from '@/stores/counter'
 import { BASE_API, IS_DEV } from '@/utils/env'
+import { getCaptchaData, check } from '@/api/system/captcha/captcha'
+import { sha256Hex, mineSlice as mineSliceJs, prngHex } from '@/utils/pow/sha256'
+import { mineSlice } from '@/uni_modules/lihua-pow'
 
 const counter = useCounterStore()
 const baseUrl = BASE_API
@@ -36,6 +47,116 @@ const goLogin = () => {
 
 const goDemo = () => {
 	uni.navigateTo({ url: '/pages/demo/demo' })
+}
+
+// ---------- POW 端到端（④ 尖峰）----------
+const powState = ref('未执行')
+const powProgress = ref('—')
+const powTiming = ref('—')
+const powCrossCheck = ref('—')
+const powRunning = ref(false)
+const SLICE_TRIES = 50000
+
+// ASCII 串转字节（POW 输入恒为 ASCII，sha256Hex 收 Uint8Array）
+const asciiBytes = (s : string) : Uint8Array => {
+	const bytes = new Uint8Array(s.length)
+	for (let i = 0; i < s.length; i++) {
+		bytes[i] = s.charCodeAt(i)
+	}
+	return bytes
+}
+
+const runPow = async () => {
+	if (powRunning.value) {
+		return
+	}
+	powRunning.value = true
+	powState.value = '对拍自检中...'
+	powProgress.value = '—'
+	powTiming.value = '—'
+	powCrossCheck.value = '—'
+	try {
+		// 对拍：以真实摘要构造必然命中的 target，JS/UTS 两引擎必须返回同一 nonce
+		const probeSalt = 'e5f60718a1b2c3d4'
+		const probeNonce = 12345
+		const probeTarget = sha256Hex(asciiBytes(probeSalt + probeNonce)).slice(0, 4)
+		const jsNonce = mineSliceJs(probeSalt, probeTarget, 0, 20000)
+		const probeStart = Date.now()
+		const utsNonce = mineSlice(probeSalt, probeTarget, 0, 20000)
+		const probeMs = Date.now() - probeStart
+		if (jsNonce !== probeNonce || utsNonce !== probeNonce) {
+			powCrossCheck.value = `不一致：JS=${jsNonce} UTS=${utsNonce} 期望=${probeNonce}`
+			powState.value = '对拍失败 ✗'
+			return
+		}
+		powCrossCheck.value = `JS=${jsNonce} UTS=${utsNonce} ✓（UTS 探针 ${probeMs}ms/2 万次）`
+
+		// 取验证码（后台需将验证码类型设为 POW）
+		powState.value = '请求验证码...'
+		const resp = await getCaptchaData()
+		if (resp.code !== 200 || !resp.data) {
+			powState.value = `获取失败 code=${resp.code}`
+			return
+		}
+		const captchaId = resp.data.id
+		const powParam = resp.data.data?.POW
+		if (resp.data.type !== 'POW' || !powParam) {
+			powState.value = `非 POW 类型（${resp.data.type ?? '未知'}），后台需切换验证码类型`
+			return
+		}
+		const [difficulty, saltLen, num] = powParam
+		const startTime = Date.now()
+		// 与后端 CapPowVerifier 同款派生：salt=prng(token+(i+1))、target=prng(token+(i+1)+"d")
+		const solutions : number[] = []
+		let solved = 0
+		let totalTries = 0
+		const miningStart = Date.now()
+		for (let i = 0; i < num; i++) {
+			const saltHex = prngHex(`${captchaId}${i + 1}`, saltLen)
+			const targetHex = prngHex(`${captchaId}${i + 1}d`, difficulty)
+			let cursor = 0
+			while (true) {
+				const found = mineSlice(saltHex, targetHex, cursor, SLICE_TRIES)
+				if (found >= 0) {
+					solutions.push(found)
+					totalTries += found - cursor + 1
+					solved++
+					powProgress.value = `${solved}/${num}`
+					break
+				}
+				cursor += SLICE_TRIES
+				totalTries += SLICE_TRIES
+				// 片间让出主线程，进度可见
+				await new Promise((r) => setTimeout(r, 0))
+			}
+		}
+		const miningMs = Date.now() - miningStart
+		powTiming.value = `${miningMs}ms（≈${(totalTries / 1000).toFixed(0)}k 次哈希，${(totalTries / miningMs).toFixed(0)} kH/s）`
+
+		// 提交校验（占位轨迹+固定宽高为后端公共前置校验要求，nonce 串在 data 字段）
+		powState.value = '提交校验...'
+		const checkResp = await check({
+			id: captchaId,
+			data: {
+				bgImageWidth: 318,
+				bgImageHeight: 180,
+				startTime: startTime,
+				stopTime: Date.now(),
+				trackList: [{ x: 0, y: 0, type: '', t: 0 }],
+				data: solutions.join('-')
+			}
+		})
+		if (checkResp.code === 200 && checkResp.success) {
+			powState.value = '验证通过 ✓'
+		} else {
+			powState.value = `验证失败 code=${checkResp.code} msg=${checkResp.msg}`
+		}
+	} catch (err) {
+		console.error('POW 测试异常', err)
+		powState.value = `异常：${err}`
+	} finally {
+		powRunning.value = false
+	}
 }
 </script>
 

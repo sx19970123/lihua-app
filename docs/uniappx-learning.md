@@ -294,3 +294,15 @@ Login.uvue 按"顶层零散装"重构，六工厂+声明顺序（依赖决定）
 ### 补记 19：安全区避让独立工具类 .safe-top（用户架构拍板）
 
 **分层原则=安全区语义与页面布局解耦**：common.scss 新增 `.safe-top { padding-top: var(--status-bar-height) }`（custom 导航页最外层挂载；padding 实现=等价 margin 且无父子折叠风险；Web 端变量为 0 天然退化）。auth-body 的 margin-top 40% 弃用（按页宽解析在横屏/iPad 分屏暴涨）改 120px 净距（状态栏由外层管）。MP 分支同步 120px（胶囊行 44px+状态栏 < 120px 安全区内无冲突）；WEB 分支保留 min(20vh,40%)（浏览器无状态栏，safe-top 天然退化）。内置变量 --status-bar-height 为官方 custom 导航推荐用法（App 4.61+ 自动响应变化）。
+
+### 补记 20：POW UTS 原生插件实战（④ 尖峰，双端实测通过）
+
+**插件形态**（原生混编规范）：`uni_modules/lihua-pow/utssdk/` 下 `interface.uts`（纯类型，无 export default/无 interface Uni{}）+ `app-android/{PowMiner.kt,index.uts}` + `app-ios/{PowMiner.swift,index.uts}`；Kotlin 包名=默认包名规范 `uts.sdk.modules.lihuaPow`（胶水层按包名 import）；设计=**挖矿循环整片下沉**（mineSlice(salt,target,start,maxTries) 一片 5 万次原生跑完，桥调用仅 1 次/片——现成 sha256(str) 型插件每 nonce 跨桥反而吃掉原生优势）。
+
+**编译磨错两坑（首轮 xcodebuild）**：
+1. **UTS 函数类型无 throws 概念**——胶水层 `throw new Error` 生成 Swift throwing 函数，赋给非 throwing 的 MineSlice 类型报 invalid conversion；修复=守卫改 -2 哨兵返回（JS 参考版保留 throw 不动）
+2. **Number.from 在 iOS 编译器只生成 String 重载**（文档示例 Number.from(Int) 与本机 5.34 实际不符）且字符串拼 number 不隐式转换；修复=Swift 函数直接返回 NSNumber（映射表原生口径），胶水层裸 return，日志不拼数字
+
+**基座机制实证**：Mac 真机运行（标准基座）时 UTS 插件由本地 xcodebuild **即时编译**进 app（unimoduleXxx target，需 Xcode 环境）——开发期无需打自定义基座；运行报 `undefined class: UTSSDKModulesXxxIndexSwift`=当前运行的基座里没有该插件（选错基座/旧基座），与 uni-network 缺模块同款签名。
+
+**双端实测**（尖峰页端到端：对拍自检→取码→挖矿→提交）：iOS（现代机）**80-220ms**、安卓骁龙660（2017 中端）**~1300ms**，门槛 2s；对比旧纯 JS iOS 基线 6.5s（JSCore 无 JIT）提升 30-80 倍。对拍探针（真实摘要构造必然命中 target）双端 JS/UTS nonce 全等。原生路线结论=POW 这块硬骨头已消，验证码 UI 原生自绘可行性大增。

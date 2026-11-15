@@ -1,0 +1,17 @@
+{
+	"id": "lihua-pow",
+	"displayName": "lihua POW 挖矿",
+	"version": "1.0.0",
+	"description": "POW 工作量证明原生挖矿（SHA-256 整片下沉：Android MessageDigest / iOS CryptoKit）",
+	"keywords": [
+		"pow",
+		"sha256",
+		"captcha"
+	],
+	"engines": {
+		"HBuilderX": "^5.11"
+	},
+	"uni_modules": {
+		"dependencies": []
+	}
+}

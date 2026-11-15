@@ -1,0 +1,6 @@
+/**
+ * POW 分片挖矿函数类型：从 start 起最多尝试 maxTries 个 nonce，
+ * 命中（digest hex 前缀 === targetHex）返回该 nonce，未命中返回 -1。
+ * 与 utils/pow/sha256.ts 纯 JS 版同签名同语义（真机对拍基准）
+ */
+export type MineSlice = (saltHex : string, targetHex : string, start : number, maxTries : number) => number
