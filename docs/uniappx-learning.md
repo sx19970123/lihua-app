@@ -250,3 +250,22 @@ tool 显隐规则：clear 在 disabled/readonly 下隐藏；eye 在 disabled 下
 - **换**：Login.openProtocolDialog 直调 `uni.showModal`（title/content/cancelText「不同意」/confirmText「同意」/cancelColor tertiary/confirmColor 主题蓝，success 回调分流 handleProtocolConfirm/Cancel）——pendingProtocolAction 确认后续执行链路完整保留
 - **知识沉淀**：uni.showModal 内部就是官方 dialogPage 封装（返回 UniPage 也是 x 增强）；能力面=文案/双按钮/showCancel/按钮色/editable+placeholderText 输入弹窗（x 增强，S3 场景备用）；**容器视觉（宽度/圆角/遮罩/动画）不可定制**——那是 app-dialog 聚合方案的存在意义，方案已留档（dialogPage 文本 props 聚合+收起单点化+back 键取消），真出现富内容/容器定制需求按档重建
 - S2-01 弹窗基础件计划更新：app-dialog 退役 → **showConfirm（showModal 的 Promise 封装）**，S3 注销/改密确认直接用
+
+### 补记 13：app-checkbox 自建（用户反馈内置 checkbox 不好看，要求 sard 形态）
+
+sard checkbox 真实形态拆解（源码）：**不是自绘框+勾叠层，是 check-icon 单元素双态**——未选=灰空框（20px、1px fourth 色边框、圆角 0.15em≈3px），选中=**border-color transparent 框消失+纯 primary 色勾图标**（sari 字体）。x 端复刻：uni-icons `checkmarkempty` 替代 sari 勾（uni-icons 无 sard 那种一体双态框勾图标），框 view+勾 icon 条件渲染。app-checkbox=checked(v-model)+label+change 事件；内置 checkbox（foreColor 唯一定制点，形状/大小不可控）退役。暗色全走语义 token（fourth/primary/emphasis）。
+
+### 补记 14：app-checkbox 语义补齐 + checkbox-group（用户拍板三项+group）
+
+自绘 checkbox 语义面补齐三件：disabled（token 置灰+onClick 拦截）、点击态（touchstart/end 维护 pressed→opacity --lh-active-opacity，不用 hover-class=未查证）、aria（aria-role=checkbox+aria-label=label）——放弃项=form/checkbox-group 原生联动（手机弱需求，登记）。
+
+**app-checkbox-group（provide/inject 受控模式）**：子 checkbox inject 上下文后双模式——有 group=isChecked 随值集合（includes 闭包读 props 保响应性）+点击转 group.toggle(value→集合增减→update:modelValue+change)；无 group=独立 v-model:checked 现状。子项需 value prop（string）。横向布局不做 prop（纵向容器默认，横向=页面自排，不提前写）。group 级 disabled 传播未做（子项各自 disabled 已够）。
+
+### 补记 15：aria 属性赌输（编译 warn 实锤）
+
+自绘 checkbox 的 aria-role/aria-label 在 x view 上**无官方通道**（view/common 属性表全文无 aria；唯一相关 getAccessibilityInfo=识别辅助应用服务，与标注无关）——无障碍语义=自绘 view 的放弃项（与 form 联动同列）。属性已移除。
+
+### 补记 16：checked 可选化 + demo 页未来结构登记
+
+- group 模式下 checkbox 不传 checked（受控于集合）触发 Missing required prop warn——`checked?: boolean` 修正（group 分支不读该 prop，独立模式调用方均传）
+- **demo 页未来结构**（用户规划）：个人中心总入口（list 组件，S2-01）→ 二级菜单（title=组件名，list）→ 组件示例详情（checkbox/input 等）。当前平铺单页=临时形态，list 组件到位后重构

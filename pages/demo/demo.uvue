@@ -1,0 +1,66 @@
+<template>
+	<view class="page-padding">
+		<text class="title">组件示例</text>
+
+		<view class="card">
+			<text class="label">app-checkbox · 独立模式（v-model:checked）</text>
+			<view class="row">
+				<app-checkbox v-model:checked="single" label="记住账号" />
+			</view>
+			<text class="value">checked = {{ single }}</text>
+		</view>
+
+		<view class="card">
+			<text class="label">app-checkbox-group · 受控模式（v-model 值集合）</text>
+			<app-checkbox-group v-model="groupValues">
+				<app-checkbox value="a" label="选项 A" />
+				<app-checkbox value="b" label="选项 B" />
+				<app-checkbox value="c" label="选项 C（disabled）" disabled />
+			</app-checkbox-group>
+			<text class="value">selected = {{ groupValuesText }}</text>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+import AppCheckboxGroup from '@/components/app-checkbox-group/app-checkbox-group.uvue'
+
+// 独立模式
+const single = ref<boolean>(false)
+
+// group 受控模式（c 项 disabled 不可勾选）
+const groupValues = ref<string[]>([])
+
+const groupValuesText = computed(() => groupValues.value.length > 0 ? groupValues.value.join(', ') : '（空）')
+</script>
+
+<style>
+	.title {
+		font-size: 18px;
+		font-weight: bold;
+		color: var(--lh-emphasis-color);
+	}
+
+	.card {
+		margin-top: 16px;
+		padding: 12px;
+		background-color: var(--lh-input-bg, #ffffff);
+		border-radius: var(--lh-radius);
+	}
+
+	.label {
+		font-size: 13px;
+		color: var(--lh-tertiary-color);
+	}
+
+	.row {
+		margin-top: 12px;
+	}
+
+	.value {
+		margin-top: 8px;
+		font-size: 14px;
+		color: var(--lh-emphasis-color);
+	}
+</style>
