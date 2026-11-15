@@ -1,11 +1,20 @@
 <template>
 	<view v-if="visible" class="lh-cap-mask" :class="{ 'lh-cap-mask--in': entered }" @touchmove="onMaskTouchMove">
 		<view class="lh-cap-card" :class="sizeClass">
-			<!-- 右上操作区：滑切/加载中淡出（常驻节点 opacity 过渡，v-if 无法过渡） -->
+			<!-- 右上操作区：App/Web 常驻节点 opacity 过渡淡入淡出（v-if 无法过渡）；
+				微信端 pointer-events 在 WXSS 不生效，改 v-if 挂卸（直接显隐） -->
+			<!-- #ifndef MP-WEIXIN -->
 			<view class="lh-cap-opts" :class="{ 'lh-cap-opts--show': optsVisible }">
 				<uni-icons class="lh-cap-opts-icon" type="refreshempty" @click="refresh(false)" />
 				<uni-icons class="lh-cap-opts-icon" type="closeempty" @click="close()" />
 			</view>
+			<!-- #endif -->
+			<!-- #ifdef MP-WEIXIN -->
+			<view v-if="optsVisible" class="lh-cap-opts lh-cap-opts--show">
+				<uni-icons class="lh-cap-opts-icon" type="refreshempty" @click="refresh(false)" />
+				<uni-icons class="lh-cap-opts-icon" type="closeempty" @click="close()" />
+			</view>
+			<!-- #endif -->
 
 			<!-- 切换期间中央 loading：仅滑出+等响应阶段显示，滑入即藏免遮挡 -->
 			<view v-if="slidePhase === 'out'" class="lh-cap-switch-loading">
@@ -23,7 +32,10 @@
 				<text v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">{{ loadingError }}，点击重试</text>
 
 				<!-- 工作量证明（POW）：轨道全程保留——滑动→挖矿（钮变 spinner）→彩带结果；:key 换码重建防 transform 残留 -->
-				<view v-else-if="type === 'POW'" :key="'pow-' + captchaId" class="lh-cap-pow" :class="slideClass">
+				<!-- 静态 style 起点：Vapor 端（App/Web）DOM 创建即 -288（绑定 patch 在安卓首帧滞后必闪），setProperty 直驱；
+					微信端 VDOM 渲染 transition 可靠，:style 三态（全显式值）覆盖静态驱动（见 slideStyleMp） -->
+				<view v-else-if="type === 'POW'" :key="'pow-' + captchaId" class="lh-cap-pow"
+					style="transform: translateX(-288px)" :class="slideStyleMp" ref="contentEl">
 					<text class="lh-cap-tip">安全校验</text>
 					<view class="lh-cap-track">
 						<text class="lh-cap-track-text">{{ powPhase === 'slide' ? '按住滑块，拖到最右' : '正在验证...' }}</text>
@@ -45,7 +57,8 @@
 				</view>
 
 					<!-- 图形四类型；:key 换码重建防 transform 残留 -->
-					<view v-else :key="'graphic-' + captchaId" class="lh-cap-graphic" :class="slideClass">
+					<view v-else :key="'graphic-' + captchaId" class="lh-cap-graphic"
+						style="transform: translateX(-288px)" :class="slideStyleMp" ref="contentEl">
 					<text class="lh-cap-tip">{{ type === 'WORD_IMAGE_CLICK' ? '请依次点击文字' : '拖动滑块完成拼图' }}</text>
 					<view v-if="type === 'WORD_IMAGE_CLICK'" class="lh-cap-click-tips">
 						<image class="lh-cap-click-hint" :src="sliderImage" mode="scaleToFill" />
@@ -132,6 +145,8 @@
 	const DRAG_END = CONTENT_WIDTH - THUMB_SIZE
 
 	const visible = ref<boolean>(false)
+	// 内容容器（pow/graphic 二选一存在）：滑切位移 setProperty 直驱用
+	const contentEl = ref<any>(null)
 	// 进场态：Vapor 无 animation-fill-mode，animation 插入帧会闪终态；改初始即起点+class 切换过渡
 	const entered = ref<boolean>(false)
 	// 刷新切换相位：out=旧内容右滑出，in=新容器（:key 重建）首帧停左侧待滑入
@@ -170,6 +185,8 @@
 	// 所属页面实例（active 时=dialogPage）：getCurrentInstance 仅 setup/生命周期内可用，
 	// 点击回调里现取为 null，须挂载期缓存供 close 使用
 	let ownerPage : any = null
+	// 微信端（组件挂业务页）：挂载期缓存的组件实例，量测用（异步上下文取 getCurrentInstance 为 null）
+	let ownerInstance : any = null
 
 	const clamp = (v : number, min : number, max : number) : number => v < min ? min : v > max ? max : v
 
@@ -254,6 +271,10 @@
 	const getCaptcha = async (slide : boolean = false) => {
 		if (slide) {
 			slidePhase.value = 'out'
+			// #ifndef MP-WEIXIN
+			// 滑出直驱（与滑块回弹同构）：class 切换驱动的 transform 过渡在 Vapor 端跳变，不可用
+			contentEl.value?.style.setProperty('transform', 'translateX(288px)')
+			// #endif
 		} else {
 			captchaLoading.value = true
 		}
@@ -304,6 +325,11 @@
 				return
 			}
 			await nextTick()
+			// 等一帧余量确保 prep 首帧绘制，再直驱 0 播放滑入
+			await sleep(50)
+			// #ifndef MP-WEIXIN
+			contentEl.value?.style.setProperty('transform', 'translateX(0px)')
+			// #endif
 			slidePhase.value = 'idle'
 			await sleep(300)
 			// 点选：滑入静止后量蒙层（动画中量绝对坐标带偏移必错）
@@ -316,6 +342,11 @@
 		// 打开流：内容（prep 态已渲染）左滑入场，静止后补点选量测（动画中量绝对坐标带偏移必错）
 		if (!loadingError.value) {
 			await nextTick()
+			// 等一帧余量确保 prep 首帧绘制，再直驱 0 播放滑入
+			await sleep(50)
+			// #ifndef MP-WEIXIN
+			contentEl.value?.style.setProperty('transform', 'translateX(0px)')
+			// #endif
 			slidePhase.value = 'idle'
 			await sleep(300)
 		}
@@ -338,7 +369,7 @@
 				resolve()
 				return
 			}
-			uni.createSelectorQuery().in(getCurrentInstance()?.proxy).select('.lh-cap-click-mask').boundingClientRect().exec(ret => {
+			uni.createSelectorQuery().in(ownerInstance ?? getCurrentInstance()?.proxy).select('.lh-cap-click-mask').boundingClientRect().exec(ret => {
 				const r = ret[0] as { left : number, top : number } | null
 				if (r) {
 					maskRect.left = r.left
@@ -677,14 +708,19 @@
 		return cls
 	})
 
-	const slideClass = computed(() : string => {
-		if (slidePhase.value === 'out') {
-			return 'lh-cap-slide-out'
-		}
-		return slidePhase.value === 'in' ? 'lh-cap-slide-prep' : ''
-	})
-
 	const optsVisible = computed(() : boolean => !captchaLoading.value && !loadingError.value && slidePhase.value === 'idle')
+
+	// 微信端滑切位移：keyframes class 驱动（声明即播，与节点复用/绑定值过渡解耦——
+	// 同分支 :key 重建在微信 diff 不可靠，复用容器的绑定 out→in 跳变会被 transition 过渡成横穿）；
+	// idle 沿用 mp-in（forwards 终态 0 持续，换 '' 会让静态 -288 拉回）；App/Web 恒空串走 setProperty 直驱
+	const slideStyleMp = computed(() : string => {
+		// #ifdef MP-WEIXIN
+		return slidePhase.value === 'out' ? 'lh-cap-mp-out' : 'lh-cap-mp-in'
+		// #endif
+		// #ifndef MP-WEIXIN
+		return ''
+		// #endif
+	})
 
 	// ---------- 生命周期 ----------
 
@@ -700,6 +736,10 @@
 		} else {
 			ownerPage = getCurrentInstance()?.proxy?.$page ?? null
 		}
+		// #endif
+		// #ifdef MP-WEIXIN
+		// 组件挂业务页（proxy 直渲）：缓存组件实例供量测（异步上下文 getCurrentInstance 为 null）
+		ownerInstance = getCurrentInstance()?.proxy ?? null
 		// #endif
 	})
 
@@ -783,6 +823,37 @@
 		opacity: 1;
 		pointer-events: auto;
 	}
+
+	/* #ifdef MP-WEIXIN */
+	/* 微信端滑切位移：keyframes 声明即播（见 slideStyleMp）；from=静态起点一致无首帧闪，forwards 保终态 */
+	.lh-cap-mp-out {
+		animation: lh-cap-mp-out 300ms ease-out forwards;
+	}
+
+	.lh-cap-mp-in {
+		animation: lh-cap-mp-in 300ms ease-out forwards;
+	}
+
+	@keyframes lh-cap-mp-out {
+		from {
+			transform: translateX(0);
+		}
+
+		to {
+			transform: translateX(288px);
+		}
+	}
+
+	@keyframes lh-cap-mp-in {
+		from {
+			transform: translateX(-288px);
+		}
+
+		to {
+			transform: translateX(0);
+		}
+	}
+	/* #endif */
 
 	.lh-cap-opts-icon {
 		font-size: 20px;
@@ -900,15 +971,9 @@
 		transition: transform 300ms ease-out;
 	}
 
-	/* 刷新滑切：旧内容右滑出 / 新内容（:key 重建）首帧停左侧再滑入；
-		位移显式 px（Vapor 百分比不可靠）；滑距=内容区宽 288，出 lh-cap-clip 边缘（padding 内缘）即消失 */
-	.lh-cap-slide-out {
-		transform: translateX(288px);
-	}
-
-	.lh-cap-slide-prep {
-		transform: translateX(-288px);
-	}
+	/* 刷新滑切：位移全程 setProperty 直驱+transition（与滑块回弹同构、两端真机过线路径）；
+		起点=容器静态 style 属性 -288（DOM 创建即生效，绕开绑定 patch——动态 class/style 绑定
+		在安卓端新节点首帧滞后必闪 0 位；class 切换驱动的 transform 过渡在 x 端不可靠，均弃用） */
 
 	/* 层级（低→高）：卡片背景 < 切换 loading(z1) < 验证码内容模块(z2)——滑出/滑入的内容从 loading 上层划过 */
 	.lh-cap-switch-loading {
