@@ -3,16 +3,25 @@
 		<view class="lh-cap-card" :class="sizeClass">
 			<!-- 右上操作区：App/Web 常驻节点 opacity 过渡淡入淡出（v-if 无法过渡）；
 				微信端 pointer-events 在 WXSS 不生效，改 v-if 挂卸（直接显隐） -->
+			<!-- 点击挂外层 view：uni-icons 组件的 click 转发在微信端不可靠，view tap 全端可靠 -->
 			<!-- #ifndef MP-WEIXIN -->
 			<view class="lh-cap-opts" :class="{ 'lh-cap-opts--show': optsVisible }">
-				<uni-icons class="lh-cap-opts-icon" type="refreshempty" @click="refresh(false)" />
-				<uni-icons class="lh-cap-opts-icon" type="closeempty" @click="close()" />
+				<view class="lh-cap-opts-btn" @click="refresh(false)">
+					<uni-icons class="lh-cap-opts-icon" type="refreshempty" />
+				</view>
+				<view class="lh-cap-opts-btn" @click="close()">
+					<uni-icons class="lh-cap-opts-icon" type="closeempty" />
+				</view>
 			</view>
 			<!-- #endif -->
 			<!-- #ifdef MP-WEIXIN -->
 			<view v-if="optsVisible" class="lh-cap-opts lh-cap-opts--show">
-				<uni-icons class="lh-cap-opts-icon" type="refreshempty" @click="refresh(false)" />
-				<uni-icons class="lh-cap-opts-icon" type="closeempty" @click="close()" />
+				<view class="lh-cap-opts-btn" @click="refresh(false)">
+					<uni-icons class="lh-cap-opts-icon" type="refreshempty" />
+				</view>
+				<view class="lh-cap-opts-btn" @click="close()">
+					<uni-icons class="lh-cap-opts-icon" type="closeempty" />
+				</view>
 			</view>
 			<!-- #endif -->
 
@@ -149,6 +158,9 @@
 	const contentEl = ref<any>(null)
 	// 进场态：Vapor 无 animation-fill-mode，animation 插入帧会闪终态；改初始即起点+class 切换过渡
 	const entered = ref<boolean>(false)
+	// POW↔图形高度动画 class（a/b 交替强制重建，见 getCaptcha），并入 sizeClass 输出
+	const heightAnim = ref<string>('')
+	const heightFlip = ref<boolean>(false)
 	// 刷新切换相位：out=旧内容右滑出，in=新容器（:key 重建）首帧停左侧待滑入
 	const slidePhase = ref<'idle' | 'out' | 'in'>('idle')
 	const captchaLoading = ref<boolean>(false)
@@ -243,6 +255,7 @@
 	const resetState = () => {
 		entered.value = false
 		slidePhase.value = 'idle'
+		heightAnim.value = ''
 		type.value = undefined
 		captchaId.value = ''
 		trackArr.value = []
@@ -269,6 +282,7 @@
 	// slide=true 走滑切流：旧内容右滑出与请求并行 → 换数据（:key 重建容器）→ 新内容从左滑入；
 	// Vapor 端 class 切换替换 animation 不可靠（终态残留卡右侧），全部改 transition+节点重建
 	const getCaptcha = async (slide : boolean = false) => {
+		const prevHeight = (captchaLoading.value || loadingError.value) ? 296 : (type.value === 'POW' ? 136 : 296)
 		if (slide) {
 			slidePhase.value = 'out'
 			// #ifndef MP-WEIXIN
@@ -286,10 +300,26 @@
 				throw new Error(`code=${resp.code}`)
 			}
 			const d = resp.data
+			// POW↔图形跨高：高度动画在空窗期独占播放（交替 class 强制重建——card 常驻节点同 class 复挂
+			// 在 Vapor 不重触发动画，首开连贯后续跳变的根因）；播完经赋值帧（静态类切目标高度=填充值）摘除，
+			// 滑入期间 card 无活跃 animation（父级动画层会吞子容器 transition——安卓滑入丢失根因）
+			const targetHeight = (d.type === 'POW') ? 136 : 296
+			const crossHeight = slide && targetHeight !== prevHeight
+			if (crossHeight) {
+				heightFlip.value = !heightFlip.value
+				heightAnim.value = targetHeight > prevHeight
+					? (heightFlip.value ? 'lh-cap-h-grow-a' : 'lh-cap-h-grow-b')
+					: (heightFlip.value ? 'lh-cap-h-shrink-a' : 'lh-cap-h-shrink-b')
+				await sleep(120)
+			}
 			// 赋值前切 in：容器首渲染（打开=v-if 切入/滑切=:key 重建）即 prep 左外态，统一左滑入场；
 			// 滑切流若首渲染带 out 再切 in，位移跳变会被容器 transition 过渡成从右往左横穿
 			slidePhase.value = 'in'
 			type.value = d.type
+			if (crossHeight) {
+				await nextTick()
+				heightAnim.value = ''
+			}
 			captchaId.value = d.id
 			backgroundImage.value = d.backgroundImage ?? ''
 			sliderImage.value = d.templateImage ?? ''
@@ -705,6 +735,9 @@
 		if (entered.value) {
 			cls += ' lh-cap-card--in'
 		}
+		if (heightAnim.value) {
+			cls += ' ' + heightAnim.value
+		}
 		return cls
 	})
 
@@ -806,6 +839,65 @@
 		height: 136px;
 	}
 
+	/* POW↔图形高度过渡：keyframes 显式起止（Vapor 端 transition height 三路全灭，keyframes 宽高 5.31+ 支持）；
+		a/b 双 class 交替（keyframes 内容成对重复）——常驻节点同 class 复挂不重触发动画，交替保证每次 class 值必变；
+		播完经赋值帧（静态类切目标高度=填充值同值）摘除，滑入期间卡片无活跃 animation（父动画层吞子 transition） */
+	.lh-cap-h-shrink-a {
+		animation: lh-cap-h-shrink-a 100ms ease forwards;
+	}
+
+	.lh-cap-h-shrink-b {
+		animation: lh-cap-h-shrink-b 100ms ease forwards;
+	}
+
+	.lh-cap-h-grow-a {
+		animation: lh-cap-h-grow-a 100ms ease forwards;
+	}
+
+	.lh-cap-h-grow-b {
+		animation: lh-cap-h-grow-b 100ms ease forwards;
+	}
+
+	@keyframes lh-cap-h-shrink-a {
+		from {
+			height: 296px;
+		}
+
+		to {
+			height: 136px;
+		}
+	}
+
+	@keyframes lh-cap-h-shrink-b {
+		from {
+			height: 296px;
+		}
+
+		to {
+			height: 136px;
+		}
+	}
+
+	@keyframes lh-cap-h-grow-a {
+		from {
+			height: 136px;
+		}
+
+		to {
+			height: 296px;
+		}
+	}
+
+	@keyframes lh-cap-h-grow-b {
+		from {
+			height: 136px;
+		}
+
+		to {
+			height: 296px;
+		}
+	}
+
 	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点（旧版不遮操作区语义） */
 	.lh-cap-opts {
 		position: absolute;
@@ -854,6 +946,12 @@
 		}
 	}
 	/* #endif */
+
+	/* 点击热区容器（icon 本体不带事件，见 template 注释） */
+	.lh-cap-opts-btn {
+		justify-content: center;
+		align-items: center;
+	}
 
 	.lh-cap-opts-icon {
 		font-size: 20px;
