@@ -25,8 +25,9 @@
 			</view>
 			<!-- #endif -->
 
-			<!-- 切换期间中央 loading：仅滑出+等响应阶段显示，滑入即藏免遮挡 -->
-			<view v-if="slidePhase === 'out'" class="lh-cap-switch-loading">
+			<!-- 切换期间中央 loading：与滑出动画互斥——滑出完成且响应未到才显示（网络波动兜底），
+				数据到进 in 相位即藏 -->
+			<view v-if="slidePhase === 'waiting'" class="lh-cap-switch-loading">
 				<view class="lh-cap-spinner"></view>
 				<text class="lh-cap-zone-text">正在加载...</text>
 			</view>
@@ -47,11 +48,11 @@
 					style="transform: translateX(-288px)" :class="slideStyleMp" ref="contentEl">
 					<text class="lh-cap-tip">安全校验</text>
 					<view class="lh-cap-track">
-						<text class="lh-cap-track-text">{{ powPhase === 'slide' ? '按住滑块，拖到最右' : '正在验证...' }}</text>
+						<text class="lh-cap-track-text">{{ powTrackText }}</text>
 						<!-- 结果彩带：从左向右铺满轨道，文案铺满后淡入 -->
 						<view v-if="powPhase === 'success' || powPhase === 'fail'"
 							class="lh-cap-ribbon" :class="powPhase === 'success' ? 'lh-cap-ribbon-ok' : 'lh-cap-ribbon-no'">
-							<text class="lh-cap-ribbon-text">{{ powPhase === 'success' ? '验证成功' : powFailMsg }}</text>
+							<text class="lh-cap-ribbon-text">{{ powPhase === 'success' ? powSuccessMsg : powFailMsg }}</text>
 						</view>
 						<view class="lh-cap-unit" ref="powUnitEl" @touchstart="onPowTouchStart"
 							@touchmove="onPowTouchMove" @touchend="onPowTouchEnd" @touchcancel="onPowTouchCancel">
@@ -161,8 +162,9 @@
 	// POW↔图形高度动画 class（a/b 交替强制重建，见 getCaptcha），并入 sizeClass 输出
 	const heightAnim = ref<string>('')
 	const heightFlip = ref<boolean>(false)
-	// 刷新切换相位：out=旧内容右滑出，in=新容器（:key 重建）首帧停左侧待滑入
-	const slidePhase = ref<'idle' | 'out' | 'in'>('idle')
+	// 刷新切换相位：out=旧内容右滑出，waiting=滑出完成等响应（loading 唯一显示窗），
+	// in=新容器（:key 重建）首帧停左侧待滑入
+	const slidePhase = ref<'idle' | 'out' | 'waiting' | 'in'>('idle')
 	// 滑入动画放行标志：容器渲染稳定后再挂动画 class（延后启动防首帧渲染拥塞吃动画）
 	const contentAnim = ref<boolean>(false)
 	const captchaLoading = ref<boolean>(false)
@@ -187,6 +189,10 @@
 	const dragging = ref<boolean>(false)
 	const powPhase = ref<'slide' | 'mining' | 'success' | 'fail'>('slide')
 	const powFailMsg = ref<string>('验证失败，请重试')
+	// 挖矿进度（onProgress 百分比）与超时显示标志：>1s 才在「正在验证...」后追加括号进度
+	const powProgress = ref<number>(0)
+	const powShowProgress = ref<boolean>(false)
+	const powSuccessMsg = ref<string>('验证成功')
 
 	const showResult = ref<boolean>(false)
 	const resultOk = ref<boolean>(false)
@@ -300,7 +306,22 @@
 		loadingError.value = undefined
 		try {
 			const job = getCaptchaData()
-			const resp = slide ? (await Promise.all([job, sleep(300)]))[0] : await job
+			let resp
+			if (slide) {
+				// 滑出动画（300ms）与请求竞速：响应先到=全程无 loading（多数情况），
+				// 滑出先完成=waiting 相位补显示 loading（网络波动兜底）；响应先到也等滑出动画收尾
+				const slideDone = sleep(300)
+				const first = await Promise.race([job.then(() => 'job'), slideDone.then(() => 'slide')])
+				if (first === 'slide') {
+					slidePhase.value = 'waiting'
+					await slideDone
+				} else {
+					await slideDone
+				}
+				resp = await job
+			} else {
+				resp = await job
+			}
 			if (resp.code !== 200 || !resp.data) {
 				throw new Error(`code=${resp.code}`)
 			}
@@ -343,6 +364,8 @@
 			dragX.value = 0
 			powX.value = 0
 			powPhase.value = 'slide'
+			powProgress.value = 0
+			powShowProgress.value = false
 			showResult.value = false
 			verifying.value = false
 		} catch (err) {
@@ -554,11 +577,23 @@
 		}
 		powPhase.value = 'mining'
 		startTime.value = Date.now()
+		// 挖矿超 1s 才显示进度括号（快路径零打扰）；timer 走 verifyTimer 由 stopJobs 统一清理
+		verifyTimer = setTimeout(() => {
+			verifyTimer = undefined
+			powShowProgress.value = true
+		}, 1000)
 		try {
-			const handle = solvePow(id, param)
+			const handle = solvePow(id, param, (solved, total) => {
+				powProgress.value = Math.round(solved / total * 100)
+			})
 			cancelPowMining = handle.cancel
 			const customData = await handle.result
 			cancelPowMining = undefined
+			// 快路径（<1s）时超时显示 timer 尚未触发，先清防与结果倒计时互覆
+			if (verifyTimer !== undefined) {
+				clearTimeout(verifyTimer)
+				verifyTimer = undefined
+			}
 			// 空解=取消；代际不符=已刷新换码，丢弃过期解
 			if (!customData || captchaId.value !== id) {
 				return
@@ -675,6 +710,7 @@
 		check({ id, data }).then(resp => {
 			if (resp.code === 200 && resp.success) {
 				if (isPow) {
+					powSuccessMsg.value = `验证成功，耗时${(durationMs / 1000).toFixed(1)}秒`
 					powPhase.value = 'success'
 					// 填充 400ms + 驻留 1000ms 后关闭
 					verifyTimer = setTimeout(() => {
@@ -726,6 +762,8 @@
 		clickCount.value = 0
 		trackArr.value = []
 		powPhase.value = 'slide'
+		powProgress.value = 0
+		powShowProgress.value = false
 		// 切换动画进行中不重入；已有内容时走滑切流（含 POW/验证失败自动刷新），首开/错误重试走全卡 loading
 		if (!isClose && !captchaLoading.value && slidePhase.value === 'idle') {
 			getCaptcha(type.value !== undefined && !loadingError.value)
@@ -752,18 +790,34 @@
 
 	const optsVisible = computed(() : boolean => !captchaLoading.value && !loadingError.value && slidePhase.value === 'idle')
 
+	// POW 轨道文案：待滑/挖矿（超 1s 追加括号进度）/结果（文案已由彩带层接管，此层不显示）
+	const powTrackText = computed(() : string => {
+		if (powPhase.value === 'slide') {
+			return '按住滑块，拖到最右'
+		}
+		if (powPhase.value === 'mining' && powShowProgress.value) {
+			return `正在验证...（${powProgress.value}%）`
+		}
+		return '正在验证...'
+	})
+
 	// 微信端滑切位移：keyframes class 驱动（声明即播，与节点复用/绑定值过渡解耦——
 	// 同分支 :key 重建在微信 diff 不可靠，复用容器的绑定 out→in 跳变会被 transition 过渡成横穿）；
 	// idle 沿用 mp-in（forwards 终态 0 持续，换 '' 会让静态 -288 拉回）；App/Web 恒空串走 setProperty 直驱
 	const slideStyleMp = computed(() : string => {
 		// #ifdef MP-WEIXIN
-		return slidePhase.value === 'out' ? 'lh-cap-mp-out' : 'lh-cap-mp-in'
+		// out+waiting=mp-out（右滑出/waiting 停右外）；in+idle=mp-in（滑入/完成态 forwards 终态 0
+		// 持续——idle 若落 mp-out 会把滑出动画重播一遍致白屏，勿翻转语义）
+		if (slidePhase.value === 'out' || slidePhase.value === 'waiting') {
+			return 'lh-cap-mp-out'
+		}
+		return 'lh-cap-mp-in'
 		// #endif
 		// #ifndef MP-WEIXIN
 		// App：滑入 keyframes（from -288=静态起点一致）；动画 class 由 contentAnim 延后挂载
 		// （出生帧与数据渲染解耦防首帧拥塞吃动画）；idle/滑切全程沿用不摘（forwards 终态 0，
 		// 摘除回落静态 -288 会跳回左外）；滑出走 setProperty 直驱（复挂场景 keyframes 不可靠）
-		if (slidePhase.value === 'out') {
+		if (slidePhase.value === 'out' || slidePhase.value === 'waiting') {
 			return ''
 		}
 		return contentAnim.value ? 'lh-cap-slide-in' : ''
@@ -1396,6 +1450,8 @@
 	 * 【微信小程序端（VDOM 渲染，与 Vapor 行为不同）】
 	 * 9. 同分支 :key 重建 diff 不可靠（复用容器）：绑定值 out→in 跳变被 transition 过渡成
 	 *    横穿卡片。滑切动画用 keyframes class 声明即播（mp-out/mp-in），与节点复用解耦。
+	 *    相位→class 映射语义勿翻转：idle（滑入完成态）必须沿用 mp-in——曾把映射改为
+	 *    「非 in 即 mp-out」致 idle 重播滑出动画=内容滑出后整卡白屏（小程序白屏第三案）。
 	 * 10. pointer-events 在 WXSS 不生效；uni-icons 组件的 click 转发不可靠（点击挂外层 view）。
 	 * 11. selectorQuery/uni.getElementById 在业务页可用，但本组件量测走缓存实例
 	 *    （getCurrentInstance 异步上下文返回 null，onMounted 缓存 ownerInstance/ownerPage）。
