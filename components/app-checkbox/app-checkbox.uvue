@@ -15,8 +15,8 @@
 // 视觉：未选=灰空框（fourth 色 1px 边框圆角 3px），选中=主题色填满方块+白勾。
 // 双模式：inject 到 checkbox-group 上下文时受控于值集合（需 value prop），否则独立 v-model:checked
 const props = defineProps<{
-	// 勾选状态（独立模式 v-model:checked）
-	checked: boolean
+	// 勾选状态（独立模式 v-model:checked；group 模式下受控于值集合可不传）
+	checked?: boolean
 	// 文字标签（兼 aria-label）
 	label?: string
 	// group 模式下的选中标识
