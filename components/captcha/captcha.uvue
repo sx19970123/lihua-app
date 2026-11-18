@@ -39,7 +39,10 @@
 					<view class="lh-cap-spinner"></view>
 					<text class="lh-cap-zone-text">加载中...</text>
 				</view>
-				<text v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">{{ loadingError }}，点击重试</text>
+				<!-- view 承担居中（x 端 text 自身 flex 居中不生效），点击挂外层 -->
+				<view v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">
+					<text class="lh-cap-error-text">{{ loadingError }}，点击重试</text>
+				</view>
 
 				<!-- 工作量证明（POW）：轨道全程保留——滑动→挖矿（钮变 spinner）→彩带结果；:key 换码重建防 transform 残留 -->
 				<!-- 静态 style 起点：Vapor 端（App/Web）DOM 创建即 -288（绑定 patch 在安卓首帧滞后必闪），setProperty 直驱；
@@ -56,9 +59,9 @@
 						</view>
 						<view class="lh-cap-unit" ref="powUnitEl" @touchstart="onPowTouchStart"
 							@touchmove="onPowTouchMove" @touchend="onPowTouchEnd" @touchcancel="onPowTouchCancel">
-							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-fill"></view>
+							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-fill" :style="themeBg"></view>
 							<!-- 结果期彩带铺满轨道，滑块随之隐藏（拖到中途时钮杵在彩带上观感怪） -->
-							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-thumb">
+							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-thumb" :style="themeBg">
 								<view v-if="powPhase === 'mining'" class="lh-cap-thumb-spinner"></view>
 								<uni-icons v-else class="lh-cap-unit-thumb-icon" type="arrow-right" />
 							</view>
@@ -98,7 +101,7 @@
 						<!-- 点选蒙层：touchend 取坐标（click 事件无可靠坐标） -->
 						<view v-if="type === 'WORD_IMAGE_CLICK'" id="lh-cap-click-mask" class="lh-cap-click-mask" @touchend="onMaskTap">
 							<view v-for="(item, index) in trackArr" :key="index" class="lh-cap-click-dot"
-								:style="{ left: item.x - 13 + 'px', top: item.y - 13 + 'px' }">
+								:style="{ left: item.x - 13 + 'px', top: item.y - 13 + 'px', backgroundColor: capTheme || '' }">
 								<text class="lh-cap-click-dot-text">{{ index + 1 }}</text>
 							</view>
 						</view>
@@ -111,9 +114,9 @@
 						</view>
 						<view class="lh-cap-unit" ref="dragUnitEl" @touchstart="onDragStart"
 							@touchmove="onDragMove" @touchend="onDragEnd" @touchcancel="onDragCancel">
-							<view v-if="!showResult" class="lh-cap-unit-fill"></view>
+							<view v-if="!showResult" class="lh-cap-unit-fill" :style="themeBg"></view>
 							<!-- 结果期彩带铺满轨道，滑块随之隐藏（拖到中途时钮杵在彩带上观感怪） -->
-							<view v-if="!showResult" class="lh-cap-unit-thumb">
+							<view v-if="!showResult" class="lh-cap-unit-thumb" :style="themeBg">
 								<view v-if="verifying" class="lh-cap-thumb-spinner"></view>
 								<uni-icons v-else class="lh-cap-unit-thumb-icon" type="arrow-right" />
 							</view>
@@ -134,13 +137,25 @@
 	// 模式：proxy（业务页挂载，App/Web 下仅作 API 锚点与事件转发）/ active（dialogPage 壳挂载，渲染真身）
 	import { getCaptchaData, check } from '@/api/system/captcha/captcha'
 	import { solvePow } from './pow/index'
+
 	import type { CaptchaRequestData, CaptchaResponseData } from '@/api/system/captcha/type/captcha-type'
 
 	type TrackItem = { x : number, y : number, type : string, t : number }
 
 	const props = defineProps<{
 		mode ?: 'proxy' | 'active'
+		// 主题色覆盖双值（css color）：亮色态/暗色态各一，缺省该态回落全局 token var(--lh-primary)
+		themeLight ?: string
+		themeDark ?: string
 	}>()
+
+	// 主题覆盖当前值：按亮暗取对应 prop，该态未传回落空串（class 内 token 接管）
+	const isDark = ref<boolean>(false)
+	const capTheme = computed(() : string => {
+		return isDark.value ? (props.themeDark ?? '') : (props.themeLight ?? '')
+	})
+	// 对象语法（Vapor 端字符串 style 绑定不解析，项目先例全对象）
+	const themeBg = computed(() : any => capTheme.value ? { backgroundColor: capTheme.value } : {})
 
 	const emit = defineEmits<{
 		(e : 'success', id : string) : void
@@ -167,6 +182,8 @@
 	const slidePhase = ref<'idle' | 'out' | 'waiting' | 'in'>('idle')
 	// 滑入动画放行标志：容器渲染稳定后再挂动画 class（延后启动防首帧渲染拥塞吃动画）
 	const contentAnim = ref<boolean>(false)
+	// 按钮扣住标志：滑切/打开全程扣住，滑入动画播完（sleep 300 后）放行——按钮与滑入完成同步现身
+	const optsHold = ref<boolean>(false)
 	const captchaLoading = ref<boolean>(false)
 	const loadingError = ref<string>()
 	const type = ref<CaptchaResponseData['type']>()
@@ -205,6 +222,8 @@
 	// 所属页面实例（active 时=dialogPage）：getCurrentInstance 仅 setup/生命周期内可用，
 	// 点击回调里现取为 null，须挂载期缓存供 close 使用
 	let ownerPage : any = null
+	// 亮暗感知取消句柄（onMounted 注册，onUnmounted 回收）
+	let unwatchTheme : (() => void) | null = null
 	// 微信端（组件挂业务页）：挂载期缓存的组件实例，量测用（异步上下文取 getCurrentInstance 为 null）
 	let ownerInstance : any = null
 
@@ -229,7 +248,13 @@
 	const open = () => {
 		// #ifdef APP || WEB
 		if (props.mode !== 'active') {
-			uni.openDialogPage({ url: '/pages/captcha/captcha' })
+			// proxy 只是 API 锚点不渲染，主题 prop 经 url query 转发给壳页真身（双底座透传）
+			let url = '/pages/captcha/captcha'
+			if (props.themeLight || props.themeDark) {
+				// # 是 url 片段符必须编码，壳页成对 decode
+				url += `?tl=${encodeURIComponent(props.themeLight ?? '')}&td=${encodeURIComponent(props.themeDark ?? '')}`
+			}
+			uni.openDialogPage({ url })
 			return
 		}
 		// #endif
@@ -264,6 +289,7 @@
 		entered.value = false
 		slidePhase.value = 'idle'
 		contentAnim.value = false
+		optsHold.value = false
 		heightAnim.value = ''
 		type.value = undefined
 		captchaId.value = ''
@@ -292,6 +318,7 @@
 	// Vapor 端 class 切换替换 animation 不可靠（终态残留卡右侧），全部改 transition+节点重建
 	const getCaptcha = async (slide : boolean = false) => {
 		const prevHeight = (captchaLoading.value || loadingError.value) ? 298 : (type.value === 'POW' ? 136 : 298)
+		optsHold.value = true
 		if (slide) {
 			slidePhase.value = 'out'
 			// #ifndef MP-WEIXIN
@@ -367,6 +394,9 @@
 			powProgress.value = 0
 			powShowProgress.value = false
 			showResult.value = false
+			resultOk.value = false
+			resultMsg.value = ''
+			powFailMsg.value = '验证失败，请重试'
 			verifying.value = false
 		} catch (err) {
 			console.error('验证码取码失败', err)
@@ -392,6 +422,7 @@
 			// #endif
 			slidePhase.value = 'idle'
 			await sleep(300)
+			optsHold.value = false
 			// 点选：滑入静止后量蒙层（动画中量绝对坐标带偏移必错）
 			if (type.value === 'WORD_IMAGE_CLICK') {
 				await nextTick()
@@ -411,6 +442,7 @@
 			// #endif
 			slidePhase.value = 'idle'
 			await sleep(300)
+			optsHold.value = false
 		}
 		// 点选：内容渲染完成后量蒙层绝对位置（轨迹换算基准），失败按 0 兜底（轨迹偏移可容忍一次刷新）
 		if (!loadingError.value && type.value === 'WORD_IMAGE_CLICK') {
@@ -755,15 +787,8 @@
 	const refresh = (isClose : boolean) => {
 		stopJobs()
 		verifying.value = false
-		showResult.value = false
-		resultMsg.value = ''
-		dragX.value = 0
-		powX.value = 0
-		clickCount.value = 0
-		trackArr.value = []
-		powPhase.value = 'slide'
-		powProgress.value = 0
-		powShowProgress.value = false
+		// 视觉态（结果彩带/滑块位/序号/powPhase）不清——失败红态保持滑出（红着出场），
+		// 由 getCaptcha 换码赋值段统一清，新内容滑入即默认轨道
 		// 切换动画进行中不重入；已有内容时走滑切流（含 POW/验证失败自动刷新），首开/错误重试走全卡 loading
 		if (!isClose && !captchaLoading.value && slidePhase.value === 'idle') {
 			getCaptcha(type.value !== undefined && !loadingError.value)
@@ -788,7 +813,7 @@
 		return cls
 	})
 
-	const optsVisible = computed(() : boolean => !captchaLoading.value && !loadingError.value && slidePhase.value === 'idle')
+	const optsVisible = computed(() : boolean => !captchaLoading.value && !loadingError.value && slidePhase.value === 'idle' && !optsHold.value)
 
 	// POW 轨道文案：待滑/挖矿（超 1s 追加括号进度）/结果（文案已由彩带层接管，此层不显示）
 	const powTrackText = computed(() : string => {
@@ -831,7 +856,50 @@
 		emit('success', id)
 	}
 
+	// 亮暗感知（组件内平台分叉）：App=appTheme/auto 兜 osTheme+双监听；Web=matchMedia；微信=hostTheme
+	const applyTheme = () => {
+		// #ifdef APP
+		const info = uni.getAppBaseInfo()
+		let t = info.appTheme
+		if (t === 'auto' || t == null) {
+			t = uni.getSystemInfoSync().osTheme ?? 'light'
+		}
+		isDark.value = t === 'dark'
+		// #endif
+		// #ifdef WEB
+		isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+		// #endif
+		// #ifdef MP-WEIXIN
+		isDark.value = (uni.getAppBaseInfo() as any).hostTheme === 'dark'
+		// #endif
+	}
+
 	onMounted(() => {
+		applyTheme()
+		// #ifdef APP
+		const tid1 = uni.onAppThemeChange(() => applyTheme())
+		const tid2 = uni.onOsThemeChange(() => applyTheme())
+		unwatchTheme = () => {
+			uni.offAppThemeChange(tid1)
+			uni.offOsThemeChange(tid2)
+		}
+		// #endif
+		// #ifdef WEB
+		const mq = window.matchMedia('(prefers-color-scheme: dark)')
+		const onMq = () => {
+			isDark.value = mq.matches
+		}
+		mq.addEventListener('change', onMq)
+		unwatchTheme = () => {
+			mq.removeEventListener('change', onMq)
+		}
+		// #endif
+		// #ifdef MP-WEIXIN
+		const tid = uni.onHostThemeChange(() => applyTheme())
+		unwatchTheme = () => {
+			uni.offHostThemeChange(tid)
+		}
+		// #endif
 		// #ifdef APP || WEB
 		if (props.mode !== 'active') {
 			uni.$on('lh-captcha-success', onBusSuccess)
@@ -851,6 +919,8 @@
 			uni.$off('lh-captcha-success', onBusSuccess)
 		}
 		// #endif
+		unwatchTheme?.()
+		unwatchTheme = null
 		stopJobs()
 	})
 
@@ -970,9 +1040,9 @@
 	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点（旧版不遮操作区语义） */
 	.lh-cap-opts {
 		position: absolute;
-		/* 按钮 21px 盒与 title 行盒同顶（padding 16 线）→天然垂直居中；right 4+末按钮 margin 8=icon 距边 8px */
-		top: 16px;
-		right: 4px;
+		/* 28px 热区盒中心 26 与 title 行中心 26.5 对齐；right 11+盒内边 5=icon 距卡片右缘 16px（padding 线） */
+		top: 12px;
+		right: 11px;
 		z-index: 20;
 		flex-direction: row;
 		align-items: center;
@@ -1035,12 +1105,13 @@
 
 	/* 点击热区容器（icon 本体不带事件，见 template 注释） */
 	.lh-cap-opts-btn {
-		/* 与 title 行盒同高同起点（top 16=padding 线），flex 居中=与 title 天然上下居中 */
-		height: 21px;
+		/* 28×28 热区（约 icon 面积两倍），icon 盒内居中；top 12 使盒中心 26=title 行中心 26.5 对齐 */
+		width: 28px;
+		height: 28px;
 		justify-content: center;
 		align-items: center;
-		/* x 无 gap，按钮间距走 margin（容器 right 相应 -4 补偿贴边） */
-		margin-right: 8px;
+		/* x 无 gap；btn 间 margin 0+盒内 padding 5×2=icon 视觉间距 10px */
+		margin-right: 0px;
 	}
 
 	.lh-cap-opts-icon {
@@ -1063,7 +1134,11 @@
 
 	.lh-cap-error {
 		flex: 1;
-		text-align: center;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.lh-cap-error-text {
 		font-size: 14px;
 		color: #f56c6c;
 	}
@@ -1072,7 +1147,7 @@
 		width: 24px;
 		height: 24px;
 		border: 2px solid var(--lh-active-bg, #f0f0f0);
-		border-top-color: #f7b645;
+		border-top-color: var(--lh-primary, #3b82f6);
 		border-radius: 50%;
 		animation: lh-cap-rotate 0.8s linear infinite;
 	}
@@ -1307,7 +1382,7 @@
 		width: 26px;
 		height: 26px;
 		border-radius: 50%;
-		background-color: #409eff;
+		background-color: var(--lh-primary, #3b82f6);
 		border: 2px solid #ffffff;
 		justify-content: center;
 		align-items: center;
@@ -1346,7 +1421,8 @@
 		left: 0;
 		width: 328px;
 		height: 40px;
-		background-color: rgba(198, 168, 118, 0.5);
+		background-color: var(--lh-primary, #3b82f6);
+		opacity: 0.5;
 		border-radius: 0 20px 20px 0;
 	}
 
@@ -1357,7 +1433,7 @@
 		width: 40px;
 		height: 40px;
 		border-radius: var(--lh-radius-full, 9999px);
-		background-color: #b48d4d;
+		background-color: var(--lh-primary, #3b82f6);
 		justify-content: center;
 		align-items: center;
 	}
@@ -1391,33 +1467,28 @@
 
 	/* 暗色：token 引用自动适配，验证码专属色双值覆盖 */
 	@media (prefers-color-scheme: dark) {
-		.lh-cap-unit-fill {
-			background-color: rgba(101, 88, 67, 0.5);
-		}
+	.lh-cap-status-ok {
+		background-color: #306317;
+	}
 
-		.lh-cap-unit-thumb {
-			background-color: #9a7a40;
-		}
+	.lh-cap-status-no {
+		background-color: #7e2e2f;
+	}
 
-		.lh-cap-status-ok {
-			background-color: #306317;
-		}
+	.lh-cap-ribbon-ok {
+		background-color: #306317;
+	}
 
-		.lh-cap-status-no {
-			background-color: #7e2e2f;
-		}
+	.lh-cap-ribbon-no {
+		background-color: #7e2e2f;
+	}
 
-		.lh-cap-click-dot {
-			background-color: #2a6fc7;
-		}
+	/* 点选圈描边：暗色下白边刺眼，换中性灰阶（浅于卡面，保留暗色层次感） */
+	.lh-cap-click-dot {
+		border-color: #4a4d52;
+	}
 
-		.lh-cap-ribbon-ok {
-			background-color: #306317;
-		}
 
-		.lh-cap-ribbon-no {
-			background-color: #7e2e2f;
-		}
 	}
 
 	/*

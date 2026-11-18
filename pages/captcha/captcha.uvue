@@ -1,12 +1,26 @@
 <template>
-	<Captcha ref="captchaRef" mode="active" @success="onSuccess" />
+	<Captcha ref="captchaRef" mode="active" :themeLight="themeLight" :themeDark="themeDark" @success="onSuccess" />
 </template>
 
 <script setup lang="ts">
 	// 验证码 dialogPage 壳（仅 APP/WEB 编译）：挂载本体、拦截 back、成功经事件总线回传业务页
+	// 主题色经 url query 由 proxy 转入（双底座透传，见本体 open()）
 	import Captcha from '@/components/captcha/captcha.uvue'
 
 	const captchaRef = ref()
+	const themeLight = ref<string>('')
+	const themeDark = ref<string>('')
+
+	onLoad((options : OnLoadOptions) => {
+		const tl = options['tl']
+		const td = options['td']
+		if (tl) {
+			themeLight.value = decodeURIComponent(tl)
+		}
+		if (td) {
+			themeDark.value = decodeURIComponent(td)
+		}
+	})
 
 	// 本体只 emit('success')，跨页转发由壳负责（业务页挂的 proxy 实例 $on 接收）
 	const onSuccess = (id : string) => {

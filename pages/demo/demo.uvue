@@ -43,7 +43,7 @@
 			</view>
 			<text class="value">result = {{ captchaResult }}</text>
 			<!-- proxy 模式挂载：App/Web 开 dialogPage，微信直渲，业务方无感 -->
-			<Captcha ref="captchaRef" @success="onCaptchaSuccess" />
+			<Captcha ref="captchaRef" themeLight="#b48d4d" themeDark="#9a7a40" @success="onCaptchaSuccess" />
 		</view>
 	</view>
 </template>
