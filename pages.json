@@ -10,7 +10,14 @@
 			"path": "pages/login/Login",
 			"style": {
 				"navigationStyle": "custom",
-				"disableScroll": true 
+				"disableScroll": true
+			}
+		},
+		{
+			"path": "pages/login/Register",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": true
 			}
 		},
 		{

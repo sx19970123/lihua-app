@@ -29,11 +29,19 @@
 		</view>
 
 		<view class="card">
-			<text class="label">app-input · 密码（maxlength + showCount）</text>
+			<text class="label">app-input · 密码（maxlength + showCount + showStrength）</text>
 			<view class="row">
-				<app-input v-model="inputPwd" password maxlength="12" showCount placeholder="密码（≤12 位）" />
+				<app-input v-model="inputPwd" password maxlength="12" showCount showStrength placeholder="密码（≤12 位）" />
 			</view>
 			<text class="value">length = {{ inputPwd.length }}</text>
+		</view>
+
+		<view class="card">
+			<text class="label">app-input · 密码 + blur 事件（失焦回显次数）</text>
+			<view class="row">
+				<app-input v-model="inputBlur" password placeholder="密码（失焦触发 blur）" @blur="onInputBlur" />
+			</view>
+			<text class="value">blur count = {{ inputBlurCount }}</text>
 		</view>
 
 		<view class="card">
@@ -65,6 +73,12 @@ const groupValuesText = computed(() => groupValues.value.length > 0 ? groupValue
 // input 基础
 const inputText = ref<string>('')
 const inputPwd = ref<string>('')
+const inputBlur = ref<string>('')
+const inputBlurCount = ref<number>(0)
+
+const onInputBlur = () => {
+	inputBlurCount.value++
+}
 
 // captcha 弹窗（proxy 模式：open 触发，success 回执校验通过的后端 id）
 const captchaRef = ref<any>(null)

@@ -38,12 +38,6 @@
 	margin-top: var(--lh-gap-xl);
 }
 
-/* 登录页输入卡片覆盖：隔离 2.0 单根组件外部 class 落根节点（官方明文），覆盖组件默认高度圆角 */
-.auth-item {
-	height: 45px;
-	border-radius: var(--lh-radius-full);
-}
-
 /* 前置图标（uni-icons 单 text 根落 class）：tertiary 色自适应暗色 */
 .auth-icon {
 	font-size: 18px;
@@ -111,3 +105,4 @@
 	color: var(--lh-tertiary-color);
 	font-size: var(--lh-text-base);
 }
+

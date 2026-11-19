@@ -1,0 +1,209 @@
+<template>
+	<view class="safe-top">
+		<view class="auth-body page-padding">
+			<view class="auth-content">
+				<text class="auth-title">欢迎注册狸花猫</text>
+				<view class="reg-row">
+					<text class="text-font">已有账号？</text>
+					<text class="text-btn" @click="toLogin">返回登录</text>
+				</view>
+
+				<view class="auth-field">
+					<app-input shape="round" :height="45" placeholder="用户名" clearable
+						@blur="handleCheckUsername" v-model="registerData.username">
+						<template #prepend>
+							<uni-icons class="auth-icon" type="person" />
+						</template>
+					</app-input>
+				</view>
+
+				<view class="auth-field">
+					<app-input shape="round" :height="45" placeholder="密码" password showStrength :maxlength="30"
+						clearable v-model="registerData.password">
+						<template #prepend>
+							<uni-icons class="auth-icon" type="locked" />
+						</template>
+					</app-input>
+				</view>
+
+				<view class="auth-field">
+					<app-input shape="round" :height="45" placeholder="再次输入" password :maxlength="30" clearable
+						v-model="registerData.confirmPassword">
+						<template #prepend>
+							<uni-icons class="auth-icon" type="locked" />
+						</template>
+					</app-input>
+				</view>
+
+				<view class="login-btn-wrap">
+					<button class="auth-btn" type="primary" :loading="registerLoading" @click="handleRegisterClick">注 册</button>
+				</view>
+			</view>
+		</view>
+
+		<!-- 验证码（proxy 模式：App/WEB 下开 dialogPage，成功回传走 handleRegister；启用与否受后台开关控制） -->
+		<Captcha ref="captchaRef" themeLight="#b48d4d" themeDark="#9a7a40" @success="handleRegister" />
+	</view>
+</template>
+
+<script setup lang="ts">
+import type { RegisterType } from '@/api/system/authentication/type/register-type'
+import { register, checkUserName } from '@/api/system/authentication/authentication'
+import { toast, toastRequestError } from '@/utils/toast'
+import { useSettingStore } from '@/stores/setting'
+import AppInput from '@/components/app-input/app-input.uvue'
+import Captcha from '@/components/captcha/captcha.uvue'
+
+const captchaRef = ref()
+
+const settingStore = useSettingStore()
+
+// 返回登录（进场 slide-in-bottom，退场对称向下划出；Web/MP 端参数被忽略走默认）
+const toLogin = () => {
+	uni.navigateBack({ animationType: 'slide-out-bottom' })
+}
+
+/**
+ * 注册相关
+ */
+const initRegister = () => {
+	// 注册表单数据
+	const registerData = ref<RegisterType>({username: '', password: '', confirmPassword: ''})
+	// 用户名是否已存在（blur 查重结果，提交时兜底复查）
+	const usernameExists = ref<boolean>(false)
+	// 注册 loading
+	const registerLoading = ref<boolean>(false)
+
+	// 检查注册信息是否填写完整
+	const checkRegisterData = async () : Promise<boolean> => {
+		const data = registerData.value
+
+		// 用户名非空校验
+		if (!data.username) {
+			toast("请输入用户名")
+			return false
+		}
+
+		// 用户名规则校验
+		if (!(/^[a-zA-Z0-9@.]+$/.test(data.username))) {
+			toast("用户名只允许大小写英文、数字、@、.")
+			return false
+		}
+
+		// 提交时用户名重复情况下再次验证
+		if (usernameExists.value) {
+			await handleCheckUsername()
+			if (usernameExists.value) {
+				return false
+			}
+		}
+
+		// 密码非空校验
+		if (!data.password) {
+			toast("请输入密码")
+			return false
+		}
+
+		// 密码长度校验
+		if (!(data.password.length >= 6 && data.password.length <= 30)) {
+			toast("密码长度6-30位")
+			return false
+		}
+
+		// 二次密码校验
+		if (data.password !== data.confirmPassword) {
+			toast("两次密码不一致")
+			return false
+		}
+
+		return true
+	}
+
+	// 检查用户名是否存在（blur 即时反馈 + 提交兜底共用；失败不阻断，后端注册时仍会校验）
+	const handleCheckUsername = async () => {
+		const username = registerData.value.username
+		if (!username) {
+			return
+		}
+
+		try {
+			const resp = await checkUserName(username)
+			if (resp.code === 200) {
+				if (!resp.data) {
+					toast("该用户名已存在")
+				}
+				usernameExists.value = !resp.data
+			} else {
+				toast(resp.msg)
+			}
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
+		}
+	}
+
+	// 用户注册（captchaVerification 由验证码成功回传）
+	const handleRegister = async (captchaVerification?: string) => {
+		// 检查表单是否填写完整
+		if (!await checkRegisterData()) {
+			return
+		}
+
+		try {
+			registerLoading.value = true
+			registerData.value.captchaVerification = captchaVerification
+			const resp = await register(registerData.value)
+			// 注册成功：通知登录页代入用户名并返回
+			if (resp.code === 200) {
+				uni.$emit('registerSuccess', registerData.value.username)
+				toLogin()
+			} else {
+				toast(resp.msg)
+			}
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
+		} finally {
+			registerLoading.value = false
+		}
+	}
+
+	return { registerData, registerLoading, checkRegisterData, handleCheckUsername, handleRegister }
+}
+
+const { registerData, registerLoading, checkRegisterData, handleCheckUsername, handleRegister } = initRegister()
+
+/**
+ * 验证码相关
+ */
+const initCaptcha = () => {
+	// 是否启用验证码（取自设置 store，与登录页同源，受后台开关控制）
+	const isEnableCaptcha = computed(() => settingStore.enableCaptcha)
+
+	// 打开验证码
+	const openCaptcha = async () => {
+		// 检查表单是否填写完整
+		if (!await checkRegisterData()) {
+			return
+		}
+		captchaRef.value?.open()
+	}
+
+	// 注册按钮点击分发：验证码开启走验证码链路
+	const handleRegisterClick = () => {
+		if (isEnableCaptcha.value) {
+			openCaptcha()
+		} else {
+			handleRegister()
+		}
+	}
+
+	return { isEnableCaptcha, openCaptcha, handleRegisterClick }
+}
+
+const { isEnableCaptcha, openCaptcha, handleRegisterClick } = initCaptcha()
+</script>
+
+<style lang="scss">
+@import "@/styles/auth.scss";
+</style>
