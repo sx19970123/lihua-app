@@ -1383,7 +1383,7 @@
 		height: 26px;
 		border-radius: 50%;
 		background-color: var(--lh-primary, #3b82f6);
-		border: 2px solid #ffffff;
+		border: 2px solid rgba(255, 255, 255, 0.6);
 		justify-content: center;
 		align-items: center;
 	}
@@ -1483,9 +1483,9 @@
 		background-color: #7e2e2f;
 	}
 
-	/* 点选圈描边：暗色下白边刺眼，换中性灰阶（浅于卡面，保留暗色层次感） */
+	/* 点选圈描边：暗色换中性灰阶且半透明（同亮色白边的半透明处理） */
 	.lh-cap-click-dot {
-		border-color: #4a4d52;
+		border-color: rgba(74, 77, 82, 0.6);
 	}
 
 
