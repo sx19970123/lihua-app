@@ -1,0 +1,50 @@
+<template>
+	<view class="page-padding proto-body">
+		<text class="proto-title">隐私政策</text>
+
+		<text class="proto-p">我们非常重视您的个人信息保护。本政策用于说明我们在您使用本系统过程中对个人信息的处理方式。</text>
+
+		<text class="proto-h3">一、信息收集</text>
+		<text class="proto-p">在使用本系统时，我们仅会收集实现基础功能所必需的信息，包括：</text>
+		<view class="proto-li">
+			<text class="proto-bullet">•</text>
+			<text class="proto-li-text">注册信息（如账号、密码等）</text>
+		</view>
+		<view class="proto-li">
+			<text class="proto-bullet">•</text>
+			<text class="proto-li-text">用户自行填写或修改的个人信息</text>
+		</view>
+
+		<text class="proto-h3">二、信息使用</text>
+		<text class="proto-p">所收集的信息仅用于：</text>
+		<view class="proto-li">
+			<text class="proto-bullet">•</text>
+			<text class="proto-li-text">完成用户注册、登录与身份校验</text>
+		</view>
+		<view class="proto-li">
+			<text class="proto-bullet">•</text>
+			<text class="proto-li-text">展示及修改个人信息</text>
+		</view>
+		<view class="proto-li">
+			<text class="proto-bullet">•</text>
+			<text class="proto-li-text">保障系统安全与稳定运行</text>
+		</view>
+
+		<text class="proto-h3">三、信息保护</text>
+		<text class="proto-p">我们将采取合理的技术措施保护您的个人信息，防止信息泄露、篡改或丢失。</text>
+
+		<text class="proto-h3">四、信息共享</text>
+		<text class="proto-p">除法律法规要求外，我们不会向任何第三方共享或披露您的个人信息。</text>
+
+		<text class="proto-h3">五、政策变更</text>
+		<text class="proto-p">如本隐私政策发生调整，我们将在系统内进行公示。您继续使用即表示同意更新后的政策。</text>
+	</view>
+</template>
+
+<script setup lang="ts">
+// 纯静态内容页
+</script>
+
+<style lang="scss">
+	@import '@/styles/protocol.scss';
+</style>

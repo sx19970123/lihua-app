@@ -19,6 +19,18 @@
 				"navigationBarTitleText": "组件示例"
 			}
 		},
+		{
+			"path": "pages/protocol/UserAgreement",
+			"style": {
+				"navigationBarTitleText": "用户协议"
+			}
+		},
+		{
+			"path": "pages/protocol/PrivacyPolicy",
+			"style": {
+				"navigationBarTitleText": "隐私政策"
+			}
+		},
 		// #ifdef APP || WEB
 		{
 			"path": "pages/captcha/captcha",

@@ -352,14 +352,16 @@ const initProtocol = () => {
 
 	// 前往隐私政策
 	const toPrivacyPolicy = () => {
-		// 协议页未迁移（原分包页随拍平方案 S6 后重排）
-		toast('协议页待迁移')
+		uni.navigateTo({
+			url: '/pages/protocol/PrivacyPolicy'
+		})
 	}
 
 	// 前往用户协议
 	const toUserAgreement = () => {
-		// 协议页未迁移（原分包页随拍平方案 S6 后重排）
-		toast('协议页待迁移')
+		uni.navigateTo({
+			url: '/pages/protocol/UserAgreement'
+		})
 	}
 
 	// 整行点击翻转勾选（行内仅两个链接文字 .stop 走跳转）

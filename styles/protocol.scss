@@ -1,0 +1,49 @@
+/* 协议内容页共用（用户协议/隐私政策）：纯静态内容，颜色全走 token 亮暗自动 */
+.proto-body {
+	padding-top: var(--lh-gap-lg);
+	padding-bottom: var(--lh-gap-3xl);
+}
+
+.proto-title {
+	font-size: var(--lh-text-xl);
+	font-weight: bold;
+	line-height: var(--lh-leading-tight);
+	color: var(--lh-emphasis-color);
+	text-align: center;
+	margin-bottom: var(--lh-gap-xl);
+}
+
+.proto-h3 {
+	font-size: var(--lh-text-base);
+	font-weight: bold;
+	line-height: var(--lh-leading-snug);
+	color: var(--lh-emphasis-color);
+	margin-top: var(--lh-gap-xl);
+}
+
+.proto-p {
+	font-size: var(--lh-text-base);
+	line-height: var(--lh-leading-normal);
+	color: var(--lh-emphasis-color);
+	margin-top: var(--lh-gap-sm);
+}
+
+.proto-li {
+	flex-direction: row;
+	margin-top: var(--lh-gap-xs);
+	padding-left: var(--lh-gap-lg);
+}
+
+.proto-bullet {
+	font-size: var(--lh-text-base);
+	line-height: var(--lh-leading-normal);
+	color: var(--lh-tertiary-color);
+	margin-right: var(--lh-gap-xs);
+}
+
+.proto-li-text {
+	flex: 1;
+	font-size: var(--lh-text-base);
+	line-height: var(--lh-leading-normal);
+	color: var(--lh-emphasis-color);
+}
