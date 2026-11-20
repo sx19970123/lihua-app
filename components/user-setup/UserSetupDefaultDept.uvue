@@ -72,9 +72,6 @@
 			toast("正在设置默认部门，请稍候")
 			return
 		}
-		// TODO(临时-测试)：随意下一页（跳过校验），验收后删除这两行还原
-		emit('next')
-		return
 		if (userStore.defaultDeptCode) {
 			emit('next')
 		} else {

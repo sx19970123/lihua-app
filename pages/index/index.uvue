@@ -32,6 +32,14 @@
 			<text class="value">对拍：{{ powCrossCheck }}</text>
 			<button class="btn" type="primary" :loading="powRunning" :disabled="powRunning" @tap="runPow">取码→挖矿→提交</button>
 		</view>
+		<view class="card">
+			<text class="label">WS · 连接测试（S1-08 尖峰：连接/状态三态/通知接收）</text>
+			<text class="value">状态：{{ wsStatus }}</text>
+			<text class="value">最近通知：{{ wsNotice }}</text>
+			<button class="btn" type="primary" @tap="wsConnect">连接</button>
+			<button class="btn" @tap="wsManualReconnect">手动重连</button>
+			<button class="btn" @tap="wsClose">主动关闭</button>
+		</view>
 	</view>
 </template>
 
@@ -41,6 +49,7 @@ import { BASE_API, IS_DEV } from '@/utils/env'
 import { getCaptchaData, check } from '@/api/system/captcha/captcha'
 import { sha256Hex, mineSlice as mineSliceJs, prngHex } from '@/components/captcha/pow/sha256'
 import { mineSlice, prepareEngine, engineName } from '@/uni_modules/lihua-pow'
+import { webSocket, wsStatus } from '@/utils/web-socket'
 import { setData as setUserSetupData, goUserSetup } from '@/helpers/user-setup'
 
 const counter = useCounterStore()
@@ -53,6 +62,21 @@ const goLogin = () => {
 
 const goDemo = () => {
 	uni.navigateTo({ url: '/pages/demo/demo' })
+}
+
+// ---------- WS 连接测试（S1-08 尖峰）----------
+const wsNotice = ref('—')
+webSocket.addEventListener('WS_NOTICE', (data: any) => {
+	wsNotice.value = JSON.stringify(data).slice(0, 60)
+})
+const wsConnect = () => {
+	webSocket.connect()
+}
+const wsManualReconnect = () => {
+	webSocket.manualReconnect()
+}
+const wsClose = () => {
+	webSocket.closeConnect()
 }
 
 // 向导测试入口：预写全量待补全项，向导恒显五步（未登录时向导 initUserInfo 会 401 跳回登录页）

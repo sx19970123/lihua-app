@@ -11,6 +11,7 @@ import {ResponseError, type ResponseType} from "@/api/global/type";
 import {getFileTempPath} from "@/utils/attachment/attachment-utils";
 import {resolveAttachmentEntryUrl} from "@/api/system/attachment/attachment-storage";
 import { setDefaultDept } from "@/api/system/profile/profile";
+import { webSocket } from "@/utils/web-socket";
 
 // 用户信息初始化在途请求（非响应式）：路由守卫每次导航都可能触发，去重防止冷启动连续导航并发重复请求
 let initUserInfoPromise: Promise<ResponseType<AuthInfoType>> | null = null
@@ -81,7 +82,7 @@ export const useUserStore = defineStore('user', {
 		authenticationFailure() {
 			removeToken()
 			this.clearUserInfo()
-			// WS 迁移后在原位补 webSocket.closeConnect()
+			webSocket.closeConnect()
 			uni.reLaunch({
 				url: "/pages/login/Login"
 			})
