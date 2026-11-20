@@ -1,0 +1,351 @@
+<template>
+	<!-- 卡片+筛选框+树整体封装：外部只传数据与开关（filterable 控制搜索框显隐） -->
+	<view class="app-tree-card">
+		<view v-if="filterable" class="app-tree-search">
+			<app-input shape="round" :size="searchSize ?? 'small'" :height="searchHeight ?? 40"
+				:placeholder="searchPlaceholder ?? '请输入关键词'" clearable v-model="keyword" />
+		</view>
+		<scroll-view class="app-tree-scroll" scroll-y>
+			<!-- 节点全量常驻（v3：过滤/收起只切 v-show、元素永不销毁——x 端批量行销毁触发
+			     框架 Element::Dispose 崩溃，sard 的 v-if 销毁流派在 Vapor 不可用）；缩进按层级内联 -->
+			<view v-for="state in allStates" :key="state.item.key" class="app-tree-node" v-show="state.shown"
+				:style="{paddingLeft: (state.level * 20) + 'px'}">
+				<view class="app-tree-hit" hover-class="app-tree-node-pressed" :hover-stay-time="100"
+					@click="onSelect(state.item)">
+					<!-- 箭头槽常驻（叶子隐藏占位，标题跨层级对齐）；过滤中命中子树视为展开 -->
+					<view class="app-tree-arrow" @click.stop="toggleByItem(state.item)">
+						<uni-icons v-if="hasChildren(state.item)" class="app-tree-arrow-icon" :class="state.arrowCls"
+							type="right" />
+					</view>
+					<!-- 关键词高亮=三段常驻 text（空串零宽度；内容烘焙进 state，纯文本 patch 无元素增删） -->
+					<text class="app-tree-title"><text class="app-tree-title-seg">{{ state.segBefore }}</text><text
+							class="app-tree-title-hit">{{ state.segHit }}</text><text
+							class="app-tree-title-seg">{{ state.segAfter }}</text></text>
+					<!-- 行尾三态：loadingKey 行转圈（loading 态优先）→ 选中对勾 -->
+					<loading v-if="loading && state.item.key === loadingKey" class="app-tree-loading" />
+					<uni-icons v-else-if="state.item.key === current" class="app-tree-check"
+						type="checkmarkempty" />
+				</view>
+			</view>
+			<text v-if="visibleCount === 0" class="app-tree-empty">无匹配数据</text>
+		</scroll-view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 通用树形组件（sard Tree 最小复刻）：卡片+可选筛选框+层级缩进+展开收起+单选（行尾对勾）+宽松过滤。
+	// 渲染=全量常驻+可见性切换（非销毁；x 端 Element::Dispose 崩溃规避），
+	// 非组件递归（x 编译链递归组件无先例）；整块点击=选中，箭头点击=展开收起
+	import AppInput from '@/components/app-input/app-input.uvue'
+
+	interface TreeItem {
+		// key 必须全树唯一（显隐集合/v-for 复用都以其为身份；重复 key 会导致过滤失效与 diff 崩溃，sard 同款契约）
+		key: string
+		title: string
+		children?: TreeItem[]
+		// 业务负载字段随行携带（如部门 code），select 事件原样回传
+		[prop: string]: any
+	}
+
+	interface TreeState {
+		item: TreeItem
+		level: number
+		// 行显隐（v-show 指令读）与箭头朝向类（watchEffect 烘焙，模板只做属性读）
+		shown: boolean
+		arrowCls: string
+		// 标题三段（命中段高亮；非过滤态 segBefore=整段、其余空串）
+		segBefore: string
+		segHit: string
+		segAfter: string
+	}
+
+	const props = defineProps<{
+		data: TreeItem[]
+		// 默认展开全部节点
+		defaultExpandAll?: boolean
+		// 当前选中节点 key（v-model:current）
+		current?: string
+		// 显示内置筛选框（关键词宽松过滤+命中高亮）
+		filterable?: boolean
+		// 筛选框透传子集（同名显式转发给内置 app-input；默认小号 40 高）
+		searchPlaceholder?: string
+		searchSize?: 'small' | 'default' | 'large'
+		searchHeight?: number
+		// 行内加载态：loadingKey 对应行尾显示转圈（替代全屏 showLoading；结束后 current 更新为对勾）
+		loading?: boolean
+		loadingKey?: string
+	}>()
+
+	const emit = defineEmits<{
+		(e: 'update:current', key: string): void
+		(e: 'select', key: string, item: TreeItem): void
+	}>()
+
+	// 全量状态列表：深度优先一次拍平，此后长度与顺序永不再变（保证元素不增删）
+	const allStates = ref<TreeState[]>([])
+
+	const buildStates = (items : TreeItem[], level : number, out : TreeState[]) => {
+		items.forEach(item => {
+			out.push({item, level, shown: true, arrowCls: '', segBefore: '', segHit: '', segAfter: ''})
+			if (item.children && item.children.length > 0) {
+				buildStates(item.children, level + 1, out)
+			}
+		})
+	}
+
+	// 展开态（key 集合；树规模小，数组 includes 足够）
+	const expandedKeys = ref<string[]>([])
+
+	const collectParentKeys = (items : TreeItem[]) : string[] => {
+		const keys : string[] = []
+		items.forEach(item => {
+			if (item.children && item.children.length > 0) {
+				keys.push(item.key)
+				keys.push(...collectParentKeys(item.children))
+			}
+		})
+		return keys
+	}
+
+	watch(() => props.data, (val) => {
+		const states : TreeState[] = []
+		buildStates(val, 0, states)
+		allStates.value = states
+		if (props.defaultExpandAll) {
+			expandedKeys.value = collectParentKeys(val)
+		}
+	}, { immediate: true })
+
+	// 过滤关键字（经 filter 方法置入，sard 同款调用面）
+	const keyword = ref<string>('')
+	const filtering = computed(() : boolean => keyword.value !== '')
+
+	const hasChildren = (item : TreeItem) : boolean => !!item.children && item.children.length > 0
+
+	const toggleByItem = (item : TreeItem) => {
+		if (!hasChildren(item) || filtering.value) {
+			return
+		}
+		const index = expandedKeys.value.indexOf(item.key)
+		if (index >= 0) {
+			expandedKeys.value.splice(index, 1)
+		} else {
+			expandedKeys.value.push(item.key)
+		}
+	}
+
+	// 行内 loading 兼任操作锁：loading 期间拒绝新选中（转圈即就地反馈，无需额外提示）
+	const onSelect = (item : TreeItem) => {
+		if (props.loading) {
+			return
+		}
+		emit('update:current', item.key)
+		emit('select', item.key, item)
+	}
+
+	// 可见 key 集（非过滤=祖先全展开；过滤=宽松语义：自身命中→整棵子树全显、后代命中→可见并下探）
+	const visibleKeySet = computed(() : Set<string> => {
+		const set = new Set<string>()
+		if (filtering.value) {
+			walkFilter(props.data, set)
+		} else {
+			walk(props.data, set)
+		}
+		return set
+	})
+
+	const walk = (items : TreeItem[], set : Set<string>) => {
+		items.forEach(item => {
+			set.add(item.key)
+			if (hasChildren(item) && expandedKeys.value.includes(item.key)) {
+				walk(item.children!, set)
+			}
+		})
+	}
+
+	const matchSelf = (item : TreeItem) : boolean => item.title.includes(keyword.value)
+
+	const matchTree = (item : TreeItem) : boolean => {
+		if (matchSelf(item)) {
+			return true
+		}
+		if (item.children) {
+			for (let i = 0; i < item.children.length; i++) {
+				if (matchTree(item.children[i])) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	const pushAll = (item : TreeItem, set : Set<string>) => {
+		set.add(item.key)
+		if (item.children) {
+			item.children.forEach(child => pushAll(child, set))
+		}
+	}
+
+	const walkFilter = (items : TreeItem[], set : Set<string>) => {
+		items.forEach(item => {
+			if (matchSelf(item)) {
+				pushAll(item, set)
+			} else if (item.children && item.children.some(child => matchTree(child))) {
+				set.add(item.key)
+				walkFilter(item.children, set)
+			}
+		})
+	}
+
+	// 行显隐/箭头朝向烘焙：写入 state 字段，行显隐走 v-show 指令（class patch 不可靠已实证）
+	watchEffect(() => {
+		const set = visibleKeySet.value
+		const isFiltering = filtering.value
+		const kw = keyword.value
+		allStates.value.forEach(state => {
+			state.shown = set.has(state.item.key)
+			state.arrowCls = hasChildren(state.item) && (isFiltering || expandedKeys.value.includes(state.item.key))
+				? 'app-tree-arrow-open' : ''
+			// 标题分段：首命中三段式（多命中只点亮第一处；未命中=整段）
+			const idx = kw ? state.item.title.indexOf(kw) : -1
+			if (idx >= 0) {
+				state.segBefore = idx > 0 ? state.item.title.slice(0, idx) : ''
+				state.segHit = kw
+				state.segAfter = state.item.title.slice(idx + kw.length)
+			} else {
+				state.segBefore = state.item.title
+				state.segHit = ''
+				state.segAfter = ''
+			}
+		})
+	})
+
+	const visibleCount = computed(() : number => visibleKeySet.value.size)
+
+	// 过滤入口（空串=清除过滤，恢复展开态视图）
+	const filter = (value : string) => {
+		keyword.value = value
+	}
+
+	defineExpose({ filter })
+</script>
+
+<style lang="scss">
+	/* 卡片壳：白底/暗底+圆角+内边距，筛选框与树都在内 */
+	.app-tree-card {
+		padding: var(--lh-gap-lg);
+		border-radius: var(--lh-radius);
+		background-color: #ffffff;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.app-tree-card {
+			background-color: #242628;
+		}
+	}
+
+	.app-tree-search {
+		margin-bottom: var(--lh-gap-sm);
+	}
+
+	/* 长树限高内滚：短树按内容收缩 */
+	.app-tree-scroll {
+		max-height: 210px;
+	}
+
+	/* 样式基准取自 sard tree-node 源码后按观感收紧：行定高 36px（sard 80rpx 基础上收紧）无分隔线，
+	   行内距 0（卡片 padding 代偿，根行与内置筛选框左右对齐）+缩进 20px/级，
+	   箭头 14px 旋 90°，选中=仅行尾对勾 */
+	.app-tree {
+		width: 100%;
+	}
+
+	.app-tree-node {
+		height: 36px;
+	}
+
+	/* 内嵌按压块：上下留白居中+圆角，高亮比行小一圈 */
+	.app-tree-hit {
+		flex-direction: row;
+		align-items: center;
+		height: 32px;
+		margin-top: 2px;
+		margin-bottom: 2px;
+		border-radius: 8px;
+		padding-left: 6px;
+		padding-right: 8px;
+	}
+
+	/* 按压态=sard --sar-active-bg：亮 gray-200 / 暗 gray-700（token 已在全局表） */
+	.app-tree-node-pressed {
+		background-color: var(--lh-gray-200);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.app-tree-node-pressed {
+			background-color: var(--lh-gray-700);
+		}
+	}
+
+	.app-tree-arrow {
+		width: 20px;
+		height: 20px;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.app-tree-arrow-icon {
+		font-size: 14px;
+		color: var(--lh-tertiary-color);
+		transition-property: transform;
+		transition-duration: 0.2s;
+	}
+
+	.app-tree-arrow-open {
+		transform: rotate(90deg);
+	}
+
+	/* 标题单行省略（挂外层容器：嵌套子 text 的 text 独有样式不生效，官方单行三件套） */
+	.app-tree-title {
+		flex: 1;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+	}
+
+	/* 标题分段（x 端 text 样式不继承，字号/行高/颜色逐段显式；暗色随 token 自适应） */
+	.app-tree-title-seg {
+		font-size: 15px;
+		line-height: var(--lh-leading-snug);
+		color: var(--lh-emphasis-color);
+	}
+
+	/* 过滤命中的关键词段 */
+	.app-tree-title-hit {
+		font-size: 15px;
+		line-height: var(--lh-leading-snug);
+		color: var(--lh-primary);
+	}
+
+	/* 选中态=行尾对勾（标题不高亮） */
+	.app-tree-check {
+		font-size: 16px;
+		color: var(--lh-primary);
+		margin-left: 8px;
+	}
+
+	/* 行内加载转圈（内置 loading 组件：渲染线程驱动，与对勾同位） */
+	.app-tree-loading {
+		width: 16px;
+		height: 16px;
+		border-color: var(--lh-primary);
+		margin-left: 8px;
+	}
+
+	.app-tree-empty {
+		text-align: center;
+		font-size: var(--lh-text-sm);
+		color: var(--lh-tertiary-color);
+		padding: 16px 0;
+	}
+</style>
