@@ -62,7 +62,7 @@ import type { LoginType } from '@/api/system/authentication/type/login-type'
 import { toast, toastRequestError } from '@/utils/toast'
 import { rememberMe, getRememberedInfo } from '@/helpers/remember'
 import { setToken, removeToken } from '@/helpers/token'
-import { setData as setUserSetupData, clearData as clearUserSetupData } from '@/helpers/user-setup'
+import { setData as setUserSetupData, clearData as clearUserSetupData, goUserSetup } from '@/helpers/user-setup'
 import { queryPostLoginCheckData } from '@/api/system/profile/profile'
 import { login } from "@/api/system/authentication/authentication"
 import AppInput from '@/components/app-input/app-input.uvue'
@@ -277,10 +277,9 @@ const initPostLoginCheck = () => {
 			return false
 		}
 		if (checkItems.length > 0) {
-			// 向导页未迁移（S2-11）：暂存待补全项回首页，向导迁入后由路由守卫拉回（S2-03 接线）
+			// 有待补全项进初始设置向导（防绕过守卫属 S2-03，暂由向导 onBackPress 拦截兜底）
 			setUserSetupData(checkItems)
-			toast('存在 ' + checkItems.length + ' 项待补全信息，向导页迁移后生效')
-			uni.reLaunch({ url: '/pages/index/index' })
+			goUserSetup()
 		} else {
 			clearUserSetupData()
 			uni.reLaunch({ url: '/pages/index/index' })

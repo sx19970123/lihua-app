@@ -1,0 +1,176 @@
+<template>
+	<view class="setup-step">
+		<view class="setup-step-header">
+			<uni-icons class="setup-icon" type="person" />
+			<text class="setup-title">基础信息</text>
+			<text class="setup-desc">新用户首次登录需要录入基础信息</text>
+		</view>
+		<scroll-view class="setup-step-body" scroll-y :bounces="false" :show-scrollbar="false">
+			<view class="setup-form">
+			<view class="setup-field">
+				<app-input shape="round" :height="45" placeholder="请输入用户昵称" :maxlength="20" clearable
+					v-model="nickname" />
+			</view>
+			<view class="setup-field">
+				<app-input shape="round" :height="45" placeholder="请输入手机号码（非必填）" clearable v-model="phoneNumber" />
+			</view>
+			<view class="setup-field">
+				<app-input shape="round" :height="45" placeholder="请输入电子邮箱（非必填）" clearable v-model="email" />
+			</view>
+			<view class="setup-field">
+				<!-- 性别选择行：与输入框行同构（值/placeholder 居左+右箭头），点击弹底部操作菜单 -->
+				<view class="setup-select-row" @click="openGenderSheet">
+					<text class="setup-select-text"
+						:class="gender ? 'setup-select-filled' : 'setup-select-placeholder'">{{ genderLabel || '请选择用户性别（非必选）' }}</text>
+					<uni-icons class="setup-select-arrow" type="down" />
+				</view>
+			</view>
+		</view>
+		</scroll-view>
+		<view class="setup-step-footer">
+			<view class="setup-btns">
+				<button class="setup-btn" type="primary" :loading="saveLoading" @click="handleNext">下一步</button>
+				<view class="setup-sub-btns">
+					<text class="setup-ghost-btn" @click="emit('prev')">上一步</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 基础信息步：昵称/手机/邮箱选填 + 性别 picker；提交时做选填字段唯一性实时校验（与 web 端一致）
+	import { toast, toastRequestError } from '@/utils/toast'
+	import { initDict, getDictLabel } from '@/helpers/dict'
+	import { useUserStore } from '@/stores/user'
+	import { saveBasics } from '@/api/system/profile/profile'
+	import { checkPhoneNumber, checkEmail } from '@/api/system/user/user'
+	import AppInput from '@/components/app-input/app-input.uvue'
+
+	const emit = defineEmits<{next: [], prev: []}>()
+
+	const userStore = useUserStore()
+	const {user_gender} = initDict('user_gender')
+
+	const nickname = ref<string>('')
+	const phoneNumber = ref<string>('')
+	const email = ref<string>('')
+	// 性别默认不选（placeholder 提示），空值提交时跳过该字段
+	const gender = ref<string>('')
+
+	const saveLoading = ref<boolean>(false)
+
+	// 性别选项：字典 label/value 拆两列（itemList 吃字符串数组）
+	const genderLabels = computed(() : string[] => user_gender.value.map(item => item.label ?? ''))
+	const genderValues = computed(() : string[] => user_gender.value.map(item => item.value ?? ''))
+	const genderLabel = computed(() : string => getDictLabel(user_gender.value, gender.value) ?? '')
+
+	// 底部操作菜单选性别（picker 滚轮快速反滑丢 settle 动画系 native 实现不可修；3 项场景一键直达更优）
+	// 弹层打开时系统主题反转会糊底（颜色为打开瞬间快照、展示中不活更）——监听主题反转主动关闭规避
+	const sheetVisible = ref<boolean>(false)
+
+	const onThemeFlip = () => {
+		if (sheetVisible.value) {
+			uni.hideActionSheet()
+		}
+	}
+
+	// #ifdef APP
+	// App 端主题=auto 跟随系统，OS 主题反转即触发（S3-08 三态切换落地时需补 onAppThemeChange）
+	const themeCallbackId : number = uni.onOsThemeChange(onThemeFlip)
+	// #endif
+	// #ifdef WEB
+	const themeCallbackId : number = uni.onHostThemeChange(onThemeFlip)
+	// #endif
+
+	onUnmounted(() => {
+		// #ifdef APP
+		uni.offOsThemeChange(themeCallbackId)
+		// #endif
+		// #ifdef WEB
+		uni.offHostThemeChange(themeCallbackId)
+		// #endif
+	})
+
+	const openGenderSheet = () => {
+		if (genderLabels.value.length === 0) {
+			toast("性别选项加载中")
+			return
+		}
+		sheetVisible.value = true
+		uni.showActionSheet({
+			itemList: genderLabels.value,
+			success: (res) => {
+				const value = genderValues.value[res.tapIndex]
+				if (value !== undefined) {
+					gender.value = value
+				}
+			},
+			complete: () => {
+				sheetVisible.value = false
+			}
+		})
+	}
+
+	const handleNext = async () => {
+		// TODO(临时-测试)：随意下一页（跳过校验与提交），验收后删除这两行还原
+		emit('next')
+		return
+		if (!checkBasicData()) {
+			return
+		}
+		try {
+			saveLoading.value = true
+			// 选填字段唯一性实时校验（占用时后端返回 false）
+			if (phoneNumber.value && !(await checkPhoneNumber(phoneNumber.value)).data) {
+				toast("该手机号已存在")
+				return
+			}
+			if (email.value && !(await checkEmail(email.value)).data) {
+				toast("该邮箱已存在")
+				return
+			}
+			const resp = await saveBasics({
+				nickname: nickname.value,
+				gender: gender.value === '' ? undefined : gender.value,
+				phoneNumber: phoneNumber.value === '' ? undefined : phoneNumber.value,
+				email: email.value === '' ? undefined : email.value
+			})
+			if (resp.code === 200) {
+				// 刷新用户信息供后续步骤（默认部门）与首页使用
+				await userStore.initUserInfo()
+				emit('next')
+			} else {
+				toast(resp.msg)
+			}
+		} catch (err) {
+			console.error(err)
+			toastRequestError(err)
+		} finally {
+			saveLoading.value = false
+		}
+	}
+
+	// 表单校验（规则与 web 端向导一致：昵称必填≤20，手机/邮箱选填仅格式校验）
+	const checkBasicData = () => {
+		if (!nickname.value) {
+			toast("用户昵称不能为空")
+			return false
+		}
+
+		if (phoneNumber.value && !/^1[3-9]\d{9}$/.test(phoneNumber.value)) {
+			toast("请输入正确的手机号码")
+			return false
+		}
+
+		if (email.value && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email.value)) {
+			toast("请输入正确的邮箱")
+			return false
+		}
+		return true
+	}
+</script>
+
+<style lang="scss">
+@import "@/styles/user-setup.scss";
+</style>

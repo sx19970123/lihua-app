@@ -20,6 +20,10 @@
 			<button class="btn" type="primary" @tap="goDemo">前往组件示例</button>
 		</view>
 		<view class="card">
+			<text class="label">导航 · 初始设置向导（S2-11 测试入口）</text>
+			<button class="btn" type="primary" @tap="goUserSetupTest">呼出向导（预写全量待补全项）</button>
+		</view>
+		<view class="card">
 			<text class="label">POW · UTS 原生挖矿端到端（④ 尖峰：对拍→取码→挖矿→提交）</text>
 			<text class="value">状态：{{ powState }}</text>
 			<text class="value">引擎：{{ powEngine }}</text>
@@ -37,6 +41,7 @@ import { BASE_API, IS_DEV } from '@/utils/env'
 import { getCaptchaData, check } from '@/api/system/captcha/captcha'
 import { sha256Hex, mineSlice as mineSliceJs, prngHex } from '@/components/captcha/pow/sha256'
 import { mineSlice, prepareEngine, engineName } from '@/uni_modules/lihua-pow'
+import { setData as setUserSetupData, goUserSetup } from '@/helpers/user-setup'
 
 const counter = useCounterStore()
 const baseUrl = BASE_API
@@ -48,6 +53,12 @@ const goLogin = () => {
 
 const goDemo = () => {
 	uni.navigateTo({ url: '/pages/demo/demo' })
+}
+
+// 向导测试入口：预写全量待补全项，向导恒显五步（未登录时向导 initUserInfo 会 401 跳回登录页）
+const goUserSetupTest = () => {
+	setUserSetupData(['UserSetupResetPassword', 'UserSetupUserBasics', 'UserSetupDefaultDept'])
+	goUserSetup()
 }
 
 // ---------- POW 端到端（④ 尖峰）----------

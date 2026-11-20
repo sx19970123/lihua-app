@@ -5,7 +5,7 @@
 			<app-input shape="round" :size="searchSize ?? 'small'" :height="searchHeight ?? 40"
 				:placeholder="searchPlaceholder ?? '请输入关键词'" clearable v-model="keyword" />
 		</view>
-		<scroll-view class="app-tree-scroll" scroll-y>
+		<scroll-view class="app-tree-scroll" scroll-y :style="{maxHeight: (maxHeight ?? 210) + 'px'}">
 			<!-- 节点全量常驻（v3：过滤/收起只切 v-show、元素永不销毁——x 端批量行销毁触发
 			     框架 Element::Dispose 崩溃，sard 的 v-if 销毁流派在 Vapor 不可用）；缩进按层级内联 -->
 			<view v-for="state in allStates" :key="state.item.key" class="app-tree-node" v-show="state.shown"
@@ -74,6 +74,8 @@
 		// 行内加载态：loadingKey 对应行尾显示转圈（替代全屏 showLoading；结束后 current 更新为对勾）
 		loading?: boolean
 		loadingKey?: string
+		// 滚动区最大高度（px，缺省 210；可由外部按视口计算传入）
+		maxHeight?: number
 	}>()
 
 	const emit = defineEmits<{
@@ -248,10 +250,7 @@
 		margin-bottom: var(--lh-gap-sm);
 	}
 
-	/* 长树限高内滚：短树按内容收缩 */
-	.app-tree-scroll {
-		max-height: 210px;
-	}
+	/* 滚动区限高由 maxHeight prop 内联驱动（缺省 210），短树按内容收缩 */
 
 	/* 样式基准取自 sard tree-node 源码后按观感收紧：行定高 36px（sard 80rpx 基础上收紧）无分隔线，
 	   行内距 0（卡片 padding 代偿，根行与内置筛选框左右对齐）+缩进 20px/级，

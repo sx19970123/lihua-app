@@ -1,0 +1,109 @@
+<template>
+	<view class="setup-step">
+		<view class="setup-step-header">
+			<uni-icons class="setup-icon" type="staff" />
+			<text class="setup-title">默认部门</text>
+			<text class="setup-desc">请设置您的默认部门</text>
+		</view>
+		<view class="setup-step-body">
+			<view class="setup-form">
+				<!-- 卡片+筛选框+树整体在组件内；选中即设置默认部门（设置动作随选择即时提交，下一步仅校验结果） -->
+				<AppTree :data="treeData" :current="userStore.defaultDept.id" default-expand-all filterable
+					:max-height="treeMaxHeight" :loading="loading" :loading-key="loadingKey"
+					@select="handleSelectDept" />
+			</view>
+		</view>
+		<view class="setup-step-footer">
+			<view class="setup-btns">
+				<button class="setup-btn" type="primary" @click="handleNext">下一步</button>
+				<view class="setup-sub-btns">
+					<text class="setup-ghost-btn" @click="emit('prev')">上一步</text>
+					<!-- skip 语义：未设过默认部门才显示「以后再说」（推迟设置；已设过则只有下一步） -->
+					<text v-if="!userStore.defaultDeptCode" class="setup-sub-divider">|</text>
+					<text v-if="!userStore.defaultDeptCode" class="setup-ghost-btn" @click="openSkipDialog">以后再说</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 默认部门步：app-tree 树形选择（卡片/筛选框在组件内，filterable 开启）
+	import { toast, toastRequestError } from '@/utils/toast'
+	import { useUserStore } from '@/stores/user'
+	import type { SysDept } from '@/api/system/dept/type/sys-dept'
+	import AppTree from '@/components/app-tree/app-tree.uvue'
+
+	const emit = defineEmits<{next: [], skip: [], prev: []}>()
+
+	const userStore = useUserStore()
+
+	// 部门树 → 组件节点（key/title 由 id/name 归一，业务字段 code 随行携带供提交）
+	const deptToItem = (dept: SysDept): any => ({
+		...dept,
+		key: dept.id ?? '',
+		title: dept.name ?? '',
+		children: dept.children && dept.children.length > 0 ? dept.children.map(deptToItem) : undefined
+	})
+
+	const treeData = userStore.deptTrees.map(deptToItem)
+
+	// 树滚动区限高：按视口动态计算（头部+表单间距+按钮区+安全区预留），矮屏收缩但不小于 160
+	const treeMaxHeight = Math.max(160, uni.getWindowInfo().windowHeight - 560)
+
+	// 选中即设置默认部门（行内 loading：选中行转圈→成功 current 更新为对勾；失败提示由 catch 兜底）
+	const loading = ref<boolean>(false)
+	const loadingKey = ref<string>('')
+
+	const handleSelectDept = (key: string, item: any) => {
+		loading.value = true
+		loadingKey.value = key
+		userStore.updateDefaultDept({id: item.key, name: item.title, code: item.code}).catch((err) => {
+			console.error(err)
+			toastRequestError(err)
+		}).finally(() => {
+			loading.value = false
+		})
+	}
+
+	// 下一步前校验已设置默认部门（与 web 端一致）；设置请求进行中时锁操作
+	const handleNext = () => {
+		if (loading.value) {
+			toast("正在设置默认部门，请稍候")
+			return
+		}
+		// TODO(临时-测试)：随意下一页（跳过校验），验收后删除这两行还原
+		emit('next')
+		return
+		if (userStore.defaultDeptCode) {
+			emit('next')
+		} else {
+			toast("请选择默认部门")
+		}
+	}
+
+	// 跳过确认（uni.showModal，协议弹窗同款官方形态）
+	const openSkipDialog = () => {
+		if (loading.value) {
+			toast("正在设置默认部门，请稍候")
+			return
+		}
+		uni.showModal({
+			title: '以后再说',
+			content: '可稍后在「个人中心 - 默认部门」中设置',
+			cancelText: '继续设置',
+			confirmText: '以后再说',
+			cancelColor: '#74787c',
+			confirmColor: '#3b82f6',
+			success: (res) => {
+				if (res.confirm) {
+					emit('skip')
+				}
+			}
+		})
+	}
+</script>
+
+<style lang="scss">
+@import "@/styles/user-setup.scss";
+</style>

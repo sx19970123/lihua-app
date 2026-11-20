@@ -21,6 +21,14 @@
 			}
 		},
 		{
+			"path": "pages/user-setup/UserSetup",
+			"style": {
+				"navigationStyle": "custom",
+				"disableScroll": true,
+				"disableSwipeBack": true
+			}
+		},
+		{
 			"path": "pages/demo/demo",
 			"style": {
 				"navigationBarTitleText": "组件示例"

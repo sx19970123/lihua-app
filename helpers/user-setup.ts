@@ -36,3 +36,21 @@ export const removeDataItem = (item: string) => {
 		clearData()
 	}
 }
+
+/**
+ * 进入初始设置向导：APP 端底部滑入（登录页留栈底被覆盖）；其余端 reLaunch 清栈
+ * （微信端页面栈唯一，安卓物理返回=退出小程序而非退回登录页绕过）
+ */
+export const goUserSetup = () => {
+	// #ifdef APP
+	uni.navigateTo({
+		url: "/pages/user-setup/UserSetup",
+		animationType: "slide-in-bottom"
+	})
+	// #endif
+	// #ifndef APP
+	uni.reLaunch({
+		url: "/pages/user-setup/UserSetup"
+	})
+	// #endif
+}

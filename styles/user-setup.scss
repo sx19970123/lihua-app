@@ -1,0 +1,138 @@
+/* ========== 登录后初始设置向导（五步组件共享样式，蒸汽版：BEM 单类 + token 色/间距/圆角） ========== */
+
+/* 页面骨架：安全区下方满高（页面 flex 容器内撑满），步进轨道占余下全部 */
+.setup-page {
+	flex: 1;
+}
+
+/* 轨道单步槽位（宽度由页面按 1/count 内联给定；页面禁滚对齐登录域：键盘覆盖不推挤布局） */
+.setup-step-slot {
+	height: 100%;
+}
+
+/* 底部安全区占位（内容底缘不贴 home 指示条） */
+.setup-bottom-safe {
+	height: var(--uni-safe-area-inset-bottom);
+}
+
+/* 步骤版式三段式：头部（距顶固定）+身体（弹性 scroll，矮屏才滚）+脚部（距底固定） */
+.setup-step {
+	flex: 1;
+}
+
+.setup-step-header {
+	align-items: center;
+	padding: 48px 24px 0;
+}
+
+.setup-step-body {
+	flex: 1;
+	padding: 0 24px;
+}
+
+.setup-step-footer {
+	padding: 0 24px 24px;
+}
+
+.setup-icon {
+	font-size: 60px;
+	color: var(--lh-primary);
+}
+
+.setup-title {
+	font-size: var(--lh-text-xl);
+	font-weight: bold;
+	line-height: var(--lh-leading-tight);
+	/* 主字体色（亮黑/暗白），与主题色图标区分 */
+	color: var(--lh-emphasis-color);
+	margin-top: var(--lh-gap-2xl);
+}
+
+.setup-desc {
+	font-size: var(--lh-text-base);
+	line-height: var(--lh-leading-normal);
+	color: var(--lh-tertiary-color);
+	text-align: center;
+	margin-top: var(--lh-gap-sm);
+}
+
+.setup-form {
+	width: 100%;
+	margin-top: var(--lh-gap-3xl);
+}
+
+/* 表单项间距（对齐登录域 auth-field 刻度） */
+.setup-field {
+	margin-top: var(--lh-gap-xl);
+}
+
+.setup-btns {
+	width: 100%;
+}
+
+/* 主按钮：与登录域 auth-btn 同视觉（原生 type=primary 提供 loading/点击态） */
+.setup-btn {
+	width: 100%;
+	height: 45px;
+	border-radius: var(--lh-radius-full);
+	background-color: var(--lh-primary);
+	font-size: var(--lh-text-lg);
+	color: #ffffff;
+}
+
+.setup-sub-btns {
+	flex-direction: row;
+	justify-content: center;
+	align-items: center;
+	margin-top: var(--lh-gap-lg);
+}
+
+/* 次级文字按钮（上一步/以后再说/返回登录） */
+.setup-ghost-btn {
+	font-size: var(--lh-text-base);
+	color: var(--lh-tertiary-color);
+	padding: var(--lh-gap-xs) var(--lh-gap-sm);
+}
+
+.setup-sub-divider {
+	margin: 0 var(--lh-gap-md);
+	color: var(--lh-tertiary-color);
+}
+
+/* 性别选择行：与 app-input 卡片同视觉（45px 胶囊行），值/placeholder 居左+右箭头 */
+.setup-select-row {
+	flex-direction: row;
+	align-items: center;
+	width: 100%;
+	height: 45px;
+	padding: 0 12px;
+	border: 1px solid var(--lh-border-color);
+	border-radius: var(--lh-radius-full);
+	background-color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+	.setup-select-row {
+		background-color: #242628;
+	}
+}
+
+.setup-select-text {
+	flex: 1;
+	font-size: var(--lh-text-base);
+}
+
+.setup-select-placeholder {
+	color: var(--lh-fourth-color);
+}
+
+.setup-select-filled {
+	color: var(--lh-emphasis-color);
+}
+
+.setup-select-arrow {
+	font-size: 14px;
+	color: var(--lh-fourth-color);
+}
+
+/* 部门步容器卡片/筛选/滚动已封装进 app-tree 组件（filterable） */

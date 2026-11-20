@@ -19,7 +19,7 @@
 			}" :value="modelValue"
 				:password="password && !showPassword" :placeholder="placeholder" :disabled="disabled"
 				:maxlength="maxlength ?? -1" placeholder-class="app-input-placeholder" @input="onInput"
-				@blur="onBlur" />
+				@focus="onFocus" @blur="onBlur" />
 			<view v-if="clearable && !disabled && !readonly && modelValue" class="app-input-tool" @click="onClear">
 				<uni-icons class="app-input-tool-clear" type="clear" />
 			</view>
@@ -84,6 +84,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
 	(e: 'update:modelValue', value: string): void
+	(e: 'focus'): void
 	(e: 'blur'): void
 }>()
 
@@ -125,6 +126,11 @@ const onInput = (e: InputEvent) => {
 	emit('update:modelValue', e.detail.value)
 }
 
+// 焦点事件透传（组件不自带重量测——屏外挂载等场景的坐标补偿由消费方经 @focus + remeasure() 自行触发）
+const onFocus = () => {
+	emit('focus')
+}
+
 const onBlur = () => {
 	emit('blur')
 }
@@ -140,10 +146,12 @@ const togglePassword = () => {
 onMounted(() => {
 	ownerInstance = getCurrentInstance()?.proxy ?? null
 	if (props.password && props.showStrength) {
-		// 首帧渲染完成后量测（挂载即量可能拿到零尺寸）
+		// 首帧渲染完成后量测（挂载即量可能拿到零尺寸；屏外挂载的坐标无效，消费方可调 remeasure()）
 		nextTick(() => measureStrength())
 	}
 })
+
+defineExpose({ remeasure: measureStrength })
 </script>
 
 <style>
