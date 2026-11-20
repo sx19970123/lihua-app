@@ -54,7 +54,7 @@
 
 <script setup lang="ts">
 // 视觉对齐 sard-uniapp Input（白底卡片+灰边框；聚焦不染色对齐原生 App 习惯，ucss 无伪类）
-import { getPasswordStrength } from '@/utils/password-strength'
+import { getPasswordStrength } from '@/helpers/password-strength'
 
 const props = defineProps<{
 	// 输入值（v-model）
@@ -119,7 +119,7 @@ const measureStrength = () => {
 	})
 }
 
-// 强度等级：0 未达弱 / 1 弱 / 2 中 / 3 强（阈值与 web/master 同源，见 utils/password-strength）
+// 强度等级：0 未达弱 / 1 弱 / 2 中 / 3 强（阈值与 web/master 同源，见 helpers/password-strength）
 const strengthLevel = computed(() : number => getPasswordStrength(props.modelValue))
 
 const onInput = (e: InputEvent) => {
