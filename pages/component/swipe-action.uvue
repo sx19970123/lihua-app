@@ -3,7 +3,7 @@
 		<text class="demo-bare-label">侧滑操作（差速展开/确认/橡皮筋）</text>
 		<app-list>
 			<app-swipe-action v-for="(row, index) in demoSwipeRows" :key="row.text" ref="swipeRefs"
-				:actions="row.actions" :divider="index < demoSwipeRows.length - 1" :loading="swipeLoading[index]"
+				:actions="row.actions" :divider="index < demoSwipeRows.length - 1" :loading="swipeLoading"
 				@action="act => onSwipeAction(act, index)">
 				<app-list-item :divider="false" :title="row.text" arrow hover />
 			</app-swipe-action>
@@ -32,40 +32,53 @@
 		{ text: '已读', event: 'read', color: '#909399', confirm: true, confirmText: '确认将此条目标记为已读吗？', side: 'left' },
 		{ text: '删除', event: 'delete', type: 'danger', confirm: true, confirmText: '确认要删除此条目吗？' }
 	]
-	// 行数据自带 actions/direction（与 index 解耦——删除行后各行配置跟行走，不会错位拿到别组的）
+	// 行数据自带 actions（与 index 解耦——删除行后各行配置跟行走，不会错位拿到别组的）；
+	// 行 4 加 asyncAll=全员异步演示组标记（判定须值比较——ref 深代理下引用相等恒 false）
 	const demoSwipeRows = ref([
 		{ text: '侧滑条目一', actions: swipeActionsRow },
 		{ text: '侧滑条目二', actions: swipeActionsRow },
 		{ text: '侧滑条目三', actions: swipeActionsRow },
-		{ text: '侧滑条目四', actions: swipeActionsBoth }
+		{ text: '侧滑条目四', actions: swipeActionsBoth, asyncAll: true }
 	])
 	const swipeActionResult = ref<string>('')
 	const swipeRefs = ref<any[]>([])
-	// 行级 loading 状态（受控传组件：请求期间 spinner+全操作拒绝）
-	const swipeLoading = ref<boolean[]>([false, false, false, false])
-	const fakeServerDelete = (id : string) : Promise<boolean> => {
+	// loading=全局单布尔即足：侧滑互斥（一次只一行在场），同一布尔传全行=任一行操作
+	// 期间整列表冻结（行级守卫×全行传参，iOS 惯例语义），行数据零污染、无键控对齐问题
+	const swipeLoading = ref<boolean>(false)
+	const fakeServerOp = (id : string) : Promise<boolean> => {
 		return new Promise<boolean>((resolve) => {
 			setTimeout(() => {
 				resolve(true)
 			}, 600)
 		})
 	}
+	// 四契约并陈：行 1-3=标星异步/置顶同步（确认链）/删除；行 4=全员异步组（左组已读/
+	// 置顶确认链 loading+标星直点冻结，右组删除）——两级 loading 同权演示
 	const onSwipeAction = (action : any, index : number) => {
 		swipeActionResult.value = action.event
-		if (action.event === 'delete') {
-			const row = demoSwipeRows.value[index]
-			swipeLoading.value[index] = true
-			fakeServerDelete(row.text).then((ok : boolean) => {
-				if (!ok) {
-					swipeLoading.value[index] = false
-					uni.showToast({ title: '删除失败', icon: 'none' })
-					return
-				}
+		const row = demoSwipeRows.value[index]
+		// 异步判定走值比较（行自带标记跟行走，删行不错位）：asyncAll 组全员接假服务，其余仅删除/标星
+		const asyncOp = action.event === 'delete' || action.event === 'star' || row.asyncAll === true
+		if (!asyncOp) {
+			return
+		}
+		swipeLoading.value = true
+		fakeServerOp(row.text).then((ok : boolean) => {
+			if (!ok) {
+				swipeLoading.value = false
+				uni.showToast({ title: `${action.text}失败`, icon: 'none' })
+				return
+			}
+			if (action.event === 'delete') {
+				// loading 不清：须保持 true 至行卸载（冻结现场带进收场动画），filter 后必清
 				swipeRefs.value[index]?.remove()?.then(() => {
 					demoSwipeRows.value = demoSwipeRows.value.filter((r : any) => r.text !== row.text)
+					swipeLoading.value = false
 				})
-			})
-		}
+			} else {
+				swipeLoading.value = false
+			}
+		})
 	}
 </script>
 

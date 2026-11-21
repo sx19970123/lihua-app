@@ -1,0 +1,76 @@
+<template>
+	<SwipeCore :actions="actions" :direction="direction" :disabled="disabled" :divider="divider" :loading="loading"
+			ref="coreRef" @action="onAction" @open="onOpen" @close="onClose">
+		<slot />
+	</SwipeCore>
+</template>
+
+<script setup lang="ts">
+	// 侧滑操作·薄入口（平台分叉收口，规范见 skills/create-component.md）：条件 import
+	// 选核心——app(iOS/Android/鸿蒙)/H5 元素 API 同构一份，MP 独立一份；本文件只透传
+	// props/events/slot 与代理 expose，逻辑零驻留
+	// #ifdef MP-WEIXIN
+	import SwipeCore from './core/swipe-core-mp.uvue'
+	// #endif
+	// #ifndef MP-WEIXIN
+	import SwipeCore from './core/swipe-core.uvue'
+	// #endif
+
+	type SwipeAction = {
+		// 按钮文案
+		text : string
+		// 事件标识（@action 回传）
+		event : string
+		// danger=红底（危险操作），默认蓝底
+		type ?: string
+		// 自定义按钮背景色（优先于 type 配色）
+		color ?: string
+		// 点击后进确认态，确认后触发 @action
+		confirm ?: boolean
+		// 确认条文案
+		confirmText ?: string
+		// 所属侧：left=左组（右滑展开）；缺省 right=右组（左滑展开）
+		side ?: string
+		// 业务透传负载（组件不读，@action 原样回传）
+		data ?: any
+	}
+
+	defineProps<{
+		// 侧滑按钮组（组件自渲染，宽度自适应文案）
+		actions : SwipeAction[]
+		// 滑出方向：right=按钮在右左滑展开（默认）；left=按钮在左右滑展开
+		direction ?: string
+		// 禁用手势（按钮不可滑出）
+		disabled ?: boolean
+		// 行底分隔线（默认开；末行或组内单行显式 :divider="false"）
+		divider ?: boolean
+		// 行级加载态（两级通用）：确认链冻结二次确认现场、直点钮冻结展开档；
+		// 被点钮文字前 spinner；期间全操作拒绝；撤离自动收起（删除走 remove()）
+		loading ?: boolean
+	}>()
+
+	const emit = defineEmits<{
+		// 按钮最终确认（唯一业务回调）——回传整个按钮 item（event+data 均可读）
+		(e : 'action', action : SwipeAction) : void
+		// 展开完成（side='left'|'right'，含程序化 open）
+		(e : 'open', side : string) : void
+		// 收起完成（含互斥/程序化 close）
+		(e : 'close') : void
+	}>()
+
+	const coreRef = ref<any>(null)
+	const onAction = (a : SwipeAction) => { emit('action', a) }
+	const onOpen = (s : string) => { emit('open', s) }
+	const onClose = () => { emit('close') }
+
+	defineExpose({
+		// 程序化 open('left'|'right')，缺省按 direction prop 选侧
+		open : (side ?: string) => { coreRef.value?.open(side) },
+		close : () => { coreRef.value?.close() },
+		// 行消失动画原语：resolve 于动画播完——业务在 then 里清数据
+		remove : () : Promise<void> => {
+			const p = coreRef.value?.remove()
+			return p ?? Promise.resolve()
+		}
+	})
+</script>

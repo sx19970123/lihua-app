@@ -1,6 +1,6 @@
 ---
 name: create-component
-description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系）、暗色模式、按压反馈三等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范。
+description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范。
 ---
 
 # 新建/修改公共组件（uni-app x 手搓组件规范）
@@ -42,15 +42,21 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - 仅两类例外：①精调组件双值场景（如验证码红绿结果色）组件内 @media 双段；
   ②**hover 按压类必须字面量**（见下节）。
 
-## 按压反馈（styles/press.scss 统一维护）
+## 按压反馈与分隔线（styles/press.scss 统一维护）
 
 - 机制：`hover-class` 原生驱动 + `:hover-stay-time="100"`；选类依据
   `stores/theme.ts` 的 `themeStore.isDark`。
-- 三等级类（组件 style 头 `@import '@/styles/press.scss'`，编译期合并进作用域）：
-  行级 `.app-pressed-row(-dark)`（浅一号+与分隔线同色）、卡片级 `.app-pressed-block(-dark)`、
+- 按压四等级（组件 style 头 `@import '@/styles/press.scss'`，编译期合并进作用域）：
+  行级 `.app-pressed-row(-dark)`、卡片级 `.app-pressed-block(-dark)`、
+  灰底内嵌级 `.app-pressed-inset(-dark)`（secondary-bg 灰底载体：分段器段等——
+  row/block 在该底色上各有一半场景同色不可见）、
   文本级 `.app-pressed-text`（opacity .5，跨亮暗免双类）。
 - **hover 类不能走 var/@media**（原生驱动不重算，主题切换停旧色）——必须字面量双类。
-- **分隔线与按压同色规范**：带线载体线色=按压色同值（按压时线画在灰上同色隐形）。
+- **线色强制=按压色（全组件统一，用户拍板 2026-11-21）**：带分隔线的载体，线色直接挂
+  同名按压类 `app-pressed-row`（行级载体）/`app-pressed-block`（卡片级载体）——常驻渲染
+  走类的 @media 暗色段自动亮暗，与按压色同一定义（按压时线画在灰上同色隐形，物理上
+  不可能不同色）；线自身类只管几何（position/端点/高度），双类叠加。
+  **组件禁止自定线色**；调按压色/线色只改 press.scss 一个文件。
 
 ## 动画
 
@@ -71,6 +77,22 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - **烘焙字段+纯属性读**：class/显隐逻辑在 watchEffect 里写进 state 字段，模板只读属性；
   `:class="fn()"` 函数调用形态不追踪依赖（死路）。
 - import 统一写 script 顶部。
+
+## 平台分叉组件（依赖元素命令式能力的组件）
+
+- 组件若依赖 `el.style.setProperty` / `el.getBoundingClientRect` 等元素命令式能力，注意
+  **MP 端 v-for 元素 ref 垫片无 .style、无量测函数**——此类组件按「薄入口+按平台核心」
+  分叉（先例：app-swipe-action）：
+  - 入口 `app-*.uvue`：**script 条件 import** 选核心（`#ifdef MP-WEIXIN` 等），模板单份
+    `<Core>`+透传 props/events/slot/expose 代理——模板不做 #ifdef。
+  - `core/` 核心按后端矩阵开份数：app(iOS/Android/鸿蒙)/H5 元素 API 同构**一份通吃**；
+    MP 独立一份（零元素 ref、几何烘响应式 state、:style 单通道）。新平台真机冒分歧再拆
+    第三份（入口加一行条件 import），不预写份数。
+  - 与 UI 无关的状态机（手势/几何/流程）尽量抽共享模块单源；共享模块是内部实现非契约，
+    平台交互模型被迫分歧时（如 MP setData 帧率）该平台核心可自治。
+  - 平台差异代码收敛在核心内，业务页面零 #ifdef（铁律不变）。
+- MP 量测兜底：`try el.getBoundingClientRect()` 抛错/零宽 → 字符宽估算
+  （CJK≈1em、其余≈0.55em × 字号），纯中文误差 ±2px。
 
 ## 交互
 

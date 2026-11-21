@@ -1,0 +1,964 @@
+<template>
+	<view class="app-swipe-action" :class="removing ? 'app-swipe-action-removing' : ''"
+			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
+		<view class="app-swipe-clip">
+			<!-- 行底分隔线（挂裁切层底=天然界内；消费方内层行 :divider="false"） -->
+			<view v-if="divider !== false" class="app-swipe-line app-pressed-row" />
+			<!-- 左组（恒宽叠塔镜像）：零元素 ref（MP 垫片无 .style），:style 响应式单通道 -->
+			<view v-for="(action, index) in leftList" :key="action.event" class="app-swipe-btn app-swipe-btn--left"
+					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
+					:style="mpBtnL[index]"
+					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
+					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+				</view>
+				<text class="app-swipe-btn-text" :style="mpTextL[index]">{{ confirming && confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
+			</view>
+			<!-- 右组（恒宽叠塔） -->
+			<view v-for="(action, index) in rightList" :key="action.event" class="app-swipe-btn"
+					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
+					:style="mpBtnR[index]"
+					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
+					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+				</view>
+				<text class="app-swipe-btn-text" :style="mpTextR[index]">{{ confirming && confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
+			</view>
+			<!-- 内容层：透明（按钮空间与内容互补，不依赖层叠） -->
+			<view class="app-swipe-content" :style="mpContent">
+				<slot />
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 侧滑核心·MP-微信：零元素 ref（v-for 元素垫片无 .style、无量测函数）——几何全程烘
+	// 响应式 state、:style 单通道渲染；量测走字符宽估算；状态机/契约与 swipe-core.uvue
+	// 同源（app/h5 核心），写层与量测层按平台分叉。入口见 app-swipe-action.uvue。
+	// ---- 状态机与 app 核心逐段对齐（改动须双侧同步，engine 抽取前临时单源纪律）----
+	// 侧滑操作（双侧，恒宽叠塔模型）：actions 单集合按 side 分左右组——彩带宽恒=自身+
+	// 靠内容侧全部（右组锚右缘藏右外/左组锚左缘反转渲染序完全镜像），动画只做进入位移
+	// d=W_i'×(1-p) 线性跟手；弹簧段可见段平分阻尼行程（width 拉伸）、松手 JS 同帧补间复原；
+	// 确认态=彩带自延长盖场（装不下时 item 顺势顶开）；确认执行=现场冻结，去向仅两途：
+	// 删除=remove() 带现场收场；单条操作=完成（loading 撤离/同步未置）自动收起。
+	// 直点钮同权：loading 冻结展开档+钮上 spinner，撤离同收；未置 loading 乐观即收。
+	// currentX 双向语义：负=右组/正=左组/0=收起
+
+	import { closeOthers, markOpen, clearOpen } from '../mutex'
+	import { createSpringControl } from '@/utils/spring'
+
+	type SwipeAction = {
+		// 按钮文案
+		text : string
+		// 事件标识（@action 回传）
+		event : string
+		// danger=红底（危险操作），默认蓝底
+		type ?: string
+		// 自定义按钮背景色（优先于 type 配色）
+		color ?: string
+		// 点击后进确认态（按钮排滑出、确认条滑入），确认后动画播完触发 @action
+		confirm ?: boolean
+		// 确认条文案
+		confirmText ?: string
+		// 所属侧：left=左组（右滑展开）；缺省 right=右组（左滑展开）
+		side ?: string
+		// 业务透传负载（组件不读，@action 原样回传）
+		data ?: any
+	}
+
+	const props = defineProps<{
+		// 侧滑按钮组（组件自渲染，宽度自适应文案）
+		actions : SwipeAction[]
+		// 滑出方向：right=按钮在右左滑展开（默认）；left=按钮在左右滑展开
+		direction ?: string
+		// 禁用手势（按钮不可滑出）
+		disabled ?: boolean
+		// 行底分隔线（默认开；末行或组内单行显式 :divider="false"）
+		divider ?: boolean
+		// 行级加载态（两级通用）：确认链冻结二次确认现场、直点钮冻结展开档；
+		// 被点钮文字前 spinner；期间全操作拒绝；撤离自动收起（删除走 remove()）
+		loading ?: boolean
+	}>()
+
+	const emit = defineEmits<{
+		(e : 'action', action : SwipeAction) : void
+		(e : 'open', side : string) : void
+		(e : 'close') : void
+	}>()
+
+	const SIDE_L = 0
+	const SIDE_R = 1
+	const sideListOf = (s : string) => props.actions.filter((a : SwipeAction) => (a.side ?? 'right') === s)
+	const leftList = computed<SwipeAction[]>(() => sideListOf('left').slice().reverse())
+	const rightList = computed<SwipeAction[]>(() => sideListOf('right'))
+
+	// 手势态通报（内层 list-item 退出按压用；inject 方默认无感）
+	const pressSuppressed = ref<boolean>(false)
+	provide('app-swipe-press', pressSuppressed)
+
+	const confirmLabel = ref<string>('')
+	const confirmIndex = ref<number>(-1)
+	const confirmSide = ref<number>(SIDE_R)
+
+	// loading spinner（常驻零销毁，显隐烘焙类）：贴被点钮文字左侧——absolute 不入流
+	// （文字位只归 confirmM 管），left 随归心补间逐帧钉住；确认链/直点钮两级通用
+	const SPIN_PAD = 22
+	const directBusy = ref<boolean>(false)
+	const directSide = ref<number>(SIDE_R)
+	const directIndex = ref<number>(-1)
+	// spinner 落点=被冻结的钮（确认链优先；与直点冻结互斥不并存）
+	const spinnerTarget = (sideId : number) : number => {
+		if (props.loading !== true) {
+			return -1
+		}
+		if (confirming.value && confirmSide.value === sideId) {
+			return confirmIndex.value
+		}
+		if (directBusy.value && directSide.value === sideId) {
+			return directIndex.value
+		}
+		return -1
+	}
+	const spinnerAtL = computed<number>(() => spinnerTarget(SIDE_L))
+	const spinnerAtR = computed<number>(() => spinnerTarget(SIDE_R))
+	const spinnerLeft = ref<number>(0)
+	const spinnerStyle = computed<any>(() => {
+		return {
+			left: `${spinnerLeft.value}px`
+		}
+	})
+
+	// 几何（量测，打包）：Wi=各按钮自身宽、Wi'=叠塔宽（自身+右侧全部）、W=组宽；
+	// margins=各彩带文字常规态左边距（确认态改写居中延长彩带，退出时复原）
+	type SideGeom = { widths : number[], fan : number[], margins : number[], total : number }
+
+	// 响应式 style 载体（声明时即构建——首渲染就带藏外 transform 无闪现帧；actions 变化
+	// 经 watch 重建）：MP 无命令式写通道，引擎写点全落此、模板 :style 直读
+	const mkBtnStyle = (a : SwipeAction, sign : number) : any => {
+		const st : any = { width: '', transform: `translateX(${sign * 999}px)`, transition: '' }
+		if (a.color != null && a.color !== '') {
+			st.backgroundColor = a.color
+		}
+		return st
+	}
+	const mkTextStyle = () : any => ({ marginLeft: '' })
+	const mpBtnL = ref<any[]>(leftList.value.map((a : SwipeAction) : any => mkBtnStyle(a, -1)))
+	const mpBtnR = ref<any[]>(rightList.value.map((a : SwipeAction) : any => mkBtnStyle(a, 1)))
+	const mpTextL = ref<any[]>(leftList.value.map((_a : SwipeAction) : any => mkTextStyle()))
+	const mpTextR = ref<any[]>(rightList.value.map((_a : SwipeAction) : any => mkTextStyle()))
+	const mpContent = ref<any>({ transform: '', transition: '' })
+	const mpSync = () => {
+		mpBtnL.value = leftList.value.map((a : SwipeAction) : any => mkBtnStyle(a, -1))
+		mpBtnR.value = rightList.value.map((a : SwipeAction) : any => mkBtnStyle(a, 1))
+		mpTextL.value = leftList.value.map((_a : SwipeAction) : any => mkTextStyle())
+		mpTextR.value = rightList.value.map((_a : SwipeAction) : any => mkTextStyle())
+	}
+
+	// 侧实体（与 app 核心同构，写层分叉）：封装一侧的几何+驱动方法
+	const makeSide = (fixedSign : number, mpBtn : any, mpText : any) => {
+		const g : SideGeom = { widths: [], fan: [], margins: [], total: 0 }
+		// 该侧进过弹簧段才需在回程复位宽度
+		let springDirty = false
+
+		// 写层：响应式 style 对象显式属性赋值（btn 仅 width/transform/transition 三属性，
+		// text 仅 margin-left——不走动态键，编译行为可预期）
+		const wBtn = (i : number, prop : string, val : string) => {
+			const st = (mpBtn.value as any[])[i]
+			if (st == null) {
+				return
+			}
+			if (prop === 'width') {
+				st.width = val
+			} else if (prop === 'transform') {
+				st.transform = val
+			} else if (prop === 'transition') {
+				st.transition = val
+			}
+		}
+		const wText = (i : number, prop : string, val : string) => {
+			const st = (mpText.value as any[])[i]
+			if (st != null && prop === 'margin-left') {
+				st.marginLeft = val
+			}
+		}
+
+		// 彩带驱动：p∈[0,1] 线性跟手；p>1 弹簧平分阻尼
+		const driveAt = (p : number) => {
+			const n = g.fan.length
+			for (let i = 0; i < n; i++) {
+				let d = 0
+				if (p > 1) {
+					const over = (p - 1) * g.total
+					const add = over * (n - i) / n
+					wBtn(i, 'width', `${g.fan[i] + add}px`)
+					if (fixedSign < 0) {
+						// 左组橡皮筋：右缘延展，文字随右缘同步右移（右组锚右缘天然跟移免补）
+						wText(i, 'margin-left', `${(g.margins[i] ?? 0) + add}px`)
+					}
+					springDirty = true
+				} else {
+					d = g.fan[i] * (1 - p)
+					if (springDirty) {
+						wBtn(i, 'width', `${g.fan[i]}px`)
+						if (fixedSign < 0) {
+							wText(i, 'margin-left', `${g.margins[i] ?? 0}px`)
+						}
+					}
+				}
+				wBtn(i, 'transform', `translateX(${fixedSign * d}px)`)
+			}
+			if (p <= 1) {
+				springDirty = false
+			}
+		}
+
+		// 全彩带过渡开关
+		const setTransitionAll = (t : string) => {
+			const n = (mpBtn.value as any[]).length
+			for (let i = 0; i < n; i++) {
+				wBtn(i, 'transition', t)
+			}
+		}
+
+		// 宽度/文字位瞬回静态常量（确认残留清算/互斥收起共用）
+		const resetStatic = () => {
+			for (let i = 0; i < g.fan.length; i++) {
+				wBtn(i, 'width', `${g.fan[i]}px`)
+				wText(i, 'margin-left', `${g.margins[i] ?? 0}px`)
+			}
+		}
+
+		// 内容侧彩带滑出行外（进确认时 j>idx 的退出视野）
+		const slideOutFrom = (idx : number) => {
+			for (let j = idx + 1; j < g.fan.length; j++) {
+				wBtn(j, 'transform', `translateX(${fixedSign * g.fan[j]}px)`)
+			}
+		}
+
+		// 量测+静态锁定（MP 无元素量测——textWidthOf 字符估算）；可重入（actions 变化）
+		const measure = (labels : string[]) => {
+			g.widths.splice(0, g.widths.length)
+			g.fan.splice(0, g.fan.length)
+			g.margins.splice(0, g.margins.length)
+			g.total = 0
+			const widths : number[] = []
+			let acc = 0
+			for (let i = 0; i < labels.length; i++) {
+				const w = textWidthOf(labels[i] ?? '') + 32
+				widths.push(w)
+				acc += w
+			}
+			g.total = acc
+			// 叠塔宽=自身+靠内容侧全部（右组数组序大=贴行界；左组已反转渲染序，同公式成立）
+			for (let i = 0; i < widths.length; i++) {
+				g.widths.push(widths[i])
+				let sum = widths[i]
+				for (let j = i + 1; j < widths.length; j++) {
+					sum += widths[j]
+				}
+				g.fan.push(sum)
+			}
+			for (let i = 0; i < widths.length; i++) {
+				wBtn(i, 'width', `${g.fan[i]}px`)
+				const tw = textWidthOf(labels[i] ?? '')
+				// 文字钉位=自身可见段中心（左组含上层盖位镜像偏移）
+				let ml : number
+				if (fixedSign > 0) {
+					ml = Math.max(0, (widths[i] - tw) / 2)
+				} else {
+					let above = 0
+					for (let j = i + 1; j < widths.length; j++) {
+						above += widths[j]
+					}
+					ml = above + Math.max(0, (widths[i] - tw) / 2)
+				}
+				g.margins.push(ml)
+				wText(i, 'margin-left', `${ml}px`)
+			}
+		}
+
+		const isSpringDirty = () : boolean => springDirty
+		const clearSpringDirty = () => { springDirty = false }
+
+		return { g, fixedSign, driveAt, setTransitionAll, resetStatic, slideOutFrom, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
+	}
+	const sides = [makeSide(-1, mpBtnL, mpTextL), makeSide(1, mpBtnR, mpTextR)]
+	// 状态：当前内容位移档（0 收起 / -W 展开）、确认/消失
+	let currentX = 0
+	const confirming = ref<boolean>(false)
+	let confirmAction : SwipeAction | null = null
+	const removing = ref<boolean>(false)
+	// 手势
+	let dragTouchId = -1
+	let startX = 0
+	let startY = 0
+	let baseX = 0
+	let horizontal : boolean | null = null
+	// 末速度追踪（EMA 平滑；松手前停顿>80ms 视为有意停住速度作废）
+	let velMs = 0
+	let trackX = 0
+	let trackT = 0
+
+	const clamp = (v : number, min : number, max : number) : number => v < min ? min : (v > max ? max : v)
+
+	// 有限值守卫：NaN/Infinity 不许进响应式 state
+	const safe = (v : number, fallback : number) : number => (isFinite(v) ? v : fallback)
+
+	// 文字实宽：MP 无元素量测——字符宽估算（CJK≈1em/其余≈0.55em × 字号 15，
+	// 纯中文误差 ±2px，入 32px 内距后不可见）
+	const textWidthOf = (label : string) : number => {
+		let units = 0
+		for (let i = 0; i < label.length; i++) {
+			units += label.charCodeAt(i) > 255 ? 1 : 0.55
+		}
+		return Math.ceil(units * 15)
+	}
+
+	const findTouch = (e : TouchEvent, id : number) : Touch | null => {
+		for (let i = 0; i < e.changedTouches.length; i++) {
+			if (e.changedTouches[i].identifier === id) {
+				return e.changedTouches[i]
+			}
+		}
+		for (let i = 0; i < e.touches.length; i++) {
+			if (e.touches[i].identifier === id) {
+				return e.touches[i]
+			}
+		}
+		return null
+	}
+
+	// ---------- 位移驱动 ----------
+	// 内容层位移统一口：x 直用（负=左移让右侧 / 正=右移让左侧）
+	const driveContent = (x : number) => {
+		mpContent.value.transform = `translateX(${x}px)`
+	}
+
+	const setTransition = (ms : number) => {
+		const t = ms > 0 ? `transform ${ms}ms ease` : 'none'
+		mpContent.value.transition = t
+		sides[SIDE_L].setTransitionAll(t)
+		sides[SIDE_R].setTransitionAll(t)
+	}
+
+	// 橡皮筋（分式衰减）：d=该侧组宽的 0.25（下限 32）——由调用方传侧组宽
+	const rubberOf = (total : number, excess : number) : number => {
+		const d = total > 0 ? Math.max(32, total * 0.25) : 32
+		const k0 = 0.4
+		return d * (1 - 1 / (excess * k0 / d + 1))
+	}
+
+	// 补间引擎（代际 token）——与 app 核心同款
+	const createTweenControl = () => {
+		let timer : number | null = null
+		let gen = 0
+		const cancel = () => {
+			gen++
+			if (timer != null) {
+				clearTimeout(timer)
+				timer = null
+			}
+		}
+		const run = (step : (e : number) => void, done ?: () => void, duration ?: number, easeIn ?: boolean) => {
+			cancel()
+			const t0 = Date.now()
+			const D = duration ?? 300
+			const myGen = gen
+			const tick = () => {
+				if (myGen !== gen) {
+					return
+				}
+				const k = clamp((Date.now() - t0) / D, 0, 1)
+				const e = easeIn === true ? k * k : 1 - (1 - k) * (1 - k)
+				step(e)
+				if (k < 1) {
+					timer = setTimeout(tick, 16)
+				} else {
+					timer = null
+					done?.()
+				}
+			}
+			tick()
+		}
+		return { cancel, run }
+	}
+	const springCtl = createTweenControl()
+	const confirmCtl = createTweenControl()
+
+	// 确认补间状态（跟踪变量=当前值，打断后新补间从实际位起跳）
+	let confirmW = 0
+	let confirmM = 0
+	// 进确认时的 item 顶开量（>0=确认时 item 被顶开过，取消时需收回）
+	let confirmExtra = 0
+
+	const cancelConfirmTween = () => {
+		confirmCtl.cancel()
+		sides[SIDE_L].resetStatic()
+		sides[SIDE_R].resetStatic()
+		confirmW = -1
+	}
+
+	// toX 传 null = 不驱动 content（item 渲染态冻结）；backD=内容侧彩带回位目标位移
+	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, backD ?: number | null, onDone ?: () => void) => {
+		confirmCtl.cancel()
+		const fromW = confirmW >= 0 ? confirmW : s.g.fan[index]
+		const fromX = currentX
+		const fromM = confirmM
+		const n = s.g.fan.length
+		const settled = Math.abs(toW - fromW) < 0.5 && Math.abs(toM - fromM) < 0.5
+			&& (toX == null || Math.abs(toX - fromX) < 0.5)
+		if (settled) {
+			onDone?.()
+			return
+		}
+		setTransition(0)
+		confirmCtl.run((e : number) => {
+			confirmW = safe(fromW + (toW - fromW) * e, toW)
+			confirmM = safe(fromM + (toM - fromM) * e, toM)
+			s.wBtn(index, 'width', `${confirmW}px`)
+			if (toX != null) {
+				currentX = safe(fromX + (toX - fromX) * e, toX)
+				driveContent(currentX)
+			}
+			s.wText(index, 'margin-left', `${confirmM}px`)
+			if (backD != null) {
+				for (let j = index + 1; j < n; j++) {
+					const d = safe(s.g.fan[j] + (backD - s.g.fan[j]) * e, backD ?? 0)
+					s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
+				}
+			}
+		}, onDone)
+	}
+
+	// 进确认：从按钮态延长到对接 item（extra=装不下时 item 顶开量）
+	const confirmExtend = (s : ReturnType<typeof makeSide>, index : number, tw : number, extra : number) => {
+		s.clearSpringDirty()
+		confirmW = s.g.fan[index]
+		confirmM = s.g.margins[index] ?? 0
+		const toW = s.g.total + extra
+		const openX = -s.fixedSign * s.g.total
+		if (currentX !== openX) {
+			setTransition(0)
+			currentX = openX
+			driveContent(currentX)
+		}
+		confirmExtra = extra
+		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2))
+	}
+
+	// 弹簧回位补间：内容+彩带 width 同帧，终态移交 openAt 就位
+	const cancelSpringTween = () => { springCtl.cancel() }
+
+	const springReturn = () => {
+		cancelSpringTween()
+		markOpen(closeSelf)
+		const s = currentX < 0 ? sides[SIDE_R] : sides[SIDE_L]
+		const g = s.g
+		const raw = Math.abs(currentX) - g.total
+		const startOver = raw > 0 ? rubberOf(g.total, raw) : 0
+		if (startOver <= 0) {
+			setTransition(300)
+			openAt(s)
+			return
+		}
+		const n = g.fan.length
+		const leftSide = s.fixedSign < 0
+		setTransition(0)
+		springCtl.run((e : number) => {
+			const over = safe(startOver * (1 - e), 0)
+			for (let i = 0; i < n; i++) {
+				const add = over * (n - i) / n
+				s.wBtn(i, 'width', `${safe(g.fan[i] + add, g.fan[i])}px`)
+				if (leftSide) {
+					s.wText(i, 'margin-left', `${safe((g.margins[i] ?? 0) + add, g.margins[i] ?? 0)}px`)
+				}
+			}
+			currentX = safe(-s.fixedSign * (g.total + over), -s.fixedSign * g.total)
+			driveContent(currentX)
+		}, () => {
+			s.clearSpringDirty()
+			setTransition(300)
+			openAt(s)
+		})
+	}
+
+	// 总驱动（currentX 双向语义：负=右组展开 / 正=左组展开 / 0=收起）
+	const drive = (x : number) => {
+		let effX = x
+		const wr = sides[SIDE_R].g.total
+		const wl = sides[SIDE_L].g.total
+		if (x < 0 && wr > 0 && -x > wr) {
+			effX = -(wr + rubberOf(wr, -x - wr))
+		} else if (x > 0 && wl > 0 && x > wl) {
+			effX = wl + rubberOf(wl, x - wl)
+		}
+		driveContent(effX)
+		if (wr > 0) {
+			const pr = clamp(-effX / wr, 0, 1.3)
+			sides[SIDE_R].driveAt(pr)
+		}
+		if (wl > 0) {
+			const pl = clamp(effX / wl, 0, 1.3)
+			sides[SIDE_L].driveAt(pl)
+		}
+	}
+
+	// ---------- 手势 ----------
+	// 彩带 touchstart：确认态下延长彩带拦冒泡（点它=确认执行，不被根级触摸取消吞掉）。
+	// MP 兜底：stopPropagation 不可靠时命中标记让根级手势让行（touchend/cancel 清位，
+	// 拦冒泡成败两世界均不留脏标——app 核心已实证 stopPropagation 有效，不携此袱）
+	let confirmBarHit = false
+	const onBtnTouchStart = (e : TouchEvent, sideId : number, index : number) => {
+		if (confirming.value && confirmSide.value === sideId && confirmIndex.value === index) {
+			e.stopPropagation()
+			confirmBarHit = true
+		}
+	}
+
+	const onTouchStart = (e : TouchEvent) => {
+		if (confirmBarHit) {
+			confirmBarHit = false
+			return
+		}
+		if (removing.value || props.disabled === true || props.loading === true) {
+			return
+		}
+		cancelSpringTween()
+		cancelInertia()
+		if (confirming.value) {
+			confirmCtl.cancel()
+			closeOthers(closeSelf)
+			exitConfirm()
+			return
+		}
+		cancelConfirmTween()
+		closeOthers(closeSelf)
+		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
+		if (t == null) {
+			return
+		}
+		dragTouchId = t.identifier
+		startX = t.screenX
+		startY = t.screenY
+		baseX = currentX
+		horizontal = null
+		setTransition(0)
+	}
+
+	const onTouchMove = (e : TouchEvent) => {
+		if (dragTouchId < 0) {
+			return
+		}
+		const p = findTouch(e, dragTouchId)
+		if (p == null) {
+			return
+		}
+		const dx = p.screenX - startX
+		const dy = p.screenY - startY
+		if (horizontal == null) {
+			// 方向判定：位移过 5px 才定，纵向意图让位滚动
+			if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+				horizontal = Math.abs(dx) > Math.abs(dy)
+				if (horizontal) {
+					e.preventDefault()
+					pressSuppressed.value = true
+				}
+			}
+			return
+		}
+		if (horizontal !== true) {
+			return
+		}
+		e.preventDefault()
+		currentX = clamp(baseX + dx, -sides[SIDE_R].g.total * 6, sides[SIDE_L].g.total * 6)
+		drive(currentX)
+		const now = Date.now()
+		const mdt = now - trackT
+		if (mdt > 0) {
+			velMs = velMs * 0.7 + ((currentX - trackX) / mdt) * 0.3
+		}
+		trackX = currentX
+		trackT = now
+	}
+
+	const onTouchEnd = () => {
+		confirmBarHit = false
+		if (dragTouchId < 0) {
+			return
+		}
+		dragTouchId = -1
+		pressSuppressed.value = false
+		if (horizontal !== true) {
+			horizontal = null
+			return
+		}
+		horizontal = null
+		// 起拖域门禁（弹簧支路/阈值支路共用）：开态域起拖=只可回开本侧或收起，不接盘对侧
+		// （total>0 守卫：单侧行对侧半宽 0 会把 fromL/R 恒真废掉本侧开启）
+		const fromL = sides[SIDE_L].g.total > 0 && baseX >= sides[SIDE_L].g.total / 2
+		const fromR = sides[SIDE_R].g.total > 0 && baseX <= -sides[SIDE_R].g.total / 2
+		if (sides[SIDE_L].isSpringDirty() || sides[SIDE_R].isSpringDirty()) {
+			// 跨域橡皮筋例外：springReturn 终态=openAt(对侧)=串面主径，改走收起档物理回弹
+			if ((currentX < 0 && fromL) || (currentX > 0 && fromR)) {
+				closeWithInertia(baseX < 0 ? sides[SIDE_R] : sides[SIDE_L], (Date.now() - trackT < 80) ? velMs : 0)
+				return
+			}
+			springReturn()
+			return
+		}
+		setTransition(300)
+		// 分侧分向阈值：收起域起拖 5px 轻扫即开（灵敏）；开态域起拖回拖过半保持本侧开
+		if (!fromL && -currentX > (fromR ? sides[SIDE_R].g.total / 2 : 5)) {
+			openAt(sides[SIDE_R])
+		} else if (!fromR && currentX > (fromL ? sides[SIDE_L].g.total / 2 : 5)) {
+			openAt(sides[SIDE_L])
+		} else {
+			// 收起档：EMA 末速（停顿>80ms 作废）；选侧=起拖域
+			const velocity = (Date.now() - trackT < 80) ? velMs : 0
+			const closeSide = baseX < 0 ? sides[SIDE_R] : sides[SIDE_L]
+			if (Math.abs(velocity) > 0.3) {
+				closeWithInertia(closeSide, velocity)
+			} else {
+				closeSelf()
+			}
+		}
+	}
+
+	// ---------- 档位 ----------
+	// 惯性收起：物理弹簧驱动（欠阻尼积分——初速承接松手末速度）
+	const inertiaSpring = createSpringControl()
+	const cancelInertia = () => { inertiaSpring.cancel() }
+
+	const closeWithInertia = (s : ReturnType<typeof makeSide>, velocity : number) => {
+		cancelInertia()
+		cancelSpringTween()
+		if (Math.abs(velocity) < 0.3) {
+			closeSelf()
+			return
+		}
+		markOpen(closeSelf)
+		setTransition(0)
+		inertiaSpring.run(currentX, 0, velocity * 1000, (x : number) => {
+			currentX = x
+			drive(x)
+		}, () => {
+			currentX = 0
+			clearOpen(closeSelf)
+			emit('close')
+		})
+	}
+
+	const openAt = (s : ReturnType<typeof makeSide>) => {
+		if (props.loading === true) {
+			return
+		}
+		currentX = -s.fixedSign * s.g.total
+		drive(currentX)
+		markOpen(closeSelf)
+		emit('open', s === sides[SIDE_L] ? 'left' : 'right')
+	}
+
+	const closeSelf = () => {
+		if (props.loading === true) {
+			return
+		}
+		cancelSpringTween()
+		cancelInertia()
+		cancelConfirmTween()
+		directBusy.value = false
+		directIndex.value = -1
+		if (confirming.value) {
+			confirming.value = false
+			confirmIndex.value = -1
+			setTransition(300)
+			currentX = 0
+			drive(0)
+			clearOpen(closeSelf)
+			emit('close')
+			return
+		}
+		currentX = 0
+		setTransition(300)
+		drive(0)
+		clearOpen(closeSelf)
+		emit('close')
+	}
+
+	// ---------- 按钮点击 ----------
+	const onActionClick = (action : SwipeAction, sideId : number, index : number) => {
+		if (props.loading === true) {
+			return
+		}
+		if (confirming.value) {
+			onConfirmExecute()
+			return
+		}
+		if (action.confirm === true) {
+			// 进确认态（彩带自延长）
+			confirming.value = true
+			confirmIndex.value = index
+			confirmSide.value = sideId
+			directBusy.value = false
+			confirmAction = action
+			confirmLabel.value = action.confirmText ?? '确认操作？'
+			setTransition(300)
+			sides[sideId].slideOutFrom(index)
+			nextTick(() => {
+				// 量确认文案实宽（估算兜底）→ 补间驱动：彩带延长+item 顶开+文字移位同帧一体；
+				// 宽度自始并入 spinner 组占位（组两侧各留 12）
+				const s = sides[sideId]
+				const tw = textWidthOf(confirmLabel.value)
+				const extra = safe(Math.max(0, tw + 24 + SPIN_PAD - s.g.total), 0)
+				confirmExtend(s, index, tw, extra)
+			})
+		} else {
+			// 直点：记录钮位——handler 同步置 loading 则冻结展开档，未置则 nextTick 乐观即收
+			directSide.value = sideId
+			directIndex.value = index
+			directBusy.value = true
+			emit('action', action)
+			nextTick(() => {
+				if (props.loading !== true) {
+					closeSelf()
+				}
+			})
+		}
+	}
+
+	// 确认执行：立即回传 @action + 确认现场冻结；单条操作同步完成（未置 loading）时
+	// nextTick 自动收起
+	const onConfirmExecute = () => {
+		const act = confirmAction
+		confirmAction = null
+		cancelSpringTween()
+		cancelInertia()
+		confirmCtl.cancel()
+		if (act != null) {
+			emit('action', act)
+		}
+		nextTick(() => {
+			if (props.loading !== true && confirming.value) {
+				closeSelf()
+			}
+		})
+	}
+
+	// 确认态退回展开档（触摸取消路径）
+	const exitConfirm = () => {
+		if (!confirming.value) {
+			return
+		}
+		const idx = confirmIndex.value
+		const s = sides[confirmSide.value]
+		confirming.value = false
+		confirmIndex.value = -1
+		markOpen(closeSelf)
+		nextTick(() => {
+			const toX = confirmExtra > 0 ? -s.fixedSign * s.g.total : null
+			confirmTweenDrive(s, idx, s.g.fan[idx], toX, s.g.margins[idx] ?? 0, 0, () => {
+				currentX = -s.fixedSign * s.g.total
+				s.driveAt(1)
+				markOpen(closeSelf)
+			})
+		})
+	}
+
+	// loading 抵达冻结现场（确认链/直点冻结通用）：spinner+文字整组归心。撤离=自动收起
+	watch(() => props.loading, (on : boolean) => {
+		if (removing.value) {
+			return
+		}
+		if (on !== true) {
+			if (confirming.value || directBusy.value) {
+				closeSelf()
+			}
+			return
+		}
+		let s = sides[SIDE_R]
+		let idx = -1
+		let fromM = 0
+		let toM = 0
+		if (confirming.value) {
+			s = sides[confirmSide.value]
+			idx = confirmIndex.value
+			const tw = textWidthOf(confirmLabel.value)
+			fromM = confirmM
+			toM = Math.max(0, (s.g.total + confirmExtra - tw) / 2 + SPIN_PAD / 2)
+		} else if (directBusy.value) {
+			// 直点冻结：钮内 32px 内距恰纳 spinner 组，文字自钮内居中位归心
+			s = sides[directSide.value]
+			idx = directIndex.value
+			fromM = s.g.margins[idx] ?? 0
+			toM = fromM + SPIN_PAD / 2
+		} else {
+			return
+		}
+		confirmCtl.cancel()
+		confirmCtl.run((e : number) => {
+			confirmM = safe(fromM + (toM - fromM) * e, toM)
+			s.wText(idx, 'margin-left', `${confirmM}px`)
+			spinnerLeft.value = Math.max(0, confirmM - SPIN_PAD)
+		})
+	})
+
+	// ---------- 量测与生命周期 ----------
+	onMounted(() => {
+		// 双侧各自量测+静态锁定+初始全藏行外（mp 载体已于声明时构建）
+		for (let s = 0; s < 2; s++) {
+			const labels = (s === SIDE_L ? leftList.value : rightList.value).map((a : SwipeAction) => a.text)
+			sides[s].measure(labels)
+			sides[s].driveAt(0)
+		}
+	})
+
+	// actions 动态变化兜底：掐断补间→载体重建→重量测+按当前档位重驱动
+	watch(() => props.actions, () => {
+		cancelSpringTween()
+		cancelConfirmTween()
+		nextTick(() => {
+			mpSync()
+			for (let s = 0; s < 2; s++) {
+				const labels = (s === SIDE_L ? leftList.value : rightList.value).map((a : SwipeAction) => a.text)
+				sides[s].measure(labels)
+				sides[s].driveAt(0)
+			}
+			drive(clamp(currentX, -sides[SIDE_R].g.total, sides[SIDE_L].g.total))
+		})
+	})
+
+	// 程序化控制
+	const openBy = (openSide ?: string) => {
+		openAt(openSide === 'left' ? sides[SIDE_L] : sides[SIDE_R])
+	}
+	// 行消失动画原语：resolve 于动画播完（业务在 then 里清数据）
+	const remove = () : Promise<void> => {
+		return new Promise<void>((resolve) => {
+			cancelSpringTween()
+			cancelInertia()
+			// 纯停表不清算：确认现场原样带入收场动画
+			confirmCtl.cancel()
+			removing.value = true
+			setTimeout(() => {
+				resolve()
+			}, 300)
+		})
+	}
+	defineExpose({
+		open : openBy,
+		close : closeSelf,
+		remove
+	})
+
+	onUnmounted(() => {
+		cancelSpringTween()
+		cancelInertia()
+		cancelConfirmTween()
+		clearOpen(closeSelf)
+	})
+</script>
+
+<style lang="scss">
+	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	@import '@/styles/press.scss';
+
+	.app-swipe-action {
+		flex-direction: column;
+		overflow: visible;
+	}
+
+	.app-swipe-action-removing {
+		overflow: hidden;
+		animation: app-swipe-remove 300ms ease forwards;
+	}
+
+	@keyframes app-swipe-remove {
+		0% {
+			max-height: 38px;
+			opacity: 1;
+		}
+
+		100% {
+			max-height: 0;
+			opacity: 0;
+		}
+	}
+
+	.app-swipe-clip {
+		position: relative;
+		flex: 1;
+		flex-direction: row;
+		overflow: hidden;
+	}
+
+	.app-swipe-line {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 1px;
+	}
+
+	.app-swipe-btn {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		right: 0;
+		flex-direction: row;
+		align-items: center;
+		background-color: var(--lh-primary);
+	}
+
+	.app-swipe-btn-danger {
+		background-color: var(--lh-danger);
+	}
+
+	.app-swipe-btn--left {
+		left: 0;
+		right: auto;
+	}
+
+	/* loading spinner：贴确认文案左侧并排；盒宽钉 20，left 由归心补间逐帧设定 */
+	.app-swipe-btn-spinner {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 20px;
+		display: none;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.app-swipe-btn-spinner--on {
+		display: flex;
+	}
+
+	@keyframes app-swipe-spin {
+		from {
+			transform: rotate(0deg);
+		}
+
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.app-swipe-btn-spinner-icon {
+		font-size: 20px;
+		color: #ffffff;
+		animation: app-swipe-spin 0.8s linear infinite;
+	}
+
+	.app-swipe-btn-text {
+		font-size: 15px;
+		color: #ffffff;
+		white-space: nowrap;
+	}
+
+	.app-swipe-content {
+		position: relative;
+		z-index: 10;
+		flex: 1;
+		flex-direction: column;
+	}
+</style>
