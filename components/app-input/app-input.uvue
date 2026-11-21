@@ -208,11 +208,12 @@ defineExpose({ remeasure: measureStrength })
 	margin-right: 8px;
 }
 
-/* 内置 input 透明底融入根容器，根壳负责底色与边框 */
+/* 内置 input 透明底融入根容器，根壳负责底色与边框；
+   default 档 16px 对齐主流输入规格（iOS/微信/抖音 16-17），兼远离 iOS <17pt 聚焦自动缩放 */
 .app-input-control {
 	flex: 1;
 	height: 24px;
-	font-size: 14px;
+	font-size: var(--lh-text-lg);
 	color: var(--lh-emphasis-color);
 	background-color: transparent;
 	padding: 0;
@@ -226,12 +227,12 @@ defineExpose({ remeasure: measureStrength })
 /* size 三档=完整视觉档位（control 高度+字号，根高由 padding+control 自然撑，页面可用 class 定死） */
 .app-input-control-sm {
 	height: 20px;
-	font-size: 12px;
+	font-size: var(--lh-text-base);
 }
 
 .app-input-control-lg {
 	height: 28px;
-	font-size: 16px;
+	font-size: 18px;
 }
 
 .app-input-control-readonly {
