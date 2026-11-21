@@ -78,20 +78,36 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   `:class="fn()"` 函数调用形态不追踪依赖（死路）。
 - import 统一写 script 顶部。
 
-## 平台分叉组件（依赖元素命令式能力的组件）
+## 平台分叉组件（多端策略五级阶梯——自上而下尝试，降级须拍板）
 
-- 组件若依赖 `el.style.setProperty` / `el.getBoundingClientRect` 等元素命令式能力，注意
-  **MP 端 v-for 元素 ref 垫片无 .style、无量测函数**——此类组件按「薄入口+按平台核心」
-  分叉（先例：app-swipe-action）：
-  - 入口 `app-*.uvue`：**script 条件 import** 选核心（`#ifdef MP-WEIXIN` 等），模板单份
-    `<Core>`+透传 props/events/slot/expose 代理——模板不做 #ifdef。
-  - `core/` 核心按后端矩阵开份数：app(iOS/Android/鸿蒙)/H5 元素 API 同构**一份通吃**；
-    MP 独立一份（零元素 ref、几何烘响应式 state、:style 单通道）。新平台真机冒分歧再拆
-    第三份（入口加一行条件 import），不预写份数。
-  - 与 UI 无关的状态机（手势/几何/流程）尽量抽共享模块单源；共享模块是内部实现非契约，
-    平台交互模型被迫分歧时（如 MP setData 帧率）该平台核心可自治。
-  - 平台差异代码收敛在核心内，业务页面零 #ifdef（铁律不变）。
-- MP 量测兜底：`try el.getBoundingClientRect()` 抛错/零宽 → 字符宽估算
+依赖元素命令式能力（`el.style.setProperty` / `el.getBoundingClientRect`）的组件在 MP 端
+垫片缺失（v-for 元素 ref 无 .style、无量测函数）。遇到平台分歧按阶梯**自上而下**尝试，
+每降一级都是维护成本的取舍，**落哪级须在组件头注释标明级位与原因**：
+
+1. **天然多端兼容（最优）**：选天然全端可用的实现——响应式 :style/烘焙 class/token/
+   computed 派生（app-card/list-item 形态）。设计期优先往这级靠。
+2. **多端兼容且不伤体验的替代实现**：换全端受支持且 UX 无损的机制（如逐帧 setProperty
+   直驱改全端响应式 :style——各端帧率观感可接受时；量测改全端字符估算）。降级条件=
+   兼容做法在某端有可感知体验损失。
+3. **组件内零星条件编译**：单文件，只在个别分歧点 #ifdef（写层适配器/单条 API 分支），
+   模板不分叉（属性级 #ifdef 不存在，模板分叉=升成本）。
+4. **核心组件分叉**：状态机抽共享模块（engine.ts）单源，仅模板+写层壳按平台分文件；
+   薄入口条件 import 选核心（见下「薄入口形态」）。
+5. **完全分叉（最下策）**：按平台独立完整实现（状态机也双份）——仅当交互模型被迫
+   根本分歧（如 MP setData 撑不起逐帧跟手、须换 CSS transition 开合模型）；须用户
+   明确拍板 + 双核文件头标「改动须双侧同步」纪律，双平台绿后尽快抽 engine 降回第 4 级。
+
+先例：app-swipe-action 现处第 5 级（临时——iOS 已验优先保 app，engine 抽取后降第 4 级）。
+
+**薄入口形态**（第 4/5 级共用）：
+- 入口 `app-*.uvue`：**script 条件 import** 选核心（`#ifdef MP-WEIXIN` 等），模板单份
+  `<Core>`+透传 props/events/slot/expose 代理——模板不做 #ifdef。
+- `core/` 核心按后端矩阵开份数：app(iOS/Android/鸿蒙)/H5 元素 API 同构**一份通吃**；
+  新平台真机冒分歧再拆（入口加一行条件 import），不预写份数。
+- 共享模块是内部实现非契约，平台交互模型被迫分歧时该平台核心可自治。
+- 平台差异代码收敛在组件/核心内，业务页面零 #ifdef（铁律不变）。
+
+- MP 量测兜底（各级通用）：`try el.getBoundingClientRect()` 抛错/零宽 → 字符宽估算
   （CJK≈1em、其余≈0.55em × 字号），纯中文误差 ±2px。
 
 ## 交互
