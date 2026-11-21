@@ -1,0 +1,133 @@
+<template>
+	<view class="page-padding">
+		<app-card>
+			<text class="demo-label">基础（v-model + 拖动滑块）</text>
+			<view class="demo-row">
+				<app-segmented v-model="segValue" :options="segOptions" @change="onSegChange" />
+			</view>
+			<text class="demo-value">value = {{ segValue }} · change × {{ segChangeCount }}</text>
+			<text class="demo-label">对象选项 + 单项禁用（拖动松手自动回避禁用段）</text>
+			<view class="demo-row">
+				<app-segmented v-model="segValue2" :options="segOptionsObj" />
+			</view>
+			<text class="demo-value">value = {{ segValue2 }}</text>
+			<text class="demo-label">全局禁用</text>
+			<view class="demo-row">
+				<app-segmented v-model="segValue3" :options="segOptions" disabled />
+			</view>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">shape=round 胶囊 + size 三档（32/40/44）</text>
+			<view class="demo-row">
+				<app-segmented v-model="segRound" :options="segOptions" shape="round" size="small" />
+			</view>
+			<view class="demo-row">
+				<app-segmented v-model="segRound" :options="segOptions" shape="round" />
+			</view>
+			<view class="demo-row">
+				<app-segmented v-model="segRound" :options="segOptions" shape="round" size="large" />
+			</view>
+			<text class="demo-value">value = {{ segRound }}</text>
+		</app-card>
+
+		<!-- iOS 液态玻璃滑块：彩色背景供玻璃采样（26+ 液态/15-25 毛玻璃；其余端实色滑块） -->
+		<app-card class="demo-card">
+			<text class="demo-label">iOS 液态玻璃滑块（彩色背景采样，拖动看材质）</text>
+			<view class="seg-stage">
+				<view class="seg-color-row">
+					<view class="seg-color-block seg-c1" />
+					<view class="seg-color-block seg-c2" />
+					<view class="seg-color-block seg-c3" />
+					<view class="seg-color-block seg-c4" />
+					<view class="seg-color-block seg-c5" />
+				</view>
+				<view class="seg-stage-control">
+					<app-segmented v-model="segGlass" :options="segGlassOptions" shape="round" />
+				</view>
+			</view>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppSegmented from '@/components/app-segmented/app-segmented.uvue'
+
+	// 基础（字符串选项；拖动/点选双通道）
+	const segOptions = ['全部', '未读', '已读']
+	const segValue = ref<string>('全部')
+	const segValue3 = ref<string>('未读')
+	const segChangeCount = ref<number>(0)
+	const onSegChange = (_v : string) => {
+		segChangeCount.value++
+	}
+
+	// 对象选项 + 单项禁用（value 与 label 分离）
+	const segOptionsObj = [
+		{ label: '日', value: 'day' },
+		{ label: '周', value: 'week', disabled: true },
+		{ label: '月', value: 'month' }
+	]
+	const segValue2 = ref<string>('day')
+
+	// 胶囊形态 + 三档尺寸（同值联动）
+	const segRound = ref<string>('全部')
+
+	// iOS 玻璃演示（彩色舞台上采样）
+	const segGlassOptions = ['一', '二', '三']
+	const segGlass = ref<string>('一')
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+
+	/* iOS 玻璃采样舞台：五色块铺底，分段器浮上（官方示例 color-row 手法） */
+	.seg-stage {
+		position: relative;
+		margin-top: 12px;
+		height: 96px;
+		border-radius: 8px;
+		overflow: hidden;
+	}
+
+	.seg-color-row {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		flex-direction: row;
+	}
+
+	.seg-color-block {
+		flex: 1;
+	}
+
+	.seg-c1 {
+		background-color: #ff453a;
+	}
+
+	.seg-c2 {
+		background-color: #ffd60a;
+	}
+
+	.seg-c3 {
+		background-color: #30d158;
+	}
+
+	.seg-c4 {
+		background-color: #0a84ff;
+	}
+
+	.seg-c5 {
+		background-color: #bf5af2;
+	}
+
+	.seg-stage-control {
+		position: absolute;
+		top: 30px;
+		left: 32px;
+		right: 32px;
+	}
+</style>

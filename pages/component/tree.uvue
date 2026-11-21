@@ -1,0 +1,54 @@
+<template>
+	<view class="page-padding">
+		<text class="demo-bare-label">带检索（filterable + defaultExpandAll + @select）</text>
+		<app-tree :data="demoTree" v-model:current="treeCurrent" default-expand-all filterable
+			@select="onTreeSelect" />
+		<text class="demo-value">current = {{ treeCurrent || '（未选）' }}</text>
+
+		<text class="demo-bare-label">无检索（defaultExpandAll + @select）</text>
+		<app-tree :data="demoTree" v-model:current="treeCurrent2" default-expand-all @select="onTreeSelect2" />
+		<text class="demo-value">current = {{ treeCurrent2 || '（未选）' }}</text>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppTree from '@/components/app-tree/app-tree.uvue'
+
+	// 示例数据（key 全树唯一——组件契约，重复 key 致过滤失效/diff 崩溃）
+	const demoTree = [
+		{
+			key: 'hq', title: '狸花猫科技', children: [
+				{
+					key: 'hq-rd', title: '研发部', children: [
+						{ key: 'hq-rd-fe', title: '前端组' },
+						{ key: 'hq-rd-be', title: '后端组' }
+					]
+				},
+				{ key: 'hq-pd', title: '产品部' },
+				{ key: 'hq-hr', title: '人事部' }
+			]
+		},
+		{
+			key: 'sh', title: '上海分公司', children: [
+				{
+					key: 'sh-rd', title: '研发部', children: [
+						{ key: 'sh-rd-fe', title: '前端组' }
+					]
+				},
+				{ key: 'sh-sale', title: '销售部' }
+			]
+		}
+	]
+	const treeCurrent = ref<string>('')
+	const onTreeSelect = (key : string) => {
+		treeCurrent.value = key
+	}
+	const treeCurrent2 = ref<string>('')
+	const onTreeSelect2 = (key : string) => {
+		treeCurrent2.value = key
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>

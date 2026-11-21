@@ -1,0 +1,30 @@
+<template>
+	<view class="page-padding">
+		<app-card title="卡片标题" extra="附加信息" footer="底部说明">
+			<text class="demo-body-text">三区完整卡片：header（title + extra）/ body / footer，区间自带分隔线</text>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-body-text">纯内容卡（title/extra/footer 全空自动省略头脚与分隔线），app-tree 即此形态</text>
+		</app-card>
+
+		<app-card class="demo-card" title="可点击卡片" hover @click="onCardClick">
+			<text class="demo-body-text">hover 开启按压反馈，click = {{ cardClickCount }}</text>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+
+	// hover 点击计数
+	const cardClickCount = ref<number>(0)
+	const onCardClick = () => {
+		cardClickCount.value++
+	}
+</script>
+
+<style lang="scss">
+	/* 组件 demo 页公共样式（styles/demo.scss，编译期合并） */
+	@import '@/styles/demo.scss';
+</style>

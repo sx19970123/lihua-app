@@ -1,0 +1,69 @@
+<template>
+	<view class="page-padding">
+		<template v-for="group in groups" :key="group.title">
+			<app-list :title="group.title">
+				<app-list-item v-for="(item, index) in group.items" :key="item.name" :divider="index > 0"
+					:icon="item.icon" :title="item.name" :value="item.label" arrow hover
+					@click="goDemo(item.url)" />
+			</app-list>
+		</template>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 组件库菜单：项目 components/ 全量组件按类型分组，每项进对应 demo 页
+	import AppList from '@/components/app-list/app-list.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+
+	type ComponentEntry = { name: string, label: string, icon: string, url: string }
+	type ComponentGroup = { title: string, items: ComponentEntry[] }
+
+	// app-list-item 与 app-list 同页联动演示；业务组件（captcha）单列一组
+	const groups: ComponentGroup[] = [
+		{
+			title: '基础',
+			items: [
+				{ name: 'app-card', label: '卡片', icon: 'images', url: '/pages/component/card' }
+			]
+		},
+		{
+			title: '表单',
+			items: [
+				{ name: 'app-input', label: '输入框', icon: 'compose', url: '/pages/component/input' },
+				{ name: 'app-checkbox', label: '复选框', icon: 'checkbox', url: '/pages/component/checkbox' },
+				{ name: 'app-checkbox-group', label: '复选组', icon: 'checkbox-filled', url: '/pages/component/checkbox-group' }
+			]
+		},
+		{
+			title: '操作',
+			items: [
+				{ name: 'app-segmented', label: '分段器', icon: 'circle', url: '/pages/component/segmented' }
+			]
+		},
+		{
+			title: '列表',
+			items: [
+				{ name: 'app-list', label: '列表容器', icon: 'list', url: '/pages/component/list' },
+				{ name: 'app-list-item', label: '列表行', icon: 'bars', url: '/pages/component/list' },
+				{ name: 'app-swipe-action', label: '侧滑操作', icon: 'forward', url: '/pages/component/swipe-action' }
+			]
+		},
+		{
+			title: '数据展示',
+			items: [
+				{ name: 'app-tree', label: '树形控件', icon: 'staff', url: '/pages/component/tree' },
+				{ name: 'app-steps', label: '步进容器', icon: 'flag', url: '/pages/component/steps' }
+			]
+		},
+		{
+			title: '业务',
+			items: [
+				{ name: 'captcha', label: '验证码', icon: 'auth', url: '/pages/component/captcha' }
+			]
+		}
+	]
+
+	const goDemo = (url: string) => {
+		uni.navigateTo({ url })
+	}
+</script>

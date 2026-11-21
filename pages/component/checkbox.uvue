@@ -1,0 +1,36 @@
+<template>
+	<view class="page-padding">
+		<app-card>
+			<text class="demo-label">独立模式（v-model:checked）</text>
+			<view class="demo-row">
+				<app-checkbox v-model:checked="single" label="记住账号" />
+			</view>
+			<text class="demo-value">checked = {{ single }}</text>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">禁用态</text>
+			<view class="demo-row">
+				<app-checkbox v-model:checked="disabledOn" label="禁用（选中态）" disabled />
+			</view>
+			<view class="demo-row">
+				<app-checkbox v-model:checked="disabledOff" label="禁用（未选中态）" disabled />
+			</view>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+
+	// 独立模式
+	const single = ref<boolean>(false)
+	// 禁用两态
+	const disabledOn = ref<boolean>(true)
+	const disabledOff = ref<boolean>(false)
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>

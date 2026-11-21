@@ -1,0 +1,74 @@
+<template>
+	<view class="page-padding">
+		<text class="demo-bare-label">横向步进容器（current 受控，按钮是唯一驱动方式）</text>
+		<app-steps class="steps-stage" :current="current" :count="panes.length">
+			<view v-for="(pane, i) in panes" :key="pane" class="steps-pane" :style="paneStyle">
+				<app-card class="steps-card">
+					<text class="demo-body-text">第 {{ i + 1 }} 步 · {{ pane }}</text>
+					<text class="demo-value">current = {{ current }}</text>
+				</app-card>
+				<view class="steps-safe" />
+			</view>
+		</app-steps>
+
+		<view class="demo-row steps-btns">
+			<button class="steps-btn" :disabled="current === 0" @click="step(-1)">上一步</button>
+			<button class="steps-btn" type="primary" :disabled="current === panes.length - 1" @click="step(1)">下一步</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 步进容器演示：轨道页宽=窗口宽（组件契约，同 UserSetup 向导用法）
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppSteps from '@/components/app-steps/app-steps.uvue'
+
+	const panes = ['步骤说明页', '表单填写页', '完成确认页']
+	const current = ref<number>(0)
+
+	const step = (delta : number) => {
+		const next = current.value + delta
+		if (next >= 0 && next < panes.length) {
+			current.value = next
+		}
+	}
+
+	// 每页宽=轨道宽 1/n（百分比相对轨道，UserSetup 向导同款）
+	const paneStyle = { width: (100 / panes.length) + '%' }
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+
+	/* 演示区定高：向导页由满高页面给 flex:1，流式 demo 页须显式高度（track 100% 高依赖父级确定高） */
+	.steps-stage {
+		height: 200px;
+	}
+
+	.steps-pane {
+		flex-direction: column;
+	}
+
+	.steps-card {
+		margin: 16px 16px 0;
+	}
+
+	/* 步进容器占满剩余高，此处限高让页面整体可滚（容器 min 高由内容撑） */
+	.steps-safe {
+		height: 16px;
+	}
+
+	.steps-btns {
+		flex-direction: row;
+		justify-content: space-between;
+		padding: 0 16px;
+	}
+
+	.steps-btn {
+		flex: 1;
+	}
+
+	.steps-btn + .steps-btn {
+		margin-left: 12px;
+	}
+</style>

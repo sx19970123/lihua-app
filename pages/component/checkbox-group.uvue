@@ -1,0 +1,30 @@
+<template>
+	<view class="page-padding">
+		<app-card>
+			<text class="demo-label">受控模式（v-model 值集合）</text>
+			<view class="demo-row">
+				<app-checkbox-group v-model="groupValues">
+					<app-checkbox value="a" label="选项 A" />
+					<app-checkbox value="b" label="选项 B" />
+					<app-checkbox value="c" label="选项 C（disabled）" disabled />
+				</app-checkbox-group>
+			</view>
+			<text class="demo-value">selected = {{ groupValuesText }}</text>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+	import AppCheckboxGroup from '@/components/app-checkbox-group/app-checkbox-group.uvue'
+
+	// group 受控模式（c 项 disabled 不可勾选）
+	const groupValues = ref<string[]>([])
+
+	const groupValuesText = computed(() => groupValues.value.length > 0 ? groupValues.value.join(', ') : '（空）')
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>

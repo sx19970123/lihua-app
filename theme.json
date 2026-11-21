@@ -2,11 +2,27 @@
 	"light": {
 		"navBgColor": "#F8F8F8",
 		"navTxtStyle": "black",
-		"bgColor": "#F7F7F8"
+		"bgColor": "#F7F7F8",
+		"tabColor": "#74787c",
+		"tabSelectedColor": "#3b82f6",
+		"tabBgColor": "#F8F8F8",
+		"tabBorderStyle": "black",
+		"tabHomeIcon": "static/tabbar/home-inactive.png",
+		"tabHomeIconSel": "static/tabbar/home-active.png",
+		"tabMineIcon": "static/tabbar/person-inactive.png",
+		"tabMineIconSel": "static/tabbar/person-active.png"
 	},
 	"dark": {
 		"navBgColor": "#000000",
 		"navTxtStyle": "white",
-		"bgColor": "#000000"
+		"bgColor": "#000000",
+		"tabColor": "#a0a4a8",
+		"tabSelectedColor": "#60a5fa",
+		"tabBgColor": "#000000",
+		"tabBorderStyle": "white",
+		"tabHomeIcon": "static/tabbar/home-inactive-dark.png",
+		"tabHomeIconSel": "static/tabbar/home-active-dark.png",
+		"tabMineIcon": "static/tabbar/person-inactive-dark.png",
+		"tabMineIconSel": "static/tabbar/person-active-dark.png"
 	}
 }

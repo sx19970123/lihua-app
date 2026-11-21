@@ -1,0 +1,18 @@
+<template>
+	<view class="page-padding">
+		<app-list>
+			<app-list-item icon="tune" title="组件" arrow hover @click="goComponents" />
+		</app-list>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 「我的」tab 页：个人中心入口聚合（当前仅组件 demo 库入口）
+	import AppList from '@/components/app-list/app-list.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+
+	const goComponents = () => {
+		uni.navigateTo({ url: '/pages/component/menu' })
+	}
+</script>
+

@@ -81,4 +81,5 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 - 标签配对校验（模板改动必做）；pages/ 零 #ifdef；注释简洁（一两行说用途，设计推理
   放 commit/记忆不塞代码）。
-- 新组件在 `pages/demo/demo.uvue` 加示例卡登记。
+- 新组件在 `pages/component/` 建独立 demo 页（@import `styles/demo.scss`），并在
+  `pages/component/menu.uvue` 对应分组登记。

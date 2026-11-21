@@ -16,10 +16,6 @@
 			<button class="btn" type="primary" @tap="goLogin">前往登录页</button>
 		</view>
 		<view class="card">
-			<text class="label">导航 · 组件示例（E 轮后入个人中心）</text>
-			<button class="btn" type="primary" @tap="goDemo">前往组件示例</button>
-		</view>
-		<view class="card">
 			<text class="label">导航 · 初始设置向导（S2-11 测试入口）</text>
 			<button class="btn" type="primary" @tap="goUserSetupTest">呼出向导（预写全量待补全项）</button>
 		</view>
@@ -58,10 +54,6 @@ const nodeEnv = IS_DEV ? 'development' : 'production'
 
 const goLogin = () => {
 	uni.navigateTo({ url: '/pages/login/Login' })
-}
-
-const goDemo = () => {
-	uni.navigateTo({ url: '/pages/demo/demo' })
 }
 
 // ---------- WS 连接测试（S1-08 尖峰）----------

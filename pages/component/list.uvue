@@ -1,0 +1,45 @@
+<template>
+	<view class="page-padding">
+		<text class="demo-bare-label">组标题 + 完整行（icon/value/arrow/hover）</text>
+		<app-list title="分组标题">
+			<app-list-item :divider="false" icon="person" title="用户设置" arrow hover @click="onListItemClick" />
+			<app-list-item icon="locked" title="修改密码" value="已设置" arrow hover @click="onListItemClick" />
+			<app-list-item icon="notification" title="检查更新" value="v1.0.2" hover @click="onListItemClick" />
+		</app-list>
+		<text class="demo-value">click = {{ listClickCount }}</text>
+
+		<text class="demo-bare-label">v-for 行（icon + hover 点击 + divider）</text>
+		<app-list>
+			<app-list-item v-for="(row, index) in demoListRows" :key="row.label" :divider="index > 0"
+				:icon="row.icon" :title="row.label" arrow hover @click="onListRowClick(row.label)" />
+		</app-list>
+		<text class="demo-value">clicked = {{ listRowClick || '（未点击）' }}</text>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// app-list（列表容器）+ app-list-item（列表行）联动演示
+	import AppList from '@/components/app-list/app-list.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+
+	// 行点击计数
+	const listClickCount = ref<number>(0)
+	const onListItemClick = () => {
+		listClickCount.value++
+	}
+
+	// v-for 行数据（divider=index>0 演示）
+	const demoListRows = [
+		{ icon: 'star', label: '我的收藏' },
+		{ icon: 'help', label: '帮助与反馈' },
+		{ icon: 'info', label: '关于狸花猫' }
+	]
+	const listRowClick = ref<string>('')
+	const onListRowClick = (label : string) => {
+		listRowClick.value = label
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>

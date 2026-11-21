@@ -1,0 +1,48 @@
+<template>
+	<view class="page-padding">
+		<app-card>
+			<text class="demo-label">基础（v-model + clearable）</text>
+			<view class="demo-row">
+				<app-input v-model="inputText" placeholder="请输入内容" clearable />
+			</view>
+			<text class="demo-value">value = {{ inputText || '（空）' }}</text>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">密码（maxlength + showCount + showStrength）</text>
+			<view class="demo-row">
+				<app-input v-model="inputPwd" password :maxlength="12" showCount showStrength placeholder="密码（≤12 位）" />
+			</view>
+			<text class="demo-value">length = {{ inputPwd.length }}</text>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">密码 + blur 事件（失焦回显次数）</text>
+			<view class="demo-row">
+				<app-input v-model="inputBlur" password placeholder="密码（失焦触发 blur）" @blur="onInputBlur" />
+			</view>
+			<text class="demo-value">blur count = {{ inputBlurCount }}</text>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppInput from '@/components/app-input/app-input.uvue'
+
+	// 基础
+	const inputText = ref<string>('')
+	// 密码强度
+	const inputPwd = ref<string>('')
+	// blur 计数
+	const inputBlur = ref<string>('')
+	const inputBlurCount = ref<number>(0)
+
+	const onInputBlur = () => {
+		inputBlurCount.value++
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>

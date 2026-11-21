@@ -1,0 +1,32 @@
+<template>
+	<view class="page-padding">
+		<app-card>
+			<text class="demo-label">弹窗验证码（ref.open + @success）</text>
+			<view class="demo-row">
+				<button type="primary" @click="openCaptcha">打开验证码</button>
+			</view>
+			<text class="demo-value">result = {{ captchaResult }}</text>
+			<!-- proxy 模式挂载：App/Web 开 dialogPage，微信直渲，业务方无感 -->
+			<Captcha ref="captchaRef" themeLight="#b48d4d" themeDark="#9a7a40" @success="onCaptchaSuccess" />
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import Captcha from '@/components/captcha/captcha.uvue'
+
+	// captcha 弹窗（proxy 模式：open 触发，success 回执校验通过的后端 id）
+	const captchaRef = ref<any>(null)
+	const captchaResult = ref<string>('（未验证）')
+	const openCaptcha = () => {
+		captchaRef.value?.open()
+	}
+	const onCaptchaSuccess = (id : string) => {
+		captchaResult.value = `验证成功，id=${id}`
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>

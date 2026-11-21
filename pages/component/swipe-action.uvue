@@ -1,0 +1,74 @@
+<template>
+	<view class="page-padding">
+		<text class="demo-bare-label">侧滑操作（差速展开/确认/橡皮筋）</text>
+		<app-list>
+			<app-swipe-action v-for="(row, index) in demoSwipeRows" :key="row.text" ref="swipeRefs"
+				:actions="row.actions" :divider="index < demoSwipeRows.length - 1" :loading="swipeLoading[index]"
+				@action="act => onSwipeAction(act, index)">
+				<app-list-item :divider="false" :title="row.text" arrow hover />
+			</app-swipe-action>
+		</app-list>
+		<text class="demo-value">剩余 {{ demoSwipeRows.length }} 条 · 动作 = {{ swipeActionResult || '（无）' }}</text>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 侧滑操作演示：app-list-item 作行内容（swipe 包行，两者插槽协作）
+	import AppList from '@/components/app-list/app-list.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+	import AppSwipeAction from '@/components/app-swipe-action/app-swipe-action.uvue'
+
+	// 1-3 行三按钮全带二次确认；4 行单删除按钮（覆盖单钮+长文案顶开路径）
+	// 预生成常量数组（函数内联生成会每次渲染返回新引用——v-for/props 无谓重跑的渲染激源）
+	const swipeActionsRow = [
+		{ text: '标星', event: 'star', color: '#b48d4d', confirm: true, confirmText: '确认将此条目设为星标吗？' },
+		{ text: '置顶', event: 'top', confirm: true, confirmText: '确认将此条目置顶显示吗？' },
+		{ text: '删除', event: 'delete', type: 'danger', confirm: true, confirmText: '确认要删除此条目吗？' }
+	]
+	// 第 4 行=双侧演示（左三右一：side 属性分侧拼装）
+	const swipeActionsBoth = [
+		{ text: '标星', event: 'star', color: '#b48d4d', side: 'left' },
+		{ text: '置顶', event: 'top', color: '#67c23a', confirm: true, confirmText: '确认将此条目置顶显示吗？', side: 'left' },
+		{ text: '已读', event: 'read', color: '#909399', confirm: true, confirmText: '确认将此条目标记为已读吗？', side: 'left' },
+		{ text: '删除', event: 'delete', type: 'danger', confirm: true, confirmText: '确认要删除此条目吗？' }
+	]
+	// 行数据自带 actions/direction（与 index 解耦——删除行后各行配置跟行走，不会错位拿到别组的）
+	const demoSwipeRows = ref([
+		{ text: '侧滑条目一', actions: swipeActionsRow },
+		{ text: '侧滑条目二', actions: swipeActionsRow },
+		{ text: '侧滑条目三', actions: swipeActionsRow },
+		{ text: '侧滑条目四', actions: swipeActionsBoth }
+	])
+	const swipeActionResult = ref<string>('')
+	const swipeRefs = ref<any[]>([])
+	// 行级 loading 状态（受控传组件：请求期间 spinner+全操作拒绝）
+	const swipeLoading = ref<boolean[]>([false, false, false, false])
+	const fakeServerDelete = (id : string) : Promise<boolean> => {
+		return new Promise<boolean>((resolve) => {
+			setTimeout(() => {
+				resolve(true)
+			}, 600)
+		})
+	}
+	const onSwipeAction = (action : any, index : number) => {
+		swipeActionResult.value = action.event
+		if (action.event === 'delete') {
+			const row = demoSwipeRows.value[index]
+			swipeLoading.value[index] = true
+			fakeServerDelete(row.text).then((ok : boolean) => {
+				if (!ok) {
+					swipeLoading.value[index] = false
+					uni.showToast({ title: '删除失败', icon: 'none' })
+					return
+				}
+				swipeRefs.value[index]?.remove()?.then(() => {
+					demoSwipeRows.value = demoSwipeRows.value.filter((r : any) => r.text !== row.text)
+				})
+			})
+		}
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+</style>
