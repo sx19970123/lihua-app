@@ -1,17 +1,19 @@
 <template>
-	<!-- 卡片+筛选框+树整体封装：外部只传数据与开关（filterable 控制搜索框显隐） -->
-	<view class="app-tree-card">
+	<!-- 面板+筛选框+树整体封装：外部只传数据与开关（filterable 控制搜索框显隐）；
+	     面板自管（不套 app-card——树行自带结构边距，叠卡片 body 内距会双重边距），圆角与 card 同款 token -->
+	<view class="app-tree-panel">
 		<view v-if="filterable" class="app-tree-search">
 			<app-input shape="round" :size="searchSize ?? 'small'" :height="searchHeight ?? 40"
 				:placeholder="searchPlaceholder ?? '请输入关键词'" clearable v-model="keyword" />
 		</view>
-		<scroll-view class="app-tree-scroll" scroll-y :style="{maxHeight: (maxHeight ?? 210) + 'px'}">
-			<!-- 节点全量常驻（v3：过滤/收起只切 v-show、元素永不销毁——x 端批量行销毁触发
-			     框架 Element::Dispose 崩溃，sard 的 v-if 销毁流派在 Vapor 不可用）；缩进按层级内联 -->
-			<view v-for="state in allStates" :key="state.item.key" class="app-tree-node" v-show="state.shown"
+		<scroll-view class="app-tree-scroll" :style="{height: scrollHeight + 'px'}">
+			<!-- 节点全量常驻（过滤/收起只切烘焙 class 的 max-height、元素永不销毁——x 端批量行销毁
+			     触发框架 Element::Dispose 崩溃，sard 的 v-if 销毁流派在 Vapor 不可用）；缩进按层级内联 -->
+			<view v-for="state in allStates" :key="state.item.key" :class="state.nodeCls"
 				:style="{paddingLeft: (state.level * 20) + 'px'}">
-				<view class="app-tree-hit" hover-class="app-tree-node-pressed" :hover-stay-time="100"
-					@click="onSelect(state.item)">
+				<view :class="state.hitCls"
+					:hover-class="readonly ? 'none' : (isDark ? 'app-tree-node-pressed-dark' : 'app-tree-node-pressed')"
+					:hover-stay-time="100" @click="onSelect(state.item)">
 					<!-- 箭头槽常驻（叶子隐藏占位，标题跨层级对齐）；过滤中命中子树视为展开 -->
 					<view class="app-tree-arrow" @click.stop="toggleByItem(state.item)">
 						<uni-icons v-if="hasChildren(state.item)" class="app-tree-arrow-icon" :class="state.arrowCls"
@@ -25,9 +27,13 @@
 					<loading v-if="loading && state.item.key === loadingKey" class="app-tree-loading" />
 					<uni-icons v-else-if="state.item.key === current" class="app-tree-check"
 						type="checkmarkempty" />
+					<!-- 行底分隔线（hit 内=左端随行缩进从标题发出、右端与按压块右缘平齐；
+					     与按压色同 token——按压时本行底线在高亮上同色隐形、上一行底线由高亮上探阴影盖住；
+					     显隐烘焙 state.showLine——首个可见行上方与末行下方无线） -->
+					<view v-show="state.showLine" class="app-tree-line" />
 				</view>
 			</view>
-			<text v-if="visibleCount === 0" class="app-tree-empty">无匹配数据</text>
+			<view v-show="visibleCount === 0" class="app-tree-empty"><text class="app-tree-empty-text">无匹配数据</text></view>
 		</scroll-view>
 	</view>
 </template>
@@ -50,9 +56,16 @@
 	interface TreeState {
 		item: TreeItem
 		level: number
-		// 行显隐（v-show 指令读）与箭头朝向类（watchEffect 烘焙，模板只做属性读）
+		// 行可见性（烘焙中间量：cls/showLine/firstVisible 都由它派生）与箭头朝向类
 		shown: boolean
 		arrowCls: string
+		// 行底分隔线显隐（末个可见行下方无线，含过滤态；同样烘焙）
+		showLine: boolean
+		// 首个可见行（上方无线，hit 不上探；过滤态重算）
+		firstVisible: boolean
+		// 行/按压块的完整 class（烘焙纯读——x 端仅单类选择器，嵌套/后代选择器不生效）
+		nodeCls: string
+		hitCls: string
 		// 标题三段（命中段高亮；非过滤态 segBefore=整段、其余空串）
 		segBefore: string
 		segHit: string
@@ -72,6 +85,8 @@
 		searchSize?: 'small' | 'default' | 'large'
 		searchHeight?: number
 		// 行内加载态：loadingKey 对应行尾显示转圈（替代全屏 showLoading；结束后 current 更新为对勾）
+		// 只读：整行点击不触发选中与按压反馈（箭头展开收起保留，纯浏览场景）
+		readonly?: boolean
 		loading?: boolean
 		loadingKey?: string
 		// 滚动区最大高度（px，缺省 210；可由外部按视口计算传入）
@@ -88,7 +103,8 @@
 
 	const buildStates = (items : TreeItem[], level : number, out : TreeState[]) => {
 		items.forEach(item => {
-			out.push({item, level, shown: true, arrowCls: '', segBefore: '', segHit: '', segAfter: ''})
+			out.push({item, level, shown: true, arrowCls: '', showLine: false, firstVisible: false,
+				nodeCls: 'app-tree-node', hitCls: 'app-tree-hit', segBefore: '', segHit: '', segAfter: ''})
 			if (item.children && item.children.length > 0) {
 				buildStates(item.children, level + 1, out)
 			}
@@ -138,7 +154,7 @@
 
 	// 行内 loading 兼任操作锁：loading 期间拒绝新选中（转圈即就地反馈，无需额外提示）
 	const onSelect = (item : TreeItem) => {
-		if (props.loading) {
+		if (props.readonly || props.loading) {
 			return
 		}
 		emit('update:current', item.key)
@@ -199,11 +215,18 @@
 		})
 	}
 
-	// 行显隐/箭头朝向烘焙：写入 state 字段，行显隐走 v-show 指令（class patch 不可靠已实证）
+	// 状态烘焙：写入 state 字段、模板纯属性读（class 绑定读烘焙字段可靠；不可靠的是
+	// 函数调用形态 :class="fn()"——不跟踪函数内依赖，v3 实证）
+	// 上一次烘焙的可见快照（判定「刚收起」：仅这些行挂动画变体类，稳态收起行无 animation——
+	// 切后台恢复时系统重置渲染层动画会把常驻动画打回起始帧撑出空白，触摸触发 relayout 才复原）
+	const prevShownMap = new Map<string, boolean>()
+
 	watchEffect(() => {
 		const set = visibleKeySet.value
 		const isFiltering = filtering.value
 		const kw = keyword.value
+		// 第一遍（正序）：可见性/箭头/标题分段 + 首可见行 + class 烘焙
+		let seenBefore = false
 		allStates.value.forEach(state => {
 			state.shown = set.has(state.item.key)
 			state.arrowCls = hasChildren(state.item) && (isFiltering || expandedKeys.value.includes(state.item.key))
@@ -219,82 +242,260 @@
 				state.segHit = ''
 				state.segAfter = ''
 			}
+			// 首可见行：上方无线可盖无需上探（上探 1px 会伸出 scroll-view 内容顶被裁，
+			// 按压时灰块顶部圆角削平）
+			state.firstVisible = !seenBefore && state.shown
+			if (state.shown) {
+				seenBefore = true
+			}
+			// class（x 端仅单类选择器，模板 class 全走烘焙字段纯读）；收起两态：
+			// 刚收起（上次可见）挂动画变体播 180ms，稳态收起挂无动画静态类
+			const wasShown = prevShownMap.get(state.item.key) ?? state.shown
+			const collapsedCls = wasShown ? 'app-tree-node-collapsed-anim' : 'app-tree-node-collapsed'
+			state.nodeCls = 'app-tree-node' + (state.shown ? '' : ' ' + collapsedCls)
+			state.hitCls = 'app-tree-hit' + (state.shown ? '' : ' app-tree-hit-collapsed')
+				+ (state.firstVisible ? ' app-tree-hit-first' : '')
+			prevShownMap.set(state.item.key, state.shown)
 		})
+		// 第二遍（倒序）：底线——本行可见且之后仍存在可见行才显示（末个可见行下方无线；过滤态同样成立）
+		let seenAfter = false
+		for (let i = allStates.value.length - 1; i >= 0; i--) {
+			const state = allStates.value[i]
+			state.showLine = seenAfter
+			if (state.shown) {
+				seenAfter = true
+			}
+		}
 	})
 
 	const visibleCount = computed(() : number => visibleKeySet.value.size)
+
+	// 行高常量（node max-height/此处高度公式/keyframes 三处同源，改行高须同步三处）
+	const ROW_HEIGHT = 38
+	// 空态高度（empty 的 padding 16×2+文字行高）
+	const EMPTY_HEIGHT = 48
+
+	// 容器行数延迟跟随（仅收起方向）：行渐收动画 180ms 播完容器再收终值——否则容器瞬缩会把
+	// 渐收中的末尾行裁在视口外（收起末尾子树时动画完全不可见）；到点读实时行数，连续操作幂等
+	const deferredRows = ref<number>(visibleCount.value)
+	watch(visibleCount, (rows) => {
+		if (rows < deferredRows.value) {
+			setTimeout(() => {
+				deferredRows.value = visibleCount.value
+			}, 200)
+		} else {
+			deferredRows.value = rows
+		}
+	})
+
+	// 滚动区显式高度：行数×行高（空态给 empty 高度），超 maxHeight 截断——不依赖内容
+	// 自然测量（后台恢复时内容已收、容器测量链陈旧会残留底部空白，显式高度静态可算）
+	const scrollHeight = computed(() : number => {
+		return deferredRows.value === 0 ? EMPTY_HEIGHT : Math.min(deferredRows.value * ROW_HEIGHT, props.maxHeight ?? 210)
+	})
 
 	// 过滤入口（空串=清除过滤，恢复展开态视图）
 	const filter = (value : string) => {
 		keyword.value = value
 	}
 
+	// ---------- 按压高亮的亮暗感知 ----------
+	// hover-class 由原生触摸驱动，其类样式中的 @media/var 在主题切换时不重算（真机实测按压色停在旧主题），
+	// 改亮暗双类字面量+动态绑定（感知三分叉与 captcha 同款）
+	const isDark = ref<boolean>(false)
+	let unwatchTheme : (() => void) | null = null
+
+	const applyTheme = () => {
+		// #ifdef APP
+		const info = uni.getAppBaseInfo()
+		let t = info.appTheme
+		if (t === 'auto' || t == null) {
+			t = uni.getSystemInfoSync().osTheme ?? 'light'
+		}
+		isDark.value = t === 'dark'
+		// #endif
+		// #ifdef WEB
+		isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
+		// #endif
+		// #ifdef MP-WEIXIN
+		isDark.value = (uni.getAppBaseInfo() as any).hostTheme === 'dark'
+		// #endif
+	}
+
+	onMounted(() => {
+		applyTheme()
+		// #ifdef APP
+		const tid1 = uni.onAppThemeChange(() => applyTheme())
+		const tid2 = uni.onOsThemeChange(() => applyTheme())
+		unwatchTheme = () => {
+			uni.offAppThemeChange(tid1)
+			uni.offOsThemeChange(tid2)
+		}
+		// #endif
+		// #ifdef WEB
+		const mq = window.matchMedia('(prefers-color-scheme: dark)')
+		const onMq = () => {
+			isDark.value = mq.matches
+		}
+		mq.addEventListener('change', onMq)
+		unwatchTheme = () => {
+			mq.removeEventListener('change', onMq)
+		}
+		// #endif
+		// #ifdef MP-WEIXIN
+		const tid = uni.onHostThemeChange(() => applyTheme())
+		unwatchTheme = () => {
+			uni.offHostThemeChange(tid)
+		}
+		// #endif
+	})
+
+	onUnmounted(() => {
+		unwatchTheme?.()
+	})
+
 	defineExpose({ filter })
 </script>
 
 <style lang="scss">
-	/* 卡片壳：白底/暗底+圆角+内边距，筛选框与树都在内 */
-	.app-tree-card {
-		padding: var(--lh-gap-lg);
+	/* 面板壳：底色/圆角与 app-card 同款 token；上下常驻 8px（scroll-view 的 css padding
+	   在 x 端不生效，边距收在面板上兜底）；纵向 16px 等距体系（面板 8+区间 8） */
+	.app-tree-panel {
+		flex-direction: column;
+		width: 100%;
+		padding-top: 8px;
+		padding-bottom: 8px;
+		background-color: var(--lh-emphasis-bg);
 		border-radius: var(--lh-radius);
-		background-color: #ffffff;
+		overflow: hidden;
 	}
 
-	@media (prefers-color-scheme: dark) {
-		.app-tree-card {
-			background-color: #242628;
+	/* 搜索区：上下均 8px——面板 8+8=框顶净 16、框底 8+首行文字空隙 8=16 与行距 16 精确对齐；
+	   左右 16px 同栅格；filterable 关闭时不渲染零残留 */
+	.app-tree-search {
+		padding: 8px 16px 8px;
+	}
+
+	/* 滚动区（.app-tree-scroll）高度由 scrollHeight 计算显式驱动（可见行数×行高，超 maxHeight
+	   截断、空态给 empty 高度）——不靠内容自然撑，规避后台恢复的容器测量陈旧 */
+
+	/* 行基准取自 sard tree-node 源码后按观感收紧：行定高 38px（文字 22+上下空隙各 8），缩进 20px/级，
+	   箭头 16px 旋 90°，选中=仅行尾对勾 */
+	.app-tree-node {
+		/* 高度权威源=max-height 单属性（官方 collapse 同款：内容自然高 39 被压到 38，hit 上探
+		   1px 靠 overflow visible 溢出渲染）；两态 38↔0 由展开收起动画过渡 */
+		max-height: 38px;
+		position: relative;
+		/* 允许 hit 上探 1px 渲染（x 端 overflow 默认 hidden 裁子内容，官方 overflow.md：
+		   view 显式 visible 全端可用；子元素仅越盒 1px，渲染开销可忽略） */
+		overflow: visible;
+		/* max-height 过渡：App(Vapor) 端不生效（收起侧由 collapsed 类的 keyframes 兜底），
+		   Web/微信端浏览器内核生效（两端展开收起都平滑） */
+		transition-property: max-height;
+		transition-duration: 180ms;
+		transition-timing-function: ease;
+	}
+
+	/* 收起稳态：纯静态（无 animation）——后台切换恢复时系统会重置渲染层动画，常驻动画被
+	   打回起始帧撑出空白占位（触摸触发 relayout 才复原），故动画只由 -anim 变体短暂承担 */
+	.app-tree-node-collapsed {
+		max-height: 0px;
+		overflow: hidden;
+	}
+
+	/* 刚收起行的动画变体（烘焙按 prevShown 快照判定，下次烘焙切回静态类）：
+	   max-height 的 transition 在 Vapor 端不生效，改 keyframes（宽高 animation 5.31+ 可行，
+	   captcha h-shrink 同款实证）；不用 forwards，播完回落静态 max-height:0（同值无缝） */
+	.app-tree-node-collapsed-anim {
+		max-height: 0px;
+		overflow: hidden;
+		animation-name: app-tree-shrink;
+		animation-duration: 180ms;
+	}
+
+	@keyframes app-tree-shrink {
+		from {
+			max-height: 38px;
+		}
+		to {
+			max-height: 0px;
 		}
 	}
 
-	.app-tree-search {
-		margin-bottom: var(--lh-gap-sm);
+	/* 内容层随收起淡出下滑（官方 content-box 第二板斧），展开时淡入回升 */
+	.app-tree-hit-collapsed {
+		opacity: 0;
+		transform: translateY(-6px);
 	}
 
-	/* 滚动区限高由 maxHeight prop 内联驱动（缺省 210），短树按内容收缩 */
-
-	/* 样式基准取自 sard tree-node 源码后按观感收紧：行定高 36px（sard 80rpx 基础上收紧）无分隔线，
-	   行内距 0（卡片 padding 代偿，根行与内置筛选框左右对齐）+缩进 20px/级，
-	   箭头 14px 旋 90°，选中=仅行尾对勾 */
-	.app-tree {
-		width: 100%;
-	}
-
-	.app-tree-node {
-		height: 36px;
-	}
-
-	/* 内嵌按压块：上下留白居中+圆角，高亮比行小一圈 */
+	/* 按压块：流内负 margin 上探 1px（高 39 顶起于行顶 -1）——按压高亮同色盖住上一行底线，
+	     本行底线在块内同色隐形=上下两线按压时齐隐；左右内缩 8px（面板内边距兼按压高亮区）；
+	     不用 absolute（其 left 基准=行 padding box 外缘，行上内联的层级缩进 paddingLeft 会失效） */
 	.app-tree-hit {
 		flex-direction: row;
 		align-items: center;
-		height: 32px;
-		margin-top: 2px;
-		margin-bottom: 2px;
+		height: 39px;
+		margin-top: -1px;
+		margin-left: 8px;
+		margin-right: 8px;
 		border-radius: 8px;
 		padding-left: 6px;
 		padding-right: 8px;
+		position: relative;
+		transition-property: transform, opacity;
+		transition-duration: 180ms;
+		transition-timing-function: ease;
 	}
 
-	/* 按压态=sard --sar-active-bg：亮 gray-200 / 暗 gray-700（token 已在全局表） */
-	.app-tree-node-pressed {
-		background-color: var(--lh-gray-200);
+	/* 首个可见行不上探（正满行高）：上方无线可盖，且上探 1px 会伸出 scroll-view 内容顶被裁，
+	   按压灰块顶部圆角削平=「上方截断」观感 */
+	.app-tree-hit-first {
+		height: 38px;
+		margin-top: 0;
+	}
+
+	/* 分隔线挂行底（视觉习惯=行的下边框）：左端 40（箭头槽右缘+2，标题起点附近）——右端 8 止于
+	   本行圆角切点；两端坐标同时避开「下一行按压灰块的左/右上圆角缺口」：父子相邻时上行缩进浅
+	   20px，线左端相对子行灰块偏移=40-20=20，远出切点（圆角 8）无交叠；
+	   颜色与按压态同 token——按压时本行底线同色隐形 */
+	.app-tree-line {
+		position: absolute;
+		left: 40px;
+		right: 8px;
+		bottom: 0;
+		height: 1px;
+		background-color: var(--lh-gray-100);
 	}
 
 	@media (prefers-color-scheme: dark) {
-		.app-tree-node-pressed {
-			background-color: var(--lh-gray-700);
+		.app-tree-line {
+			background-color: var(--lh-gray-800);
 		}
 	}
 
+	/* 按压态亮暗双类字面量（hover-class 原生驱动不重算 @media/var，主题切换实测失效）；
+	   值与分隔线同源（gray-100 #f7f7f8 / gray-800 #393c3f），由 :hover-class 按主题动态选用；
+	   圆角随 hit 基类四角 8px；hit 上探 1px 盖上一行线（线端止于圆角切点，不进圆角区，
+	   右上圆角缺口处无线可漏） */
+	.app-tree-node-pressed {
+		background-color: #f7f7f8;
+	}
+
+	.app-tree-node-pressed-dark {
+		background-color: #393c3f;
+	}
+
+	/* 箭头触区扩大（视觉图标仍 16 居中）：宽 32×满行高 36——约 3 倍触区接近 iOS 最小触目标，
+	   展开收起不用精准戳小方块；标题起点随之右移（hit 内距 6+槽 32=38），分隔线 left 联动 40 */
 	.app-tree-arrow {
-		width: 20px;
-		height: 20px;
+		width: 32px;
+		height: 36px;
 		justify-content: center;
 		align-items: center;
 	}
 
 	.app-tree-arrow-icon {
-		font-size: 14px;
+		font-size: 16px;
 		color: var(--lh-tertiary-color);
 		transition-property: transform;
 		transition-duration: 0.2s;
@@ -314,14 +515,14 @@
 
 	/* 标题分段（x 端 text 样式不继承，字号/行高/颜色逐段显式；暗色随 token 自适应） */
 	.app-tree-title-seg {
-		font-size: 15px;
+		font-size: var(--lh-text-lg);
 		line-height: var(--lh-leading-snug);
 		color: var(--lh-emphasis-color);
 	}
 
 	/* 过滤命中的关键词段 */
 	.app-tree-title-hit {
-		font-size: 15px;
+		font-size: var(--lh-text-lg);
 		line-height: var(--lh-leading-snug);
 		color: var(--lh-primary);
 	}
@@ -341,10 +542,14 @@
 		margin-left: 8px;
 	}
 
+	/* 空态外包 view 承载居中（x 端 text 自身 text-align 居中不可靠）；v-show 常驻不销毁 */
 	.app-tree-empty {
-		text-align: center;
+		justify-content: center;
+		padding: 16px 0;
+	}
+
+	.app-tree-empty-text {
 		font-size: var(--lh-text-sm);
 		color: var(--lh-tertiary-color);
-		padding: 16px 0;
 	}
 </style>
