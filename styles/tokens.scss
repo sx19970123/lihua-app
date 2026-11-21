@@ -219,8 +219,13 @@ page {
 
 /* 项目补充段：组件级/项目专属 token（全量 sard theme 外） */
 page {
-	/* 按钮基准高（=sar button 组件级变量） */
-	--lh-button-height: 40px;
+    /* 按钮基准高（=sar button 组件级变量） */
+    --lh-button-height: 40px;
+
+    /* 分段器三档高（2026-11-21 真机反馈偏矮整体上调一档：md 对齐按钮 40、lg=44 触区理想值） */
+    --lh-segmented-height-sm: 32px;
+    --lh-segmented-height-md: 40px;
+    --lh-segmented-height-lg: 44px;
 
 	/* 圆角三档：主=卡片/按钮/input；小=tag/badge/缩略图天生小组件；胶囊=固定全圆 */
 	--lh-radius: 12px;

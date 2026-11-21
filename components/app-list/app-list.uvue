@@ -1,0 +1,45 @@
+<template>
+	<view class="app-list">
+		<view v-if="(title ?? '') !== ''" class="app-list-title">
+			<text class="app-list-title-text">{{ title }}</text>
+		</view>
+		<view class="app-list-content">
+			<slot />
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 通用列表容器（sard List card 模式最小复刻，旧仓消费 100% card）：卡外组标题+卡片内容区；
+	// 行组件 app-list-item 经默认插槽装入，两组件纯插槽解耦
+
+	defineProps<{
+		// 卡片外组标题（iOS 设置页分组小字风格，如设置页「基础设置/权限信息/安全设置」）
+		title?: string
+	}>()
+</script>
+
+<style lang="scss">
+	.app-list {
+		flex-direction: column;
+	}
+
+	/* 组标题：卡外小字，左右与行内距对齐 16 */
+	.app-list-title {
+		margin: 16px 16px 8px;
+	}
+
+	.app-list-title-text {
+		font-size: 13px;
+		line-height: var(--lh-leading-snug);
+		color: var(--lh-tertiary-color);
+	}
+
+	/* 内容区=卡片形态：白/暗底 token+圆角+overflow hidden 裁子项（首末行圆角继承的 x 替代） */
+	.app-list-content {
+		flex-direction: column;
+		background-color: var(--lh-emphasis-bg);
+		border-radius: var(--lh-radius);
+		overflow: hidden;
+	}
+</style>

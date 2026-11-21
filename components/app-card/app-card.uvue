@@ -13,11 +13,11 @@
 				</slot>
 			</view>
 		</view>
-		<view v-if="!headless" class="app-card-line" />
+		<view v-if="!headless" class="app-card-line app-pressed-block" />
 		<view class="app-card-body">
 			<slot />
 		</view>
-		<view v-if="!footless" class="app-card-line" />
+		<view v-if="!footless" class="app-card-line app-pressed-block" />
 		<view v-if="!footless" class="app-card-footer">
 			<slot name="footer">
 				<text v-if="(footer ?? '') !== ''" class="app-card-footer-text">{{ footer }}</text>
@@ -102,11 +102,10 @@
 		color: var(--lh-tertiary-color);
 	}
 
-	/* 区间分隔线（sard 伪元素 border 换独立 1px view）；色与按压同源（active-bg token）——
-	   按压时整卡变灰、线画在灰上同色隐形（tree 分隔线同款规范） */
+	/* 区间分隔线（sard 伪元素 border 换独立 1px view）；色挂同名按压类 app-pressed-block
+	   （press.scss，常驻走 @media 自动亮暗，与按压同一定义——按压时整卡变灰、线画在灰上同色隐形） */
 	.app-card-line {
 		height: 1px;
-		background-color: var(--lh-active-bg);
 	}
 
 	/* body 内距组件级变量（消费方可覆盖，如面板容器需要均匀边距）；默认 sard 标准 10px 16px */

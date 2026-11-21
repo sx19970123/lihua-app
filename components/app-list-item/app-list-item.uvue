@@ -1,0 +1,152 @@
+<template>
+	<view class="app-list-item" :class="divider !== false ? 'app-list-item-with-line' : ''"
+		:hover-class="hover && !pressSuppressed ? (themeStore.isDark ? 'app-pressed-row-dark' : 'app-pressed-row') : 'none'"
+		:hover-stay-time="100" @click="onClick">
+		<view v-if="divider !== false" class="app-list-item-line app-pressed-row" :style="{ left: lineLeft }" />
+		<view v-if="hasIcon" class="app-list-item-icon">
+			<slot name="icon">
+				<uni-icons v-if="(icon ?? '') !== ''" class="app-list-item-icon-glyph" :type="icon" />
+			</slot>
+		</view>
+		<view class="app-list-item-title">
+			<slot name="title">
+				<text v-if="(title ?? '') !== ''" class="app-list-item-title-text">{{ title }}</text>
+			</slot>
+		</view>
+		<view v-if="hasValue" class="app-list-item-value">
+			<slot name="value">
+				<text v-if="(value ?? '') !== ''" class="app-list-item-value-text">{{ value }}</text>
+			</slot>
+		</view>
+		<view v-if="arrow" class="app-list-item-arrow">
+			<uni-icons class="app-list-item-arrow-glyph" type="right" />
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 通用列表行（sard ListItem 最小复刻）：icon/title/value/arrow 四槽 + #icon/#title/#value 插槽覆盖；
+	// 分隔线默认开、首行由消费方显式 :divider="false"（x 端无 :first-child 伪类）；
+	// 按压走 press.scss 行级类（hover-class 原生驱动，字面量双类 + isDark 选亮暗）
+
+	import { useThemeStore } from '@/stores/theme'
+
+	const themeStore = useThemeStore()
+	themeStore.init()
+
+	// 包裹容器（如 app-swipe-action）的手势态通报：横滑接管时退出按压（主流 App 行为）；
+	// 独立使用时无 inject 默认 false 不参与
+	const pressSuppressed = inject<boolean>('app-swipe-press', false)
+
+	const props = defineProps<{
+		// 左侧标题（或用 #title 插槽）
+		title?: string
+		// 右侧值（或用 #value 插槽，如 badge/头像/对勾）
+		value?: string
+		// 左侧图标名（uni-icons type；或用 #icon 插槽自定义）
+		icon?: string
+		// 右侧箭头
+		arrow?: boolean
+		// 开启点击反馈（按压底色）
+		hover?: boolean
+		// 行顶分隔线（默认开；首行或组内单行显式 :divider="false"）
+		divider?: boolean
+	}>()
+
+	const emit = defineEmits<{
+		(e: 'click'): void
+	}>()
+
+	const slots = useSlots()
+
+	const hasIcon = computed(() => (props.icon ?? '') !== '' || !!slots.icon)
+	const hasValue = computed(() => (props.value ?? '') !== '' || !!slots.value)
+	// 线左端从标题列起点（苹果设置风格 icon 下方无线）：有图标=icon 右缘（padding 16+图标 24+间距 12），
+	// 无图标=内容左缘；#icon 插槽自定义宽度的偏移待真实消费再调
+	const lineLeft = computed(() => hasIcon.value ? '52px' : '16px')
+
+	const onClick = () => {
+		emit('click')
+	}
+</script>
+
+<style lang="scss">
+	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	@import '@/styles/press.scss';
+
+	/* 行根：横向布局垂直居中；行盒 38 与 app-tree 同构（padding 8×2+文字行高 22）；
+	   overflow visible 放行带线行上探 1px 越行顶（x 默认 hidden，tree 轮实证必需） */
+	.app-list-item {
+		position: relative;
+		flex-direction: row;
+		align-items: center;
+		min-height: 38px;
+		padding: 8px 16px;
+		overflow: visible;
+	}
+
+	/* 带线行上探 1px（tree 分隔线同款流内负 margin）：本行顶线画进上一行底缘，
+	   按压时灰块与上下两条线全部相交——同色隐形、上下齐隐；首行不带线不上探（位置不偏移） */
+	.app-list-item-with-line {
+		margin-top: -1px;
+	}
+
+	/* 行顶分隔线（sard 非首行 ::before 换独立 view）：左端从标题列起点（见 lineLeft）、右端贴行内缘；
+	   色挂同名按压类 app-pressed-row（常驻走 @media 自动亮暗，与按压同一定义——按压时同色隐形） */
+	.app-list-item-line {
+		position: absolute;
+		top: 0;
+		right: 16px;
+		height: 1px;
+	}
+
+	/* 左侧图标槽：容器只管间距，自定义内容自适应占位 */
+	.app-list-item-icon {
+		flex-direction: row;
+		align-items: center;
+		margin-right: 12px;
+	}
+
+	.app-list-item-icon-glyph {
+		font-size: 24px;
+		color: var(--lh-emphasis-color);
+	}
+
+	/* 标题列：占满主轴，超长换行（value 是关键信息不压缩） */
+	.app-list-item-title {
+		flex: 1;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.app-list-item-title-text {
+		font-size: var(--lh-text-lg);
+		line-height: var(--lh-leading-snug);
+		color: var(--lh-emphasis-color);
+	}
+
+	/* 右侧值槽：自然宽贴右 */
+	.app-list-item-value {
+		flex-direction: row;
+		align-items: center;
+		margin-left: 8px;
+	}
+
+	.app-list-item-value-text {
+		font-size: var(--lh-text-lg);
+		line-height: var(--lh-leading-snug);
+		color: var(--lh-tertiary-color);
+	}
+
+	/* 右侧箭头 */
+	.app-list-item-arrow {
+		margin-left: 8px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.app-list-item-arrow-glyph {
+		font-size: 16px;
+		color: var(--lh-tertiary-color);
+	}
+</style>

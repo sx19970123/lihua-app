@@ -1,31 +1,65 @@
 /*
- * 按压反馈三等级（全仓统一维护点，组件/页面 style 内 @import 使用——scss 编译期合并进
- * 导入者作用域，不受样式隔离限制；页面先例 user-setup.scss）
+ * 按压反馈四等级（全仓统一维护点，组件/页面 style 内 @import 使用——scss 编译期
+ * 合并进导入者作用域，不受样式隔离限制；页面先例 user-setup.scss）
  *
  * 机制规范（全等级一致）：
  * - hover-class 原生驱动（不走 JS class patch）+ :hover-stay-time="100"（x 默认 400 太长）
- * - 带色载体必须亮暗双类字面量：原生驱动不重算 @media/var，主题切换会停旧色（tree 轮实证）；
- *   选类依据=stores/theme.ts 的 isDark（themeStore.isDark ? '-dark' : ''）
- * - 分隔线与按压同色规范：带线载体线色与按压同值（按压时线画在灰上同色隐形，tree/card 同款）
+ * - 按压场景选类依据=stores/theme.ts 的 isDark（themeStore.isDark ? '-dark' : ''）——
+ *   hover 类不能走 var/@media（原生驱动不重算，主题切换停旧色），必须字面量双类
+ * - 分隔线强制挂同名按压类（app-pressed-row/block）：常驻渲染走 @media 段自动亮暗，
+ *   与按压色同一定义（按压时线画在灰上同色隐形，物理上不可能不同色）；
+ *   线自身类只管几何（position/端点/高度）。调按压色/线色只改本文件
  * - 文本级用 opacity（跨亮暗通用，免双类）
+ *
+ * 色值：亮 gray-200/gray-300、暗 gray-800/gray-700 同源；
+ * 行级亮曾用 gray-100 与页面背景 #f7f7f8 同值按压不可见，2026-11-21 用户拍板加深一档
  */
 
-/* 行级（小载体：树行/列表行）——浅一号，与分隔线同色（gray-100/gray-800 同源） */
+/* 行级（小载体：树行/列表行/行级分隔线） */
 .app-pressed-row {
-	background-color: #f7f7f8;
+	background-color: #ecedee;
 }
 
 .app-pressed-row-dark {
 	background-color: #393c3f;
 }
 
-/* 卡片级（大载体：整卡可按）——对比明显（active-bg 同源，与 card 分隔线一致） */
+@media (prefers-color-scheme: dark) {
+	.app-pressed-row {
+		background-color: #393c3f;
+	}
+}
+
+/* 卡片级（大载体：整卡可按/卡片分隔线） */
 .app-pressed-block {
-	background-color: #ecedee;
+	background-color: #e2e3e4;
 }
 
 .app-pressed-block-dark {
 	background-color: #505457;
+}
+
+@media (prefers-color-scheme: dark) {
+	.app-pressed-block {
+		background-color: #505457;
+	}
+}
+
+/* 灰底内嵌级（secondary-bg 灰底上的内嵌控件：分段器段、胶囊按钮组）——底色锚点与
+   白底载体不同：亮需 gray-300（比 gray-200 底深一档）、暗需 gray-800（比 gray-700 底深一档），
+   现有 row/block 两对各有一半场景与该底同色不可见（2026-11-21 分段器轮实证） */
+.app-pressed-inset {
+	background-color: #e2e3e4;
+}
+
+.app-pressed-inset-dark {
+	background-color: #393c3f;
+}
+
+@media (prefers-color-scheme: dark) {
+	.app-pressed-inset {
+		background-color: #393c3f;
+	}
 }
 
 /* 文本级（文字链接等无面积元素）——按压压淡不加底，跨亮暗通用 */

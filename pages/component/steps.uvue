@@ -13,7 +13,7 @@
 
 		<view class="demo-row steps-btns">
 			<button class="steps-btn" :disabled="current === 0" @click="step(-1)">上一步</button>
-			<button class="steps-btn" type="primary" :disabled="current === panes.length - 1" @click="step(1)">下一步</button>
+			<button class="steps-btn steps-btn--gap" type="primary" :disabled="current === panes.length - 1" @click="step(1)">下一步</button>
 		</view>
 	</view>
 </template>
@@ -68,7 +68,8 @@
 		flex: 1;
 	}
 
-	.steps-btn + .steps-btn {
+	/* x 端无相邻选择器，第二颗钮独立单类拉开间距 */
+	.steps-btn--gap {
 		margin-left: 12px;
 	}
 </style>

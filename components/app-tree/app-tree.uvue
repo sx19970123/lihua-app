@@ -30,7 +30,7 @@
 					<!-- 行底分隔线（hit 内=左端随行缩进从标题发出、右端与按压块右缘平齐；
 					     与按压色同 token——按压时本行底线在高亮上同色隐形、上一行底线由高亮上探阴影盖住；
 					     显隐烘焙 state.showLine——首个可见行上方与末行下方无线） -->
-					<view v-show="state.showLine" class="app-tree-line" />
+					<view v-show="state.showLine" class="app-tree-line app-pressed-row" />
 				</view>
 			</view>
 			<view v-show="visibleCount === 0" class="app-tree-empty"><text class="app-tree-empty-text">无匹配数据</text></view>
@@ -411,20 +411,13 @@
 	/* 分隔线挂行底（视觉习惯=行的下边框）：左端 40（箭头槽右缘+2，标题起点附近）——右端 8 止于
 	   本行圆角切点；两端坐标同时避开「下一行按压灰块的左/右上圆角缺口」：父子相邻时上行缩进浅
 	   20px，线左端相对子行灰块偏移=40-20=20，远出切点（圆角 8）无交叠；
-	   颜色与按压态同 token——按压时本行底线同色隐形 */
+	   色挂同名按压类 app-pressed-row（常驻走 @media 自动亮暗，与按压同一定义——按压时本行底线同色隐形） */
 	.app-tree-line {
 		position: absolute;
 		left: 40px;
 		right: 8px;
 		bottom: 0;
 		height: 1px;
-		background-color: var(--lh-gray-100);
-	}
-
-	@media (prefers-color-scheme: dark) {
-		.app-tree-line {
-			background-color: var(--lh-gray-800);
-		}
 	}
 
 	/* 箭头触区扩大（视觉图标仍 16 居中）：宽 32×满行高 36——约 3 倍触区接近 iOS 最小触目标，

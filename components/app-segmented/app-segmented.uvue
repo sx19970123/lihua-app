@@ -1,0 +1,450 @@
+<template>
+	<!-- 假轨道（根）：透明占地——比真轨道四周外扩 12px 形变预算区（液态玻璃拖动形变越轨可见），
+	     视觉全在真轨道上不变；手势挂根（bleed 区也可起拖） -->
+	<view class="app-segmented" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd"
+		@touchcancel="onTouchEnd">
+		<view :class="trackCls">
+			<view ref="groupEl" class="app-segmented-group">
+				<view v-for="(opt, i) in items" :key="opt.value" class="app-segmented-item"
+					:hover-class="hoverCls[i]" :hover-stay-time="100" @click="onItemTap(i)">
+					<text class="app-segmented-label" :class="labelCls[i]">{{ opt.label }}</text>
+				</view>
+				<!-- 滑块：纯材质无文案（选中态=段内文字变色，落下后才高亮）。iOS 端 glass-effect-view
+				     即滑块本体直接吃 transform（原生玻璃孤岛须自身 layer 运动才触发液态形变）；
+				     位移纯响应式单通道（:style 绑定）——glass 元素 ref 无 .style 访问器，
+				     setProperty 直驱在其上全灭（真机实证 undefined is not an object） -->
+				<!-- #ifdef APP-IOS -->
+				<glass-effect-view class="app-segmented-glass" :class="glassRoundCls" :style="pointerStyle"
+					glass-style="clear" :interactive="true" :tint-color="glassTint" />
+				<!-- #endif -->
+				<!-- #ifndef APP-IOS -->
+				<view :class="pointerCls" :style="pointerStyle" />
+				<!-- #endif -->
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 分段器（sard Segmented x 端复刻+扩展）：等分滑块、点选/拖动切换（默认开启）、
+	// iOS 滑块液态玻璃（26+ 液态/15-25 官方毛玻璃降级，其余端实色 token）。
+	// 滑块位移纯响应式单通道（:style 绑定）：拖动 dragX 1:1 跟手、松手弹簧飞落（utils/spring，
+	// 初速承接末速度=fling 惯性）；玻璃铁律③ ref 无 .style，setProperty 直驱路线不可用
+
+	import { useThemeStore } from '@/stores/theme'
+	import { createSpringControl } from '@/utils/spring'
+
+	type SegmentedOption = {
+		label : string
+		value : string
+		disabled ?: boolean
+	}
+
+	const props = defineProps<{
+		// 选项：裸字符串=值即标签；对象可单项禁用
+		options : (string | SegmentedOption)[]
+		// 当前值（v-model）
+		modelValue ?: string
+		// 三档：small 28 / middle 36（默认）/ large 40
+		size ?: 'small' | 'middle' | 'large'
+		// square=主圆角（默认）；round=胶囊
+		shape ?: 'square' | 'round'
+		// 全局禁用
+		disabled ?: boolean
+	}>()
+
+	const emit = defineEmits<{
+		(e : 'update:modelValue', value : string) : void
+		(e : 'change', value : string) : void
+	}>()
+
+	const themeStore = useThemeStore()
+	themeStore.init()
+
+	// 选项归一（烘焙源）
+	type SegItem = { label : string, value : string, disabled : boolean }
+	const items = computed<SegItem[]>(() => {
+		return (props.options ?? []).map((o : string | SegmentedOption) : SegItem => {
+			if (typeof o === 'string') {
+				return { label: o, value: o, disabled: false }
+			}
+			return { label: o.label, value: o.value, disabled: o.disabled === true }
+		})
+	})
+
+	const valueAt = (i : number) : string => {
+		const arr = items.value
+		return i >= 0 && i < arr.length ? arr[i].value : ''
+	}
+
+	const indexOfValue = (v : string) : number => {
+		const arr = items.value
+		for (let i = 0; i < arr.length; i++) {
+			if (arr[i].value === v) {
+				return i
+			}
+		}
+		return -1
+	}
+
+	// 选中索引（单一响应式真源：滑块位移/段文字变色同源）
+	const index = ref<number>(0)
+
+	// 烘焙类（纯属性读；hover 双类字面量按 isDark 选——原生驱动不重算 var）
+	const isRound = computed<boolean>(() => props.shape === 'round')
+	const isDisabledAll = computed<boolean>(() => props.disabled === true)
+
+	const trackCls = computed<string>(() => 'app-segmented-track app-segmented-track--' + (props.size ?? 'middle')
+		+ (isRound.value ? ' app-segmented-track--round' : ''))
+	const pointerCls = computed<string>(() => 'app-segmented-pointer' + (isRound.value ? ' app-segmented-pointer--round' : ''))
+	const glassRoundCls = computed<string>(() => (isRound.value ? 'app-segmented-glass--round' : ''))
+	// 滑块位移（纯响应式单通道）：拖动 dragX 1:1 跟手 / 弹簧 animX 逐帧 / 稳态=index×segW；
+	// 全 JS 驱动无 CSS transition（玻璃铁律③：驱动只能走 :style 响应式绑定）
+	const segW = ref<number>(0)
+	const dragX = ref<number | null>(null)
+	const animX = ref<number | null>(null)
+	const pointerStyle = computed<any>(() => {
+		const n = items.value.length
+		const x = dragX.value != null ? dragX.value : (animX.value != null ? animX.value : index.value * segW.value)
+		return {
+			width: n > 0 ? (100 / n) + '%' : '0px',
+			transform: `translateX(${x}px)`
+		}
+	})
+
+	const labelCls = computed<string[]>(() => items.value.map((o : SegItem, i : number) : string => {
+		if (o.disabled || isDisabledAll.value) {
+			return 'app-segmented-label-disabled'
+		}
+		return index.value === i ? 'app-segmented-label-selected' : ''
+	}))
+	const hoverCls = computed<string[]>(() => items.value.map((o : SegItem) : string => {
+		if (o.disabled || isDisabledAll.value) {
+			return 'none'
+		}
+		return themeStore.isDark ? 'app-pressed-inset-dark' : 'app-pressed-inset'
+	}))
+
+	// iOS 玻璃着色=恒透明（试验终态 2026-11-21：拖动现形方案撤——tap 微滑误触 tint=「点击泛白」
+	// 根因；纯色轨道上材质本身无折射内容也不现形，滑块全时隐形、选中态只由段内文字表达）
+	const glassTint = 'transparent'
+
+	// ---------- 量测与弹簧 ----------
+	const groupEl = ref<any>(null)
+
+	// 段宽=组实宽/段数（拖动开始时刻重量测，天然免疫容器尺寸陈旧）
+	const measure = () => {
+		const r = groupEl.value?.getBoundingClientRect()
+		const n = items.value.length
+		if (r != null && r.width > 0 && n > 0) {
+			segW.value = r.width / n
+		}
+	}
+
+	const springCtl = createSpringControl()
+
+	// 当前视觉位置（手势抢断/弹簧起点取值用）
+	const visualX = () : number => dragX.value != null ? dragX.value : (animX.value != null ? animX.value : index.value * segW.value)
+
+	// 提交选中：弹簧滑到位+对外回传（值未变不 emit，sard 同款）
+	const commit = (idx : number, velPxPerS : number = 0) => {
+		springCtl.cancel()
+		const from = visualX()
+		const to = idx * segW.value
+		index.value = idx
+		dragX.value = null
+		if (segW.value > 0 && Math.abs(to - from) >= 0.5) {
+			animX.value = from
+			springCtl.run(from, to, velPxPerS, (x : number) => { animX.value = x })
+		} else {
+			animX.value = null
+		}
+		const v = valueAt(idx)
+		if (v !== '' && v !== (props.modelValue ?? '')) {
+			emit('update:modelValue', v)
+			emit('change', v)
+		}
+	}
+
+	const onItemTap = (i : number) => {
+		if (isDisabledAll.value || i === index.value) {
+			return
+		}
+		const arr = items.value
+		if (i < 0 || i >= arr.length || arr[i].disabled) {
+			return
+		}
+		commit(i)
+	}
+
+	// ---------- 拖动手势（方向判定让位纵滚，横滑接管锁默认行为——swipe 同款） ----------
+	let dragTouchId = -1
+	let startX = 0
+	let startY = 0
+	let baseX = 0
+	let horizontal : boolean | null = null
+	// fling 末速度追踪（EMA 平滑；松手前停顿>80ms 视为有意停住，速度作废）
+	let velMs = 0
+	let trackX = 0
+	let trackT = 0
+
+	const findTouch = (e : TouchEvent, id : number) : Touch | null => {
+		for (let i = 0; i < e.changedTouches.length; i++) {
+			if (e.changedTouches[i].identifier === id) {
+				return e.changedTouches[i]
+			}
+		}
+		for (let i = 0; i < e.touches.length; i++) {
+			if (e.touches[i].identifier === id) {
+				return e.touches[i]
+			}
+		}
+		return null
+	}
+
+	// 松手目标段回避禁用段：按与落点距离向外扫描最近可用段
+	const resolveTarget = (target : number) : number => {
+		const arr = items.value
+		for (let d = 0; d < arr.length; d++) {
+			const lo = target - d
+			if (lo >= 0 && lo < arr.length && !arr[lo].disabled) {
+				return lo
+			}
+			const hi = target + d
+			if (d > 0 && hi >= 0 && hi < arr.length && !arr[hi].disabled) {
+				return hi
+			}
+		}
+		return index.value
+	}
+
+	const clampIndex = (i : number) : number => {
+		const n = items.value.length
+		return Math.max(0, Math.min(n - 1, i))
+	}
+
+	const onTouchStart = (e : TouchEvent) => {
+		if (isDisabledAll.value || items.value.length < 2) {
+			return
+		}
+		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
+		if (t == null) {
+			return
+		}
+		dragTouchId = t.identifier
+		startX = t.screenX
+		startY = t.screenY
+		horizontal = null
+		// 抢断弹簧：视觉位置冻结进 dragX（防拖动起点跳回段位），速度追踪归零
+		springCtl.cancel()
+		const cur = visualX()
+		animX.value = null
+		dragX.value = cur
+		baseX = cur
+		velMs = 0
+		trackX = cur
+		trackT = Date.now()
+		measure()
+	}
+
+	const onTouchMove = (e : TouchEvent) => {
+		if (dragTouchId < 0 || segW.value <= 0) {
+			return
+		}
+		const p = findTouch(e, dragTouchId)
+		if (p == null) {
+			return
+		}
+		const dx = p.screenX - startX
+		const dy = p.screenY - startY
+		if (horizontal == null) {
+			// 位移过 5px 才定方向，纵向意图让位页面滚动
+			if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+				horizontal = Math.abs(dx) > Math.abs(dy)
+				if (horizontal) {
+					e.preventDefault()
+				}
+			}
+			return
+		}
+		if (horizontal !== true) {
+			return
+		}
+		e.preventDefault()
+		const maxX = (items.value.length - 1) * segW.value
+		const x = Math.max(0, Math.min(maxX, baseX + dx))
+		dragX.value = x
+		// 末速度 EMA（px/ms）
+		const now = Date.now()
+		const dt = now - trackT
+		if (dt > 0) {
+			velMs = velMs * 0.7 + ((x - trackX) / dt) * 0.3
+		}
+		trackX = x
+		trackT = now
+	}
+
+	const onTouchEnd = () => {
+		if (dragTouchId < 0) {
+			return
+		}
+		dragTouchId = -1
+		if (horizontal !== true) {
+			// 未成拖（轻点/纵向让位/touchcancel）：解冻回稳态（视觉等位，仅清状态）
+			horizontal = null
+			dragX.value = null
+			animX.value = null
+			return
+		}
+		horizontal = null
+		if (segW.value <= 0) {
+			return
+		}
+		const cur = dragX.value != null ? dragX.value : index.value * segW.value
+		// fling：末速够猛→目标至少推进到方向上的下一分界（快甩飞段）；否则落最近段
+		const vel = (Date.now() - trackT < 80) ? velMs : 0
+		let idx : number
+		if (Math.abs(vel) > 0.5) {
+			const pos = cur / segW.value
+			idx = clampIndex(vel > 0 ? Math.ceil(pos + 0.001) : Math.floor(pos - 0.001))
+		} else {
+			idx = clampIndex(Math.round(cur / segW.value))
+		}
+		commit(resolveTarget(idx), vel * 1000)
+	}
+
+	// ---------- 联动与生命周期 ----------
+	// 外部值变化 → 滑块跟进（拖动中不抢）
+	watch(() => props.modelValue, (v : string | null) => {
+		if (dragTouchId >= 0) {
+			return
+		}
+		const idx = indexOfValue(v ?? '')
+		if (idx >= 0 && idx !== index.value) {
+			commit(idx)
+		}
+	})
+
+	// 选项变化 → 新段渲染后重量测重就位（宽度百分比响应式自适应，段位 px 需重算；就位不弹簧）
+	const resettle = () => {
+		nextTick(() => {
+			measure()
+			springCtl.cancel()
+			dragX.value = null
+			animX.value = null
+			index.value = Math.max(0, indexOfValue(props.modelValue ?? ''))
+		})
+	}
+	watch(() => props.options, resettle)
+
+	onMounted(() => {
+		resettle()
+	})
+
+	onUnmounted(() => {
+		springCtl.cancel()
+	})
+</script>
+
+<style lang="scss">
+	/* 按压等级统一维护点（styles/press.scss，编译期合并） */
+	@import '@/styles/press.scss';
+
+	/* 假轨道（根）：透明占地——四周外扩 12px（形变预算区），视觉与占地解耦；
+	   占地代价=footprint 比视觉轨道大 24×24，消费方留间距时须知 */
+	.app-segmented {
+		flex-direction: column;
+		padding: 12px;
+		overflow: visible;
+	}
+
+	/* 真轨道：视觉不变（灰底/圆角/尺寸档全在此），滑块外探与形变越轨放行 */
+	.app-segmented-track {
+		flex-direction: column;
+		min-height: var(--lh-segmented-height-md);
+		border-radius: var(--lh-radius);
+		background-color: var(--lh-secondary-bg);
+		overflow: visible;
+	}
+
+	.app-segmented-track--small {
+		min-height: var(--lh-segmented-height-sm);
+	}
+
+	.app-segmented-track--large {
+		min-height: var(--lh-segmented-height-lg);
+	}
+
+	.app-segmented-track--round {
+		border-radius: var(--lh-radius-full);
+	}
+
+	/* 组：显式层序=组 1<滑块 2（滑块带 transform，层序不赌 DOM 序） */
+	.app-segmented-group {
+		position: relative;
+		z-index: 1;
+		flex: 1;
+		flex-direction: row;
+		align-items: stretch;
+		overflow: visible;
+	}
+
+	.app-segmented-item {
+		flex: 1;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		min-width: 0;
+	}
+
+	.app-segmented-label {
+		font-size: var(--lh-text-base);
+		line-height: var(--lh-leading-normal);
+		color: var(--lh-secondary-color);
+	}
+
+	/* 选中段文字强调色（选中态表达；拖动中不变色，落下后才高亮） */
+	.app-segmented-label-selected {
+		color: var(--lh-emphasis-color);
+	}
+
+	.app-segmented-label-disabled {
+		color: var(--lh-disabled-color);
+	}
+
+	/* 滑块（非 iOS 端实色 pill）：内嵌槽内（上下各让 4=缩小一号），水平贴段位；
+	   宽=1/n（响应式），位移弹簧 JS 驱动；圆角=主圆角 12−内嵌 4 同心 */
+	.app-segmented-pointer {
+		position: absolute;
+		top: 4px;
+		bottom: 4px;
+		left: 0;
+		z-index: 2;
+		border-radius: 8px;
+	}
+
+	/* #ifndef APP-IOS */
+	.app-segmented-pointer {
+		background-color: var(--lh-emphasis-bg);
+	}
+	/* #endif */
+
+	.app-segmented-pointer--round {
+		border-radius: var(--lh-radius-full);
+	}
+
+	/* iOS 滑块本体=液态玻璃（26+ 液态/15-25 毛玻璃降级）：几何与非 iOS 滑块同构（内嵌小一号）；
+	   自身直接被 transform 驱动（玻璃 layer 运动=液态形变触发条件）；不挂 overflow/裁切 */
+	.app-segmented-glass {
+		position: absolute;
+		top: 4px;
+		bottom: 4px;
+		left: 0;
+		z-index: 2;
+		border-radius: 8px;
+	}
+
+	.app-segmented-glass--round {
+		border-radius: var(--lh-radius-full);
+	}
+</style>
