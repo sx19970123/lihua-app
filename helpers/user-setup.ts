@@ -1,3 +1,6 @@
+import { getToken } from '@/helpers/token'
+import { toast } from '@/utils/toast'
+
 // 登录后待补全项类型（与后端 postLoginCheck 返回值一一对应，顺序由后端策略 @Order 决定）
 export type UserSetupItem = "UserSetupResetPassword" | "UserSetupUserBasics" | "UserSetupDefaultDept"
 
@@ -42,6 +45,12 @@ export const removeDataItem = (item: string) => {
  * （微信端页面栈唯一，安卓物理返回=退出小程序而非退回登录页绕过）
  */
 export const goUserSetup = () => {
+	// 无 token 拦在入口：向导是登录后流程，进页后再 401→reLaunch 会与页面挂拆/原生视图构造
+	// 并发冲突（实测 iOS SIGSEGV 闪退）；正常入口必有 token，尖峰页测试卡未登录时在此被拦
+	if (!getToken()) {
+		toast("请先登录")
+		return
+	}
 	// #ifdef APP
 	uni.navigateTo({
 		url: "/pages/user-setup/UserSetup",

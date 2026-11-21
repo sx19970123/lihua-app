@@ -21,6 +21,7 @@
 import { webSocket } from '@/utils/web-socket'
 	import { toastRequestError } from '@/utils/toast'
 	import { getData, removeDataItem, clearData } from '@/helpers/user-setup'
+	import { getToken } from '@/helpers/token'
 	import type { UserSetupItem } from '@/helpers/user-setup'
 	import AppSteps from '@/components/app-steps/app-steps.uvue'
 	import UserSetupStart from '@/components/user-setup/UserSetupStart.uvue'
@@ -71,16 +72,22 @@ import { webSocket } from '@/utils/web-socket'
 	const initLifecycle = () => {
 		const initialized = ref<boolean>(false)
 
-		onLoad(async () => {
-			try {
-				await userStore.initUserInfo()
-			} catch (err) {
-				// 失败不阻断：空部门树仍可走其余步骤，返回登录可离场；登录态异常由 401 拦截兜底
-				console.error("向导页用户信息初始化失败", err)
-				toastRequestError(err)
-			}
-			initialized.value = true
-		})
+	onLoad(async () => {
+		// 登录态守卫（S2-03 全局守卫前的页内兜底）：无 token 不发初始化请求直接回登录——
+		// 不走 401 拦截（其 reLaunch+清态与页面首帧渲染/原生视图构造并发会触发框架级闪退）
+		if (!getToken()) {
+			uni.reLaunch({ url: "/pages/login/Login" })
+			return
+		}
+		try {
+			await userStore.initUserInfo()
+		} catch (err) {
+			// 失败不阻断：空部门树仍可走其余步骤，返回登录可离场；登录态异常由 401 拦截兜底
+			console.error("向导页用户信息初始化失败", err)
+			toastRequestError(err)
+		}
+		initialized.value = true
+	})
 
 		// 拦截物理返回/侧滑，流程只能前进或经「返回登录」离场
 		onBackPress(() => true)
