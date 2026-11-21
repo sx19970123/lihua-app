@@ -1,0 +1,125 @@
+<template>
+	<view class="app-card" :hover-class="hover ? (themeStore.isDark ? 'app-pressed-block-dark' : 'app-pressed-block') : 'none'"
+		:hover-stay-time="100" @click="onClick">
+		<view v-if="!headless" class="app-card-header">
+			<view class="app-card-title">
+				<slot name="title">
+					<text v-if="(title ?? '') !== ''" class="app-card-title-text">{{ title }}</text>
+				</slot>
+			</view>
+			<view class="app-card-extra">
+				<slot name="extra">
+					<text v-if="(extra ?? '') !== ''" class="app-card-extra-text">{{ extra }}</text>
+				</slot>
+			</view>
+		</view>
+		<view v-if="!headless" class="app-card-line" />
+		<view class="app-card-body">
+			<slot />
+		</view>
+		<view v-if="!footless" class="app-card-line" />
+		<view v-if="!footless" class="app-card-footer">
+			<slot name="footer">
+				<text v-if="(footer ?? '') !== ''" class="app-card-footer-text">{{ footer }}</text>
+			</slot>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 通用卡片（sard Card 最小复刻）：header/body/footer 三区，title/extra/footer 全空时对应区自动省略；
+	// 暗色全走 token；hover 开启按压态（hover-class，x 端点击态正统——色用字面量双类：
+	// 原生驱动不重算 @media/var，主题切换会停旧色，tree 轮实证）
+
+	import { useThemeStore } from '@/stores/theme'
+
+	const themeStore = useThemeStore()
+	themeStore.init()
+
+	const props = defineProps<{
+		// 头部左侧标题（或用 #title 插槽）
+		title?: string
+		// 头部右侧附加内容（或用 #extra 插槽）
+		extra?: string
+		// 底部内容（或用 #footer 插槽）
+		footer?: string
+		// 开启点击反馈（按压底色）
+		hover?: boolean
+	}>()
+
+	const emit = defineEmits<{
+		(e: 'click'): void
+	}>()
+
+	const slots = useSlots()
+
+	// 头/脚省略判定（sard headless/footless 同款：props 与插槽双通道全空才省略）
+	const headless = computed(() => (props.title ?? '') === '' && !slots.title && (props.extra ?? '') === '' && !slots.extra)
+	const footless = computed(() => (props.footer ?? '') === '' && !slots.footer)
+
+	const onClick = () => {
+		emit('click')
+	}
+</script>
+
+<style lang="scss">
+	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	@import '@/styles/press.scss';
+
+	/* 根：底色/圆角全走 token（亮白·暗 #242628 自动）；overflow hidden 完成圆角裁切 */
+	.app-card {
+		flex-direction: column;
+		background-color: var(--lh-emphasis-bg);
+		border-radius: var(--lh-radius);
+		overflow: hidden;
+	}
+
+	/* 头部：标题左（占主轴）+ 附加右；三区内距统一 10px 16px（sard 换算 20rpx 32rpx） */
+	.app-card-header {
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: 10px 16px;
+	}
+
+	.app-card-title {
+		flex: 1;
+	}
+
+	.app-card-title-text {
+		font-size: 16px;
+		line-height: var(--lh-leading-normal);
+		color: var(--lh-emphasis-color);
+	}
+
+	.app-card-extra {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.app-card-extra-text {
+		font-size: 13px;
+		color: var(--lh-tertiary-color);
+	}
+
+	/* 区间分隔线（sard 伪元素 border 换独立 1px view）；色与按压同源（active-bg token）——
+	   按压时整卡变灰、线画在灰上同色隐形（tree 分隔线同款规范） */
+	.app-card-line {
+		height: 1px;
+		background-color: var(--lh-active-bg);
+	}
+
+	/* body 内距组件级变量（消费方可覆盖，如面板容器需要均匀边距）；默认 sard 标准 10px 16px */
+	.app-card-body {
+		padding: var(--lh-card-body-padding-y, 10px) var(--lh-card-body-padding-x, 16px);
+	}
+
+	.app-card-footer {
+		padding: 10px 16px;
+	}
+
+	.app-card-footer-text {
+		font-size: 14px;
+		color: var(--lh-tertiary-color);
+	}
+</style>
