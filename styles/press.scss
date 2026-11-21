@@ -1,0 +1,34 @@
+/*
+ * 按压反馈三等级（全仓统一维护点，组件/页面 style 内 @import 使用——scss 编译期合并进
+ * 导入者作用域，不受样式隔离限制；页面先例 user-setup.scss）
+ *
+ * 机制规范（全等级一致）：
+ * - hover-class 原生驱动（不走 JS class patch）+ :hover-stay-time="100"（x 默认 400 太长）
+ * - 带色载体必须亮暗双类字面量：原生驱动不重算 @media/var，主题切换会停旧色（tree 轮实证）；
+ *   选类依据=stores/theme.ts 的 isDark（themeStore.isDark ? '-dark' : ''）
+ * - 分隔线与按压同色规范：带线载体线色与按压同值（按压时线画在灰上同色隐形，tree/card 同款）
+ * - 文本级用 opacity（跨亮暗通用，免双类）
+ */
+
+/* 行级（小载体：树行/列表行）——浅一号，与分隔线同色（gray-100/gray-800 同源） */
+.app-pressed-row {
+	background-color: #f7f7f8;
+}
+
+.app-pressed-row-dark {
+	background-color: #393c3f;
+}
+
+/* 卡片级（大载体：整卡可按）——对比明显（active-bg 同源，与 card 分隔线一致） */
+.app-pressed-block {
+	background-color: #ecedee;
+}
+
+.app-pressed-block-dark {
+	background-color: #505457;
+}
+
+/* 文本级（文字链接等无面积元素）——按压压淡不加底，跨亮暗通用 */
+.app-pressed-text {
+	opacity: 0.5;
+}

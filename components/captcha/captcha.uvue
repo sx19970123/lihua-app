@@ -6,20 +6,24 @@
 			<!-- 点击挂外层 view：uni-icons 组件的 click 转发在微信端不可靠，view tap 全端可靠 -->
 			<!-- #ifndef MP-WEIXIN -->
 			<view class="lh-cap-opts" :class="{ 'lh-cap-opts--show': optsVisible }">
-				<view class="lh-cap-opts-btn" @click="refresh(false)">
+				<view class="lh-cap-opts-btn" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="refresh(false)">
 					<uni-icons class="lh-cap-opts-icon" type="refreshempty" />
 				</view>
-				<view class="lh-cap-opts-btn" @click="close()">
+				<view class="lh-cap-opts-btn lh-cap-opts-btn--end" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="close()">
 					<uni-icons class="lh-cap-opts-icon" type="closeempty" />
 				</view>
 			</view>
 			<!-- #endif -->
 			<!-- #ifdef MP-WEIXIN -->
 			<view v-if="optsVisible" class="lh-cap-opts lh-cap-opts--show">
-				<view class="lh-cap-opts-btn" @click="refresh(false)">
+				<view class="lh-cap-opts-btn" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="refresh(false)">
 					<uni-icons class="lh-cap-opts-icon" type="refreshempty" />
 				</view>
-				<view class="lh-cap-opts-btn" @click="close()">
+				<view class="lh-cap-opts-btn lh-cap-opts-btn--end" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="close()">
 					<uni-icons class="lh-cap-opts-icon" type="closeempty" />
 				</view>
 			</view>
@@ -139,6 +143,7 @@
 	import { solvePow } from './pow/index'
 
 	import type { CaptchaRequestData, CaptchaResponseData } from '@/api/system/captcha/type/captcha-type'
+	import { useThemeStore } from '@/stores/theme'
 
 	type TrackItem = { x : number, y : number, type : string, t : number }
 
@@ -149,10 +154,12 @@
 		themeDark ?: string
 	}>()
 
-	// 主题覆盖当前值：按亮暗取对应 prop，该态未传回落空串（class 内 token 接管）
-	const isDark = ref<boolean>(false)
+	// 主题覆盖当前值：按亮暗取对应 prop，该态未传回落空串（class 内 token 接管）；
+	// 亮暗感知收敛于 theme store（stores/theme.ts，App/Web/微信三分叉+监听）
+	const themeStore = useThemeStore()
+	themeStore.init()
 	const capTheme = computed(() : string => {
-		return isDark.value ? (props.themeDark ?? '') : (props.themeLight ?? '')
+		return themeStore.isDark ? (props.themeDark ?? '') : (props.themeLight ?? '')
 	})
 	// 对象语法（Vapor 端字符串 style 绑定不解析，项目先例全对象）
 	const themeBg = computed(() : any => capTheme.value ? { backgroundColor: capTheme.value } : {})
@@ -222,8 +229,6 @@
 	// 所属页面实例（active 时=dialogPage）：getCurrentInstance 仅 setup/生命周期内可用，
 	// 点击回调里现取为 null，须挂载期缓存供 close 使用
 	let ownerPage : any = null
-	// 亮暗感知取消句柄（onMounted 注册，onUnmounted 回收）
-	let unwatchTheme : (() => void) | null = null
 	// 微信端（组件挂业务页）：挂载期缓存的组件实例，量测用（异步上下文取 getCurrentInstance 为 null）
 	let ownerInstance : any = null
 
@@ -856,50 +861,7 @@
 		emit('success', id)
 	}
 
-	// 亮暗感知（组件内平台分叉）：App=appTheme/auto 兜 osTheme+双监听；Web=matchMedia；微信=hostTheme
-	const applyTheme = () => {
-		// #ifdef APP
-		const info = uni.getAppBaseInfo()
-		let t = info.appTheme
-		if (t === 'auto' || t == null) {
-			t = uni.getSystemInfoSync().osTheme ?? 'light'
-		}
-		isDark.value = t === 'dark'
-		// #endif
-		// #ifdef WEB
-		isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-		// #endif
-		// #ifdef MP-WEIXIN
-		isDark.value = (uni.getAppBaseInfo() as any).hostTheme === 'dark'
-		// #endif
-	}
-
 	onMounted(() => {
-		applyTheme()
-		// #ifdef APP
-		const tid1 = uni.onAppThemeChange(() => applyTheme())
-		const tid2 = uni.onOsThemeChange(() => applyTheme())
-		unwatchTheme = () => {
-			uni.offAppThemeChange(tid1)
-			uni.offOsThemeChange(tid2)
-		}
-		// #endif
-		// #ifdef WEB
-		const mq = window.matchMedia('(prefers-color-scheme: dark)')
-		const onMq = () => {
-			isDark.value = mq.matches
-		}
-		mq.addEventListener('change', onMq)
-		unwatchTheme = () => {
-			mq.removeEventListener('change', onMq)
-		}
-		// #endif
-		// #ifdef MP-WEIXIN
-		const tid = uni.onHostThemeChange(() => applyTheme())
-		unwatchTheme = () => {
-			uni.offHostThemeChange(tid)
-		}
-		// #endif
 		// #ifdef APP || WEB
 		if (props.mode !== 'active') {
 			uni.$on('lh-captcha-success', onBusSuccess)
@@ -919,15 +881,16 @@
 			uni.$off('lh-captcha-success', onBusSuccess)
 		}
 		// #endif
-		unwatchTheme?.()
-		unwatchTheme = null
 		stopJobs()
 	})
 
 	defineExpose({ open, close })
 </script>
 
-<style>
+<style lang="scss">
+	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	@import '@/styles/press.scss';
+
 	/* 遮罩：dialogPage 页面流内 100% 铺满；微信端（S6）业务页挂载需 fixed 全屏 */
 	.lh-cap-mask {
 		width: 100%;
@@ -1040,9 +1003,9 @@
 	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点（旧版不遮操作区语义） */
 	.lh-cap-opts {
 		position: absolute;
-		/* 28px 热区盒中心 26 与 title 行中心 26.5 对齐；right 11+盒内边 5=icon 距卡片右缘 16px（padding 线） */
-		top: 12px;
-		right: 11px;
+		/* 36px 热区盒中心 26 与 title 行中心 26.5 对齐（top 8+36/2）；right 4+盒 margin 4+盒内边 8=icon 距卡片右缘 16px（padding 线） */
+		top: 8px;
+		right: 4px;
 		z-index: 20;
 		flex-direction: row;
 		align-items: center;
@@ -1105,17 +1068,26 @@
 
 	/* 点击热区容器（icon 本体不带事件，见 template 注释） */
 	.lh-cap-opts-btn {
-		/* 28×28 热区（约 icon 面积两倍），icon 盒内居中；top 12 使盒中心 26=title 行中心 26.5 对齐 */
-		width: 28px;
-		height: 28px;
-		justify-content: center;
+		width: 36px;
+		height: 36px;
+		/* uvue view 默认 flex-direction: column——justify 管竖轴，做水平偏移必须显式 row */
+		flex-direction: row;
 		align-items: center;
-		/* x 无 gap；btn 间 margin 0+盒内 padding 5×2=icon 视觉间距 10px */
-		margin-right: 0px;
+		/* 热区紧贴零死区（相邻触区无缝分格，系统 toolbar 同款）；icon 非对称居中：
+		   刷新钮 icon 偏右 4px、关闭钮偏左 4px（--end）——视觉间距 8px（缓冲 4×2），
+		   外缘 icon 距卡片右缘=容器 right 4+右钮右侧余 12=16px（padding 线）不变 */
+		justify-content: flex-end;
+		padding-right: 4px;
+	}
+
+	.lh-cap-opts-btn--end {
+		justify-content: flex-start;
+		padding-left: 4px;
+		padding-right: 0;
 	}
 
 	.lh-cap-opts-icon {
-		font-size: 18px;
+		font-size: 20px;
 		color: var(--lh-fourth-color, #b5b9bd);
 	}
 

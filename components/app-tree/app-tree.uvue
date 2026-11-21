@@ -12,7 +12,7 @@
 			<view v-for="state in allStates" :key="state.item.key" :class="state.nodeCls"
 				:style="{paddingLeft: (state.level * 20) + 'px'}">
 				<view :class="state.hitCls"
-					:hover-class="readonly ? 'none' : (isDark ? 'app-tree-node-pressed-dark' : 'app-tree-node-pressed')"
+					:hover-class="readonly ? 'none' : (themeStore.isDark ? 'app-pressed-row-dark' : 'app-pressed-row')"
 					:hover-stay-time="100" @click="onSelect(state.item)">
 					<!-- 箭头槽常驻（叶子隐藏占位，标题跨层级对齐）；过滤中命中子树视为展开 -->
 					<view class="app-tree-arrow" @click.stop="toggleByItem(state.item)">
@@ -43,6 +43,7 @@
 	// 渲染=全量常驻+可见性切换（非销毁；x 端 Element::Dispose 崩溃规避），
 	// 非组件递归（x 编译链递归组件无先例）；整块点击=选中，箭头点击=展开收起
 	import AppInput from '@/components/app-input/app-input.uvue'
+	import { useThemeStore } from '@/stores/theme'
 
 	interface TreeItem {
 		// key 必须全树唯一（显隐集合/v-for 复用都以其为身份；重复 key 会导致过滤失效与 diff 崩溃，sard 同款契约）
@@ -299,65 +300,18 @@
 		keyword.value = value
 	}
 
-	// ---------- 按压高亮的亮暗感知 ----------
-	// hover-class 由原生触摸驱动，其类样式中的 @media/var 在主题切换时不重算（真机实测按压色停在旧主题），
-	// 改亮暗双类字面量+动态绑定（感知三分叉与 captcha 同款）
-	const isDark = ref<boolean>(false)
-	let unwatchTheme : (() => void) | null = null
-
-	const applyTheme = () => {
-		// #ifdef APP
-		const info = uni.getAppBaseInfo()
-		let t = info.appTheme
-		if (t === 'auto' || t == null) {
-			t = uni.getSystemInfoSync().osTheme ?? 'light'
-		}
-		isDark.value = t === 'dark'
-		// #endif
-		// #ifdef WEB
-		isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-		// #endif
-		// #ifdef MP-WEIXIN
-		isDark.value = (uni.getAppBaseInfo() as any).hostTheme === 'dark'
-		// #endif
-	}
-
-	onMounted(() => {
-		applyTheme()
-		// #ifdef APP
-		const tid1 = uni.onAppThemeChange(() => applyTheme())
-		const tid2 = uni.onOsThemeChange(() => applyTheme())
-		unwatchTheme = () => {
-			uni.offAppThemeChange(tid1)
-			uni.offOsThemeChange(tid2)
-		}
-		// #endif
-		// #ifdef WEB
-		const mq = window.matchMedia('(prefers-color-scheme: dark)')
-		const onMq = () => {
-			isDark.value = mq.matches
-		}
-		mq.addEventListener('change', onMq)
-		unwatchTheme = () => {
-			mq.removeEventListener('change', onMq)
-		}
-		// #endif
-		// #ifdef MP-WEIXIN
-		const tid = uni.onHostThemeChange(() => applyTheme())
-		unwatchTheme = () => {
-			uni.offHostThemeChange(tid)
-		}
-		// #endif
-	})
-
-	onUnmounted(() => {
-		unwatchTheme?.()
-	})
+	// 按压高亮亮暗感知走 theme store（hover-class 原生驱动不重算 @media/var，
+	// 双类字面量+动态绑定的选类依据；感知实现收敛于 stores/theme.ts）
+	const themeStore = useThemeStore()
+	themeStore.init()
 
 	defineExpose({ filter })
 </script>
 
 <style lang="scss">
+	/* 按压三等级统一维护点（styles/press.scss，编译期合并）；按压色与分隔线同色规范见彼处 */
+	@import '@/styles/press.scss';
+
 	/* 面板壳：底色/圆角与 app-card 同款 token；上下常驻 8px（scroll-view 的 css padding
 	   在 x 端不生效，边距收在面板上兜底）；纵向 16px 等距体系（面板 8+区间 8） */
 	.app-tree-panel {
@@ -471,18 +425,6 @@
 		.app-tree-line {
 			background-color: var(--lh-gray-800);
 		}
-	}
-
-	/* 按压态亮暗双类字面量（hover-class 原生驱动不重算 @media/var，主题切换实测失效）；
-	   值与分隔线同源（gray-100 #f7f7f8 / gray-800 #393c3f），由 :hover-class 按主题动态选用；
-	   圆角随 hit 基类四角 8px；hit 上探 1px 盖上一行线（线端止于圆角切点，不进圆角区，
-	   右上圆角缺口处无线可漏） */
-	.app-tree-node-pressed {
-		background-color: #f7f7f8;
-	}
-
-	.app-tree-node-pressed-dark {
-		background-color: #393c3f;
 	}
 
 	/* 箭头触区扩大（视觉图标仍 16 居中）：宽 32×满行高 36——约 3 倍触区接近 iOS 最小触目标，
