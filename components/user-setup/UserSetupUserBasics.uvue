@@ -5,7 +5,7 @@
 			<text class="setup-title">基础信息</text>
 			<text class="setup-desc">新用户首次登录需要录入基础信息</text>
 		</view>
-		<scroll-view class="setup-step-body" scroll-y :bounces="false" :show-scrollbar="false">
+		<scroll-view class="setup-step-body" :bounces="false" :show-scrollbar="false">
 			<view class="setup-form">
 			<view class="setup-field">
 				<app-input shape="round" :height="45" placeholder="请输入用户昵称" :maxlength="20" clearable

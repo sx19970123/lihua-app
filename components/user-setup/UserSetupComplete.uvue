@@ -5,7 +5,7 @@
 			<text class="setup-title">完 成</text>
 			<text class="setup-desc">一切就绪！点击下方按钮进入系统。</text>
 		</view>
-		<scroll-view class="setup-step-body" scroll-y :bounces="false" :show-scrollbar="false" />
+		<scroll-view class="setup-step-body" :bounces="false" :show-scrollbar="false" />
 		<view class="setup-step-footer">
 			<view class="setup-btns">
 				<button class="setup-btn" type="primary" @click="emit('complete')">进入系统</button>
