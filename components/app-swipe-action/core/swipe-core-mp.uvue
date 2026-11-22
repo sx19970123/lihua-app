@@ -291,6 +291,9 @@
 	const removing = ref<boolean>(false)
 	// 手势
 	let dragTouchId = -1
+	// 拖拽被互斥打断（多指：本行拖拽中他行按下，closeSelf 归零本行）——后续 move/end
+	// 全忽略直到抬手，否则手指未抬 move 又把行拖回来=没收
+	let dragCancelled = false
 	let startX = 0
 	let startY = 0
 	let baseX = 0
@@ -517,6 +520,9 @@
 	}
 
 	const onTouchStart = (e : TouchEvent) => {
+		// 按下即复位按压抑制（不放 touchEnd：stay-time 余韵期内撤抑制类会让按压色闪回）
+		pressSuppressed.value = false
+		dragCancelled = false
 		if (confirmBarHit) {
 			confirmBarHit = false
 			return
@@ -547,7 +553,7 @@
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
-		if (dragTouchId < 0) {
+		if (dragTouchId < 0 || dragCancelled) {
 			return
 		}
 		const p = findTouch(e, dragTouchId)
@@ -561,8 +567,11 @@
 			if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
 				horizontal = Math.abs(dx) > Math.abs(dy)
 				if (horizontal) {
+					// 横滑接管：锁默认行为+通报内层行退出按压；即刻登记互斥——
+					// 拖拽期不留持有者空窗（多指下他行 closeOthers 能收到本行）
 					e.preventDefault()
 					pressSuppressed.value = true
+					markOpen(closeSelf)
 				}
 			}
 			return
@@ -588,7 +597,12 @@
 			return
 		}
 		dragTouchId = -1
-		pressSuppressed.value = false
+		// 被互斥打断的轮次：静默终结（不复位 horizontal 之外的任何手势态）
+		if (dragCancelled) {
+			dragCancelled = false
+			horizontal = null
+			return
+		}
 		if (horizontal !== true) {
 			horizontal = null
 			return
@@ -662,6 +676,10 @@
 	const closeSelf = () => {
 		if (props.loading === true) {
 			return
+		}
+		// 拖拽中被外部（互斥）收起=打断本轮流（见 dragCancelled 声明处注释）
+		if (dragTouchId >= 0) {
+			dragCancelled = true
 		}
 		cancelSpringTween()
 		cancelInertia()
