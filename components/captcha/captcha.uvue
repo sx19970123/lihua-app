@@ -462,10 +462,12 @@
 			// 经缓存页面实例 getElementById 取；非 dialogPage 宿主（S6 组件挂载）回退 selectorQuery
 			const el = ownerPage?.getElementById('lh-cap-click-mask')
 			if (el) {
-				const rect = el.getBoundingClientRect()
-				maskRect.left = rect.left
-				maskRect.top = rect.top
-				resolve()
+				// Async 版跨端（MP 的 UniElement 无同步 getBoundingClientRect，裸调炸 promise）
+				el.getBoundingClientRectAsync().then((rect : any) => {
+					maskRect.left = rect.left
+					maskRect.top = rect.top
+					resolve()
+				})
 				return
 			}
 			uni.createSelectorQuery().in(ownerInstance ?? getCurrentInstance()?.proxy).select('.lh-cap-click-mask').boundingClientRect().exec(ret => {

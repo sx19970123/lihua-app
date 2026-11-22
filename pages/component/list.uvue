@@ -14,6 +14,15 @@
 				:icon="row.icon" :title="row.label" arrow hover @click="onListRowClick(row.label)" />
 		</app-list>
 		<text class="demo-value">clicked = {{ listRowClick || '（未点击）' }}</text>
+
+		<!-- icon 假设对照组（MP 行高矮排查）：同页并排无 icon 纯文字行——两端对比此组行高，
+		     一致=icon 行盒撑高差异坐实（menu 页行全带 icon） -->
+		<text class="demo-bare-label">无 icon 纯文字行（高度对照组）</text>
+		<app-list>
+			<app-list-item :divider="false" title="纯文字加箭头" arrow hover @click="onListRowClick('纯文字加箭头')" />
+			<app-list-item title="纯文字加右侧值" value="v1.0.2" hover @click="onListRowClick('纯文字加右侧值')" />
+			<app-list-item title="纯文字三要素" value="已设置" arrow hover @click="onListRowClick('纯文字三要素')" />
+		</app-list>
 	</view>
 </template>
 

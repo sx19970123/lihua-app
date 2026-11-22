@@ -132,13 +132,16 @@
 	// ---------- 量测与弹簧 ----------
 	const groupEl = ref<any>(null)
 
-	// 段宽=组实宽/段数（拖动开始时刻重量测，天然免疫容器尺寸陈旧）
-	const measure = () => {
-		const r = groupEl.value?.getBoundingClientRect()
-		const n = items.value.length
-		if (r != null && r.width > 0 && n > 0) {
-			segW.value = r.width / n
-		}
+	// 段宽=组实宽/段数（拖动开始时刻重量测，天然免疫容器尺寸陈旧）；
+	// Async 版跨端通吃——MP 的 UniElement 无同步 getBoundingClientRect（裸调必炸
+	// TypeError in promise），App 端异步晚一帧无害（segW 会话内基本恒定，重量测本防御性）
+	const measure = () : void => {
+		groupEl.value?.getBoundingClientRectAsync().then((r : any) => {
+			const n = items.value.length
+			if (r != null && r.width > 0 && n > 0) {
+				segW.value = r.width / n
+			}
+		})
 	}
 
 	const springCtl = createSpringControl()

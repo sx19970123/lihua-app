@@ -1,6 +1,6 @@
 ---
 name: create-component
-description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范。
+description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系/行高 padding 直构禁 min-height）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范。跨端坑点详规见 cross-platform-pitfalls.md。
 ---
 
 # 新建/修改公共组件（uni-app x 手搓组件规范）
@@ -34,6 +34,11 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - `:hover-stay-time` 等为原生属性族（stay 默认 400ms 太长，统一 100）。
 - scroll-view 的 css padding 不生效；其滚动方向新规范为 `direction`（默认 vertical），
   scroll-y 已废弃。
+- **行高定高=padding 直构**（跨端统一账，详规见 cross-platform-pitfalls.md）：行高
+  =上下 padding×2+文字行高，**禁用 min-height 抬行**——App 端引擎按 content 区计
+  （min+padding 叠加）、MP 按 border-box，同一声明两种高度（2026-11-22 诊断卡实锤）；
+  图形列（icon/arrow）容器钉 `height: 22px + overflow: visible`，防 uni-icons 默认
+  行盒撑高；tree 式 max-height 钳制法（内容自然高+max 单属性）为同哲学替代。
 - 条件编译铁律：业务页面禁 #ifdef；平台分叉收敛在工具类/组件内。
 
 ## 暗色模式

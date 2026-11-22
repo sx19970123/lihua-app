@@ -1,0 +1,97 @@
+---
+name: cross-platform-pitfalls
+description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/Harmony、Web/H5、微信小程序）开发的实证坑点清单与统一标准。适用于：写/调多端不一致的样式与布局（行高/min-height/text 行盒/图标行盒）、元素量测、动画与手势的跨端表现、诊断两端差异（对数法）。每条均为真机实证，附定案口径与替代写法。
+---
+
+# 跨端坑点与统一标准（App / Web / 微信小程序，全部真机实证）
+
+多端一致性是硬前置（拍板：多端一致后才继续后续开发）。本清单只收**跨端表现分叉的
+实证坑**与对应的统一写法，单端 bug 不入。排查新差异先读本文，写新组件时遵守统一
+标准节。行高/样式细则与 create-component.md 互引。
+
+## 统一标准（写码前先背）
+
+1. **行高=padding 直构**：上下 padding×2 + 文字行高，两端恒等一种账。禁 min-height
+   抬行（语义分叉见坑①），min-height 仅限无 padding 元素（segmented track 先例）。
+2. **量测一律 `getBoundingClientRectAsync()`**：同步版 MP 不存在（坑③）；App 端同步
+   版另有布局屏障问题（坑④）。动态文案宽度优先字符估算，静止期量测才用真量。
+3. **不依赖 flush 结果的逻辑不塞 nextTick**（坑⑤）：动画/补间启动放事件 handler 内
+   同步起跑。
+4. **图标/图形列容器钉 `height` + `overflow: visible`**（坑②⑥）：行盒权威不许交给
+   字体默认行高。
+5. 排查跨端差异用**对数法**（见文末），不猜样式规则。
+
+## 坑点清单
+
+### ① min-height 的 box 语义分叉（2026-11-22 诊断卡实锤，最大坑）
+
+- **App 端（iOS/Android 蒸汽）按 content 区计**：`min-height: 38px + padding 8×2`
+  → 总高 54（min 与 padding 叠加）；**显式 `box-sizing: border-box` 无效**（与官方
+  width 文档口径相悖，引擎方言）。max-height 未见此分叉（钳的是渲染终值，tree 行
+  `max-height: 38` 两端恒 38 ✓）。
+- **MP/Web 按 border-box**：min-height=总高下限，38 就是 38。
+- 症状形态：「一端行比另一端高恰好 padding 之和」——每行差 16px、一屏差 2-3 行。
+- **统一写法**：行高 padding 直构（16×2+22=54）；或 tree 式 max-height 钳制。
+- 教训：本案曾连猜三轮（line-height 无单位/text 不认继承/icon 行盒）全打偏——
+  line-height/icon 当时都无辜，**先量再猜**。
+
+### ② MP 端 text 组件的 line-height 行为存疑 + 图标行盒撑高
+
+- 微信经典坑（社区公认）：`<text>` 上直接写 line-height 可能不生效，要写外层 view
+  靠继承；本项目双写（view+text）未能观察到确定效果——**未终审**（被坑①掩盖），
+  最终以容器钉高绕开，不再依赖。
+- **uni-icons 无显式行高时默认行盒撑高行**：24px 图标 App 默认行盒 ~36、MP ~26，
+  两端不同且都超标——**容器 `height: 22px + overflow: visible` 钉死**（布局属性
+  两端必生效，字形溢出渲染放行）。
+
+### ③ MP 端 UniElement 无同步量测（getBoundingClientRect）
+
+- 同步版直接 `TypeError: _a.getBoundingClientRect is not a function (in promise)`
+  大量刷屏；金矿 mp/README 明示 MP 仅支持 `getBoundingClientRectAsync`。
+- 全仓同步量测要清零（曾漏 segmented/captcha 两处——平台分叉时只防了 swipe）。
+
+### ④ App 端同步量测=强制布局屏障（老安卓几十 ms）
+
+- 换文（confirmLabel 等）后立即同步量测，要**等渲染线程完成重排才返回**——排队
+  几十 ms 起步；估算（字符宽 CJK≈1em/其余≈0.55em×字号，MP 核同款）微秒级替代。
+- 静止期量测（mounted 的 measure）保留真量测，精度优先。
+
+### ⑤ nextTick=等组件更新 flush（老安卓常态 30-40ms、偶发 GC/背压数百 ms~秒级）
+
+- 「估算/纯计算」类逻辑塞 nextTick 里=白等 flush。先问该逻辑**是否真依赖渲染结果**
+  （量测依赖 → 估算化后不依赖 → 拆掉）。动画/补间启动同步起跑，文字换文晚一拍
+  跟上可接受（主视觉先行）。
+- 分段计时 log 定位法：click→赋值→属性写→flush→nextTick→首帧，哪段大修哪段。
+
+### ⑥ hover-class 的 Android 双失效（2026-11-22 实锤）
+
+- 按压周期中途把 hover-class 切 `'none'`：**既不刷新当前视觉**（官方语义=组件区域
+  内移动不取消，release.md:1796）**又废掉 up 摘除**（up 读当前值判「无 hover 态」→
+  down 时类永久残留）。iOS 端两样都正常（实现晚一代，属性变化即时反映）。
+- **统一写法**：hover-class 恒定类名（亮暗双类字面量由 isDark 选），拖动期间按压
+  保持、松手 ~100ms 自然褪（本项目拍板行为）。轻放即滑（<50ms）不亮=hover-start-time
+  防误显，非 bug。
+
+### ⑦ 摘 transition 对在途动画的语义分叉（2026-11-22 实锤）
+
+- `transition: none` 写入瞬间：**App 端已在途的 CSS 过渡免疫**（动画对象一经启动独立
+  于 transition 属性，照播完）；**MP/Web 端立即终止**且属性瞬跳到已写目标值。
+- 症状形态：同一份「setTransition(300) → 写 transform → 随即 setTransition(0)」
+  链，App 端看到滑出动画、MP 端元素直接消失。
+- **统一写法**：凡「先挂过渡写值、后又立刻由 JS 补间接管」的动画，过渡期的帧驱动
+  一律并入补间回调（同帧同曲线），不把任何一段视觉托付给「即将被摘的 CSS 过渡」。
+
+## 对数法（跨端差异诊断标准流程）
+
+1. **两端同屏控制变量**：诊断卡打 `uni.getWindowInfo()`（screen/win/dpr）——排除
+   模拟器与真机视口差。
+2. 最小复现探针逐层量：纯 view（验布局属性）/无 min 高（验内容行盒）/显式
+   box-sizing 对照/stretch 对照（flex-start）/**text 本体单独量**——一次分清
+   「盒的账」还是「内容的账」。
+3. 全部走 `getBoundingClientRectAsync`（两端通吃），结果 console 打单行两端贴数对比。
+4. 样式规则在 Styles 面板「存在」≠生效——以量出的数为准。
+
+## 关联
+
+- 组件手搓规范/样式铁律：`skills/create-component.md`
+- 平台分叉五级阶梯与条件编译：`skills/create-component.md` + `skills/conditional-compilation.md`

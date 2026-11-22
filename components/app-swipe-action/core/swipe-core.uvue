@@ -207,13 +207,6 @@
 			}
 		}
 
-		// 内容侧彩带滑出行外（进确认时 j>idx 的退出视野）
-		const slideOutFrom = (idx : number) => {
-			for (let j = idx + 1; j < g.fan.length; j++) {
-				wBtn(j, 'transform', `translateX(${fixedSign * g.fan[j]}px)`)
-			}
-		}
-
 		// 量测+静态锁定（text 实宽+内距=按钮宽→fan→margins→初始全藏）
 		// 可重入（actions 动态变化时重量测）；labels=各钮文案（MP 无元素量测走估算兜底）
 		const measure = (labels : string[]) => {
@@ -262,7 +255,7 @@
 		const isSpringDirty = () : boolean => springDirty
 		const clearSpringDirty = () => { springDirty = false }
 
-		return { btn, text, g, fixedSign, btnAt, textAt, driveAt, setTransitionAll, resetStatic, slideOutFrom, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
+		return { btn, text, g, fixedSign, btnAt, textAt, driveAt, setTransitionAll, resetStatic, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
 	}
 	// 双实例：左实体 fixedSign=-1（藏左外）/右实体 +1（藏右外）；
 	// side()=程序化 open 的缺省侧（direction 单侧模式决定）
@@ -415,8 +408,10 @@
 	}
 
 	// toX 传 null = 不驱动 content（item 渲染态冻结——取消确认路径用：按钮还在 item 就绝不动）
-	// backD=被点彩带内容侧彩带的回位目标位移（插值进补间=随复原动画滑入而非瞬现；null=不动）
-	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, backD ?: number | null, onDone ?: () => void) => {
+	// backD=取消路径 j>idx 回位插值（fan[j]→backD 滑回）；slideOut=进确认 j>idx 滑出插值
+	// （0→fan[j] 藏外）——不靠 CSS transition 承担滑出：摘 transition（setTransition(0)）
+	// 对在途动画两端语义不同（App=在途免疫继续播、MP/WebView=立即终止瞬跳=直接消失）
+	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, backD ?: number | null, onDone ?: () => void, slideOut ?: boolean) => {
 		// 只清旧补间不清算（纯停表）——起补间前的清旧 ≠ 打断清算（见 cancelConfirmTween 注释）
 		confirmCtl.cancel()
 		const fromW = confirmW >= 0 ? confirmW : s.g.fan[index]
@@ -446,6 +441,12 @@
 						s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
 					}
 				}
+				if (slideOut === true) {
+					for (let j = index + 1; j < n; j++) {
+						const d = safe(s.g.fan[j] * e, s.g.fan[j])
+						s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
+					}
+				}
 			}, onDone)
 	}
 
@@ -463,7 +464,7 @@
 			driveContent(currentX)
 		}
 		confirmExtra = extra
-		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2))
+		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2), null, null, true)
 	}
 
 	// 弹簧回位补间（引擎驱动）：内容+彩带 width 同帧，终态移交 openAt 就位
@@ -773,9 +774,6 @@
 			directBusy.value = false
 			confirmAction = action
 			confirmLabel.value = action.confirmText ?? '确认操作？'
-			setTransition(300)
-			// 内容侧退出视野（滑出行外）
-			sides[sideId].slideOutFrom(index)
 			// 确认文案宽走字符估算（MP 同款）：getBoundingClientRect 量换文后的实宽须等
 			// 渲染线程完成重排（强制布局屏障），老安卓上排队几十 ms=确认后彩带迟滞主因
 			// 补间同步启动（估算零依赖不须等换文 flush——nextTick 等 flush 老安卓 30ms+、
@@ -962,10 +960,10 @@
 		animation: app-swipe-remove 300ms ease forwards;
 	}
 
-	/* 行收起动画（tree 同款 max-height 两档；行盒 38 与列表行同构，内容更高的消费场景届时按实高适配） */
+	/* 行收起动画（tree 同款 max-height 两档；行盒 54 与列表行同构（padding 直构后），内容更高的消费场景届时按实高适配） */
 	@keyframes app-swipe-remove {
 		0% {
-			max-height: 38px;
+			max-height: 54px;
 			opacity: 1;
 		}
 

@@ -227,13 +227,6 @@
 			}
 		}
 
-		// 内容侧彩带滑出行外（进确认时 j>idx 的退出视野）
-		const slideOutFrom = (idx : number) => {
-			for (let j = idx + 1; j < g.fan.length; j++) {
-				wBtn(j, 'transform', `translateX(${fixedSign * g.fan[j]}px)`)
-			}
-		}
-
 		// 量测+静态锁定（MP 无元素量测——textWidthOf 字符估算）；可重入（actions 变化）
 		const measure = (labels : string[]) => {
 			g.widths.splice(0, g.widths.length)
@@ -279,7 +272,7 @@
 		const isSpringDirty = () : boolean => springDirty
 		const clearSpringDirty = () => { springDirty = false }
 
-		return { g, fixedSign, driveAt, setTransitionAll, resetStatic, slideOutFrom, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
+		return { g, fixedSign, driveAt, setTransitionAll, resetStatic, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
 	}
 	const sides = [makeSide(-1, mpBtnL, mpTextL), makeSide(1, mpBtnR, mpTextR)]
 	// 状态：当前内容位移档（0 收起 / -W 展开）、确认/消失
@@ -405,8 +398,10 @@
 		confirmW = -1
 	}
 
-	// toX 传 null = 不驱动 content（item 渲染态冻结）；backD=内容侧彩带回位目标位移
-	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, backD ?: number | null, onDone ?: () => void) => {
+	// toX 传 null = 不驱动 content；backD=取消路径 j>idx 回位插值；slideOut=进确认
+	// j>idx 滑出插值（0→fan[j]）——不靠 CSS transition：摘 transition 对在途动画两端
+	// 语义不同（App=在途免疫、MP=立即终止瞬跳）
+	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, backD ?: number | null, onDone ?: () => void, slideOut ?: boolean) => {
 		confirmCtl.cancel()
 		const fromW = confirmW >= 0 ? confirmW : s.g.fan[index]
 		const fromX = currentX
@@ -435,6 +430,12 @@
 					s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
 				}
 			}
+			if (slideOut === true) {
+				for (let j = index + 1; j < n; j++) {
+					const d = safe(s.g.fan[j] * e, s.g.fan[j])
+					s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
+				}
+			}
 		}, onDone)
 	}
 
@@ -451,7 +452,7 @@
 			driveContent(currentX)
 		}
 		confirmExtra = extra
-		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2))
+		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2), null, null, true)
 	}
 
 	// 弹簧回位补间：内容+彩带 width 同帧，终态移交 openAt 就位
@@ -741,8 +742,6 @@
 			directBusy.value = false
 			confirmAction = action
 			confirmLabel.value = action.confirmText ?? '确认操作？'
-			setTransition(300)
-			sides[sideId].slideOutFrom(index)
 			// 补间同步启动（估算零依赖不须等换文渲染——nextTick 等 flush 会把彩带启动压后，
 			// 文字换文晚一拍跟上可接受）
 			const s = sides[sideId]
@@ -912,7 +911,7 @@
 
 	@keyframes app-swipe-remove {
 		0% {
-			max-height: 38px;
+			max-height: 54px;
 			opacity: 1;
 		}
 

@@ -27,11 +27,15 @@
 	/* 组标题：卡外小字，左右与行内距对齐 16 */
 	.app-list-title {
 		margin: 16px 16px 8px;
+		/* line-height 双写（view 份，口径同 app-list-item） */
+		line-height: 18px;
 	}
 
 	.app-list-title-text {
 		font-size: 13px;
-		line-height: var(--lh-leading-snug);
+		/* px 字面量：x 端 line-height 仅保证 length 值，比例 token(1.375) 在 App 宽容生效、
+		   MP 被丢弃=行高塌（=13×1.375 预算值） */
+		line-height: 18px;
 		color: var(--lh-tertiary-color);
 	}
 

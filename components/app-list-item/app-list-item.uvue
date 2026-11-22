@@ -70,14 +70,15 @@
 	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
 	@import '@/styles/press.scss';
 
-	/* 行根：横向布局垂直居中；行盒 38 与 app-tree 同构（padding 8×2+文字行高 22）；
+	/* 行根：横向布局垂直居中；行高=padding 16×2+文字行高 22=54 直构（两端恒等）——
+	   不用 min-height：App 端引擎按 content 区计（min38+padding16=54）、MP 端按
+	   border-box（总高 38），同一声明两种账（诊断卡 A/D/E 实测定案）；tree 式单账哲学；
 	   overflow visible 放行带线行上探 1px 越行顶（x 默认 hidden，tree 轮实证必需） */
 	.app-list-item {
 		position: relative;
 		flex-direction: row;
 		align-items: center;
-		min-height: 38px;
-		padding: 8px 16px;
+		padding: 16px 16px;
 		overflow: visible;
 	}
 
@@ -101,6 +102,10 @@
 		flex-direction: row;
 		align-items: center;
 		margin-right: 12px;
+		/* 行盒钉死=文字行高同款 22（布局属性两端必生效，不赌 uni-icons text 行盒——
+		   其 24px 字号无显式行高，App 默认行盒 ~36 会撑高行）；visible 放行字形溢出渲染 */
+		height: 22px;
+		overflow: visible;
 	}
 
 	.app-list-item-icon-glyph {
@@ -113,11 +118,16 @@
 		flex: 1;
 		flex-direction: row;
 		align-items: center;
+		/* line-height 双写（view 份）：MP 端 text 自身不认 line-height、靠容器继承；
+		   App 端样式不继承、吃 text 份——两端相反，双写通吃 */
+		line-height: 22px;
 	}
 
 	.app-list-item-title-text {
 		font-size: var(--lh-text-lg);
-		line-height: var(--lh-leading-snug);
+		/* px 字面量（=text-lg 16×1.375）：x 端 line-height 仅保证 length，比例 token 在
+		   MP 被丢弃=行高塌、行盒矮（min-height 38=8×2+此 22 的三元构成） */
+		line-height: 22px;
 		color: var(--lh-emphasis-color);
 	}
 
@@ -126,11 +136,12 @@
 		flex-direction: row;
 		align-items: center;
 		margin-left: 8px;
+		line-height: 22px;
 	}
 
 	.app-list-item-value-text {
 		font-size: var(--lh-text-lg);
-		line-height: var(--lh-leading-snug);
+		line-height: 22px;
 		color: var(--lh-tertiary-color);
 	}
 
@@ -139,6 +150,9 @@
 		margin-left: 8px;
 		flex-direction: row;
 		align-items: center;
+		/* 同 icon：行盒钉死 22，防 uni-icons 默认行盒撑高行 */
+		height: 22px;
+		overflow: visible;
 	}
 
 	.app-list-item-arrow-glyph {
