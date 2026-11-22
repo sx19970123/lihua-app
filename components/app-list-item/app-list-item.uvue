@@ -1,6 +1,5 @@
 <template>
-		<view class="app-list-item"
-			:class="(divider !== false ? 'app-list-item-with-line' : '') + (pressSuppressed ? ' app-pressed-none' : '')"
+		<view class="app-list-item" :class="divider !== false ? 'app-list-item-with-line' : ''"
 			:hover-class="hover ? (themeStore.isDark ? 'app-pressed-row-dark' : 'app-pressed-row') : 'none'"
 			:hover-stay-time="100" @click="onClick">
 		<view v-if="divider !== false" class="app-list-item-line app-pressed-row" :style="{ left: lineLeft }" />
@@ -34,11 +33,6 @@
 
 	const themeStore = useThemeStore()
 	themeStore.init()
-
-	// 包裹容器（如 app-swipe-action）的手势态通报：横滑接管时退出按压（主流 App 行为）；
-	// 走 :class 挂透明抑制类——hover-class 中途切值在 Android 端既不刷新当前视觉又破坏
-	// up 摘除（区域内移动不取消语义），必须恒定类名；独立使用时无 inject 默认 false 不参与
-	const pressSuppressed = inject<boolean>('app-swipe-press', false)
 
 	const props = defineProps<{
 		// 左侧标题（或用 #title 插槽）

@@ -66,10 +66,3 @@
 .app-pressed-text {
 	opacity: 0.5;
 }
-
-/* 按压抑制（swipe 横滑接管时盖掉行按压视觉）：走 :class JS 通道透明覆盖——hover-class
-   按压周期中途切值在 Android 端不刷新视觉且废掉 up 摘除，类名必须恒定；放末尾保证
-   同特异性覆盖在前的按压类 */
-.app-pressed-none {
-	background-color: transparent;
-}
