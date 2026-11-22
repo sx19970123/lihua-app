@@ -1,8 +1,9 @@
 // 密码强度等级（注册页强度条数据源）
-// 阈值与 web/master 同源（弱=6 位 / 中=8 位字母+数字 / 强=10 位字母+数字+符号，Unicode 字母计入）
+// 阈值与 web/master 同源（弱=6 位 / 中=8 位字母+数字 / 强=10 位字母+数字+符号）
+// 注：Android 运行时正则引擎不支持 \p{L} 等 Unicode 属性转义，改用 ASCII 字母类
 const weakRegex = /^.{6,}$/
-const mediumRegex = /^(?=.*\p{L})(?=.*\d).{8,}$/u
-const strongRegex = /^(?=.*\p{L})(?=.*\d)(?=.*[^\p{L}\d]).{10,}$/u
+const mediumRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/
+const strongRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{10,}$/
 
 /**
  * 计算密码强度等级
