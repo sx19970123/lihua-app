@@ -18,8 +18,11 @@
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
 	import AppSwipeAction from '@/components/app-swipe-action/app-swipe-action.uvue'
 
-	// 1-3 行三按钮全带二次确认；4 行单删除按钮（覆盖单钮+长文案顶开路径）
+	// 第 1 行=单删除钮（单钮行路径）；2-3 行三按钮全带二次确认；4 行双侧演示（左三右一）
 	// 预生成常量数组（函数内联生成会每次渲染返回新引用——v-for/props 无谓重跑的渲染激源）
+	const swipeActionsDelete = [
+		{ text: '删除', event: 'delete', type: 'danger', confirm: true, confirmText: '确认要删除此条目吗？' }
+	]
 	const swipeActionsRow = [
 		{ text: '标星', event: 'star', color: '#b48d4d', confirm: true, confirmText: '确认将此条目设为星标吗？' },
 		{ text: '置顶', event: 'top', confirm: true, confirmText: '确认将此条目置顶显示吗？' },
@@ -35,7 +38,7 @@
 	// 行数据自带 actions（与 index 解耦——删除行后各行配置跟行走，不会错位拿到别组的）；
 	// 行 4 加 asyncAll=全员异步演示组标记（判定须值比较——ref 深代理下引用相等恒 false）
 	const demoSwipeRows = ref([
-		{ text: '侧滑条目一', actions: swipeActionsRow },
+		{ text: '侧滑条目一', actions: swipeActionsDelete },
 		{ text: '侧滑条目二', actions: swipeActionsRow },
 		{ text: '侧滑条目三', actions: swipeActionsRow },
 		{ text: '侧滑条目四', actions: swipeActionsBoth, asyncAll: true }

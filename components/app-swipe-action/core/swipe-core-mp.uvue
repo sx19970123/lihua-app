@@ -1,9 +1,11 @@
 <template>
 	<view class="app-swipe-action" :class="removing ? 'app-swipe-action-removing' : ''"
 			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
+		<!-- 行底分隔线（DOM 序最底；消费方内层行 :divider="false"） -->
+		<view v-if="divider !== false" class="app-swipe-line app-pressed-row" />
+		<!-- 裁切层（absolute 上探 1px 的纯按钮容器）：裁掉初始藏行外的按钮组，顶部探出
+		     行界=弹出色块盖上一行底线；线/内容挂其外不受裁切与位移影响 -->
 		<view class="app-swipe-clip">
-			<!-- 行底分隔线（挂裁切层底=天然界内；消费方内层行 :divider="false"） -->
-			<view v-if="divider !== false" class="app-swipe-line app-pressed-row" />
 			<!-- 左组（恒宽叠塔镜像）：零元素 ref（MP 垫片无 .style），:style 响应式单通道 -->
 			<view v-for="(action, index) in leftList" :key="action.event" class="app-swipe-btn app-swipe-btn--left"
 					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
@@ -24,10 +26,10 @@
 				</view>
 				<text class="app-swipe-btn-text" :style="mpTextR[index]">{{ confirming && confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
-			<!-- 内容层：透明（按钮空间与内容互补，不依赖层叠） -->
-			<view class="app-swipe-content" :style="mpContent">
-				<slot />
-			</view>
+		</view>
+		<!-- 内容层：透明（按钮空间与内容互补，不依赖层叠）；流内撑行高 -->
+		<view class="app-swipe-content" :style="mpContent">
+			<slot />
 		</view>
 	</view>
 </template>
@@ -45,7 +47,7 @@
 	// 直点钮同权：loading 冻结展开档+钮上 spinner，撤离同收；未置 loading 乐观即收。
 	// currentX 双向语义：负=右组/正=左组/0=收起
 
-	import { closeOthers, markOpen, clearOpen } from '../mutex'
+	import { closeOthers, markOpen, clearOpen, hasOtherDrag, progressHold, progressRelease, progressCount } from '../mutex'
 	import { createSpringControl } from '@/utils/spring'
 
 	type SwipeAction = {
@@ -92,10 +94,6 @@
 	const sideListOf = (s : string) => props.actions.filter((a : SwipeAction) => (a.side ?? 'right') === s)
 	const leftList = computed<SwipeAction[]>(() => sideListOf('left').slice().reverse())
 	const rightList = computed<SwipeAction[]>(() => sideListOf('right'))
-
-	// 手势态通报（内层 list-item 退出按压用；inject 方默认无感）
-	const pressSuppressed = ref<boolean>(false)
-	provide('app-swipe-press', pressSuppressed)
 
 	const confirmLabel = ref<string>('')
 	const confirmIndex = ref<number>(-1)
@@ -294,6 +292,8 @@
 	// 拖拽被互斥打断（多指：本行拖拽中他行按下，closeSelf 归零本行）——后续 move/end
 	// 全忽略直到抬手，否则手指未抬 move 又把行拖回来=没收
 	let dragCancelled = false
+	// S3 节流：上次驱动时间戳（16ms≈一帧，同帧多次 move 只驱动末次——降命令式写密度）
+	let lastDriveT = 0
 	let startX = 0
 	let startY = 0
 	let baseX = 0
@@ -339,6 +339,9 @@
 	}
 
 	const setTransition = (ms : number) => {
+		if (ms > 0) {
+			progressHold(closeSelf, ms + 50)
+		}
 		const t = ms > 0 ? `transform ${ms}ms ease` : 'none'
 		mpContent.value.transition = t
 		sides[SIDE_L].setTransitionAll(t)
@@ -416,6 +419,7 @@
 			return
 		}
 		setTransition(0)
+		progressHold(closeSelf, 600)
 		confirmCtl.run((e : number) => {
 			confirmW = safe(fromW + (toW - fromW) * e, toW)
 			confirmM = safe(fromM + (toM - fromM) * e, toM)
@@ -468,6 +472,7 @@
 		const n = g.fan.length
 		const leftSide = s.fixedSign < 0
 		setTransition(0)
+		progressHold(closeSelf, 600)
 		springCtl.run((e : number) => {
 			const over = safe(startOver * (1 - e), 0)
 			for (let i = 0; i < n; i++) {
@@ -497,12 +502,15 @@
 			effX = wl + rubberOf(wl, x - wl)
 		}
 		driveContent(effX)
+		// p 不设上限（仅下限 0=对侧全藏）：effX 已被 rubberOf 渐近约束天然有界，
+		// 按钮延展与 content 超出走同一曲线——曾用 1.3 封顶，单钮行 d 走 32 下限时
+		// 渐近超出 32px > 封顶 0.3×total，两者脱节=露空隙+回弹起点跳变
 		if (wr > 0) {
-			const pr = clamp(-effX / wr, 0, 1.3)
+			const pr = Math.max(0, -effX / wr)
 			sides[SIDE_R].driveAt(pr)
 		}
 		if (wl > 0) {
-			const pl = clamp(effX / wl, 0, 1.3)
+			const pl = Math.max(0, effX / wl)
 			sides[SIDE_L].driveAt(pl)
 		}
 	}
@@ -520,9 +528,8 @@
 	}
 
 	const onTouchStart = (e : TouchEvent) => {
-		// 按下即复位按压抑制（不放 touchEnd：stay-time 余韵期内撤抑制类会让按压色闪回）
-		pressSuppressed.value = false
 		dragCancelled = false
+		lastDriveT = 0
 		if (confirmBarHit) {
 			confirmBarHit = false
 			return
@@ -567,11 +574,15 @@
 			if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
 				horizontal = Math.abs(dx) > Math.abs(dy)
 				if (horizontal) {
-					// 横滑接管：锁默认行为+通报内层行退出按压；即刻登记互斥——
-					// 拖拽期不留持有者空窗（多指下他行 closeOthers 能收到本行）
+					// 横滑接管：锁默认行为；并发闸（动画忙期或他行拖拽中→本轮整轮作废，
+					// 重划再试）——认领成功才登记互斥（防 markOpen 反收拖拽中的他行）
 					e.preventDefault()
-					pressSuppressed.value = true
-					markOpen(closeSelf)
+					if (progressCount() >= 2 || hasOtherDrag(closeSelf)) {
+						dragCancelled = true
+					} else {
+						markOpen(closeSelf)
+						progressHold(closeSelf, 0)
+					}
 				}
 			}
 			return
@@ -580,6 +591,12 @@
 			return
 		}
 		e.preventDefault()
+		// S3 节流：一帧内只驱动一次（方向判定不节流，claim/markOpen 时序不受影响）
+		const throttleNow = Date.now()
+		if (throttleNow - lastDriveT < 16) {
+			return
+		}
+		lastDriveT = throttleNow
 		currentX = clamp(baseX + dx, -sides[SIDE_R].g.total * 6, sides[SIDE_L].g.total * 6)
 		drive(currentX)
 		const now = Date.now()
@@ -597,6 +614,7 @@
 			return
 		}
 		dragTouchId = -1
+		progressRelease(closeSelf)
 		// 被互斥打断的轮次：静默终结（不复位 horizontal 之外的任何手势态）
 		if (dragCancelled) {
 			dragCancelled = false
@@ -653,6 +671,7 @@
 		}
 		markOpen(closeSelf)
 		setTransition(0)
+		progressHold(closeSelf, 600)
 		inertiaSpring.run(currentX, 0, velocity * 1000, (x : number) => {
 			currentX = x
 			drive(x)
@@ -677,9 +696,11 @@
 		if (props.loading === true) {
 			return
 		}
-		// 拖拽中被外部（互斥）收起=打断本轮流（见 dragCancelled 声明处注释）
+		// 拖拽中被外部（互斥）收起=打断本轮流（见 dragCancelled 声明处注释）；
+		// 同时释放活跃认领（本行已成死手势，让后来行可接管）
 		if (dragTouchId >= 0) {
 			dragCancelled = true
+			progressRelease(closeSelf)
 		}
 		cancelSpringTween()
 		cancelInertia()
@@ -722,14 +743,12 @@
 			confirmLabel.value = action.confirmText ?? '确认操作？'
 			setTransition(300)
 			sides[sideId].slideOutFrom(index)
-			nextTick(() => {
-				// 量确认文案实宽（估算兜底）→ 补间驱动：彩带延长+item 顶开+文字移位同帧一体；
-				// 宽度自始并入 spinner 组占位（组两侧各留 12）
-				const s = sides[sideId]
-				const tw = textWidthOf(confirmLabel.value)
-				const extra = safe(Math.max(0, tw + 24 + SPIN_PAD - s.g.total), 0)
-				confirmExtend(s, index, tw, extra)
-			})
+			// 补间同步启动（估算零依赖不须等换文渲染——nextTick 等 flush 会把彩带启动压后，
+			// 文字换文晚一拍跟上可接受）
+			const s = sides[sideId]
+			const tw = textWidthOf(confirmLabel.value)
+			const extra = safe(Math.max(0, tw + 24 + SPIN_PAD - s.g.total), 0)
+			confirmExtend(s, index, tw, extra)
 		} else {
 			// 直点：记录钮位——handler 同步置 loading 则冻结展开档，未置则 nextTick 乐观即收
 			directSide.value = sideId
@@ -772,13 +791,12 @@
 		confirming.value = false
 		confirmIndex.value = -1
 		markOpen(closeSelf)
-		nextTick(() => {
-			const toX = confirmExtra > 0 ? -s.fixedSign * s.g.total : null
-			confirmTweenDrive(s, idx, s.g.fan[idx], toX, s.g.margins[idx] ?? 0, 0, () => {
-				currentX = -s.fixedSign * s.g.total
-				s.driveAt(1)
-				markOpen(closeSelf)
-			})
+		// 补间同步起跑（参数全同步值不须等换文 flush；文字回切晚一拍跟上，与进确认路径同取舍）
+		const toX = confirmExtra > 0 ? -s.fixedSign * s.g.total : null
+		confirmTweenDrive(s, idx, s.g.fan[idx], toX, s.g.margins[idx] ?? 0, 0, () => {
+			currentX = -s.fixedSign * s.g.total
+			s.driveAt(1)
+			markOpen(closeSelf)
 		})
 	}
 
@@ -813,6 +831,7 @@
 			return
 		}
 		confirmCtl.cancel()
+		progressHold(closeSelf, 600)
 		confirmCtl.run((e : number) => {
 			confirmM = safe(fromM + (toM - fromM) * e, toM)
 			s.wText(idx, 'margin-left', `${confirmM}px`)
@@ -881,6 +900,7 @@
 	@import '@/styles/press.scss';
 
 	.app-swipe-action {
+		position: relative;
 		flex-direction: column;
 		overflow: visible;
 	}
@@ -902,10 +922,14 @@
 		}
 	}
 
+	/* 裁切层：absolute 上探 1px 的纯按钮容器（top:-1=弹出色块盖上一行底线），裁掉初始
+	   藏行外的按钮组；线/内容在其外不受裁切与位移影响 */
 	.app-swipe-clip {
-		position: relative;
-		flex: 1;
-		flex-direction: row;
+		position: absolute;
+		top: -1px;
+		left: 0;
+		right: 0;
+		bottom: 0;
 		overflow: hidden;
 	}
 
@@ -917,6 +941,7 @@
 		height: 1px;
 	}
 
+	/* 色块（裁切层已上探 1px，按钮 top:0 即行顶-1） */
 	.app-swipe-btn {
 		position: absolute;
 		top: 0;
