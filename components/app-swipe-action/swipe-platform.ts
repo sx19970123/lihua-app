@@ -30,9 +30,9 @@ export type SwipeHandles = {
 }
 
 export type SwipePlatform = {
-	// 写内容层属性（transform / transition）
+	// 写内容层属性（transform）
 	content : (prop : string, val : string) => void
-	// 写彩带属性（width / transform / transition）
+	// 写彩带属性（width / transform）
 	btn : (side : number, index : number, prop : string, val : string) => void
 	// 写彩带文字属性（margin-left）
 	text : (side : number, index : number, prop : string, val : string) => void

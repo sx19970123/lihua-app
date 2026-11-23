@@ -81,7 +81,8 @@
 	// 带现场收场；单条操作=完成（loading 撤离/同步未置）自动收起；取消（触摸确认条外）=
 	// 保持确认形态整体滑出关行（微信式，不回按钮态）。
 	// 直点钮同权：loading 冻结展开档+钮上 spinner，撤离同收；未置 loading 乐观即收。
-	// currentX 双向语义：负=右组/正=左组/0=收起；手势 touch+方向判定让位纵滚，位移经适配器写
+	// currentX 双向语义：负=右组/正=左组/0=收起；手势 touch+方向判定让位纵滚，位移经适配器写；
+	// 动画全面 JS 补间/弹簧驱动（CSS 过渡退役=崩溃病理根除，并发闸与单拖拽限制已随之拆除）
 
 	// #ifdef MP-WEIXIN
 	import { createPlatform } from './platform/mp'
@@ -89,7 +90,7 @@
 	// #ifndef MP-WEIXIN
 	import { createPlatform } from './platform/app'
 	// #endif
-	import { closeOthers, markOpen, clearOpen, hasOtherDrag, progressHold, progressRelease, progressCount } from './mutex'
+	import { closeOthers, markOpen, clearOpen } from './mutex'
 	import { createSpringControl } from '@/utils/spring'
 	import { SIDE_L, SIDE_R, estimateWidth } from './swipe-platform'
 
@@ -249,13 +250,6 @@
 			}
 		}
 
-		// 全彩带过渡开关
-		const setTransitionAll = (t : string) => {
-			for (let i = 0; i < g.fan.length; i++) {
-				wBtn(i, 'transition', t)
-			}
-		}
-
 		// 宽度/文字位瞬回静态常量（确认残留清算/互斥收起共用）
 		const resetStatic = () => {
 			for (let i = 0; i < g.fan.length; i++) {
@@ -312,7 +306,7 @@
 		const isSpringDirty = () : boolean => springDirty
 		const clearSpringDirty = () => { springDirty = false }
 
-		return { g, fixedSign, driveAt, setTransitionAll, resetStatic, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
+		return { g, fixedSign, driveAt, resetStatic, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
 	}
 	// 双实例：左实体 fixedSign=-1（藏左外）/右实体 +1（藏右外）
 	const sides = [makeSide(-1), makeSide(1)]
@@ -360,16 +354,6 @@
 	// 内容层位移统一口：x 直用（负=左移让右侧 / 正=右移让左侧，双向自然语义）
 	const driveContent = (x : number) => {
 		platform.content('transform', `translateX(${x}px)`)
-	}
-
-	const setTransition = (ms : number) => {
-		if (ms > 0) {
-			progressHold(closeSelf, ms + 50)
-		}
-		const t = ms > 0 ? `transform ${ms}ms ease` : 'none'
-		platform.content('transition', t)
-		sides[SIDE_L].setTransitionAll(t)
-		sides[SIDE_R].setTransitionAll(t)
 	}
 
 	// 橡皮筋（分式衰减，iOS rubber-band 同族）：视觉超出 = d×(1 - 1/(k0·x/d + 1))
@@ -447,9 +431,8 @@
 	}
 
 	// toX 传 null = 不驱动 content（item 渲染态冻结——extra=0 时：按钮还在 item 就绝不动）
-	// slideOut=进确认 j>idx 滑出插值（0→fan[j] 藏外）——不靠 CSS transition 承担滑出：摘
-	// transition（setTransition(0)）对在途动画两端语义不同（App=在途免疫继续播、
-	// MP/WebView=立即终止瞬跳=直接消失）
+	// slideOut=进确认 j>idx 滑出插值（0→fan[j] 藏外）——JS 补间驱动（CSS 过渡已全面退役：
+	// 摘 transition 对在途动画两端语义不同，App=在途免疫、MP/WebView=立即终止瞬跳）
 	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, onDone ?: () => void, slideOut ?: boolean) => {
 		// 只清旧动画不清算（纯停表）——起步前的清旧 ≠ 打断清算（见 cancelConfirmTween 注释）
 		cancelConfirmAnim()
@@ -460,18 +443,9 @@
 		const settled = Math.abs(toW - fromW) < 0.5 && Math.abs(toM - fromM) < 0.5
 			&& (toX == null || Math.abs(toX - fromX) < 0.5)
 		if (settled) {
-			// [lh-swipe-spring] 临时诊断（验完删）
-			console.log('[lh-swipe-spring] settled-early（起点≈终点，直接跳）')
 			onDone?.()
 			return
 		}
-			setTransition(0)
-			progressHold(closeSelf, 600)
-			// [lh-swipe-spring] 临时诊断（验完删）：安卓回弹偶失排查——帧数/进度峰值/平均帧距
-			let dLast = Date.now()
-			let dTicks = 0
-			let dMax = 0
-			let dSum = 0
 			// 过冲幅度归一（每钮阻尼比）：目标 6px÷行程=过冲比例（封顶 12% 防小行程多周期晃），
 			// 闭式换 ζ（k 不动=冲刺速度不变）——各钮回弹像素一致，全程单弹簧无映射接缝
 			const range = Math.abs(toW - fromW)
@@ -479,11 +453,6 @@
 			const lzi = Math.log(1 / ratio)
 			const cRun = 2 * Math.sqrt(CONFIRM_K) * lzi / Math.sqrt(Math.PI * Math.PI + lzi * lzi)
 			confirmSpring.run(0, 1, 0, (e : number) => {
-				const dNow = Date.now()
-				dTicks++
-				dMax = Math.max(dMax, e)
-				dSum += dNow - dLast
-				dLast = dNow
 				confirmW = safe(fromW + (toW - fromW) * e, toW)
 				confirmM = safe(fromM + (toM - fromM) * e, toM)
 				s.wBtn(index, 'width', `${confirmW}px`)
@@ -498,23 +467,20 @@
 						s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
 					}
 				}
-			}, () => {
-				// [lh-swipe-spring] 临时诊断（验完删）
-				console.log(`[lh-swipe-spring] ticks=${dTicks} eMax=${Math.round(dMax * 1000) / 1000} c=${Math.round(cRun)} avgDt=${Math.round(dSum / Math.max(1, dTicks))}ms`)
-				onDone?.()
-			}, cRun)
+			}, onDone, cRun)
 	}
 
 	// 进确认：从按钮态延长到对接 item（extra=装不下时 item 顶开量）；
 	// 入口把 currentX 归一 -W（任何路径的污染清零，extra=0 时 item 全程不动）
 	const confirmExtend = (s : ReturnType<typeof makeSide>, index : number, tw : number, extra : number) => {
+		// 掐行运动补间（开行 glide 可能在途——确认弹簧与它是两个控制实例，不互斥须显式停）
+		cancelSpringTween()
 		s.clearSpringDirty()
 		confirmW = s.g.fan[index]
 		confirmM = s.g.margins[index] ?? 0
 		const toW = s.g.total + extra
 		const openX = -s.fixedSign * s.g.total
 		if (currentX !== openX) {
-			setTransition(0)
 			currentX = openX
 			driveContent(currentX)
 		}
@@ -534,14 +500,11 @@
 		const raw = Math.abs(currentX) - g.total
 		const startOver = raw > 0 ? rubberOf(g.total, raw) : 0
 		if (startOver <= 0) {
-			setTransition(300)
 			openAt(s)
 			return
 		}
 		const n = g.fan.length
 		const leftSide = s.fixedSign < 0
-		setTransition(0)
-		progressHold(closeSelf, 600)
 		springCtl.run((e : number) => {
 			const over = safe(startOver * (1 - e), 0)
 			for (let i = 0; i < n; i++) {
@@ -556,7 +519,6 @@
 			driveContent(currentX)
 		}, () => {
 			s.clearSpringDirty()
-			setTransition(300)
 			openAt(s)
 		})
 	}
@@ -586,6 +548,28 @@
 			const pl = Math.max(0, effX / wl)
 			sides[SIDE_L].driveAt(pl)
 		}
+	}
+
+	// 行运动补间（开/收共用，springCtl 承载）：从当前 currentX 到目标 300ms easeOut——
+	// 动画全面 JS 化后 CSS 过渡退役（在途 CSS 动画×命令式写=CDOMThread 崩溃病理），
+	// 所有写入同线程全序，闸与单拖拽限制随之拆除
+	const glideTo = (target : number) => {
+		const fromX = currentX
+		if (Math.abs(target - fromX) < 0.5) {
+			currentX = target
+			drive(target)
+			return
+		}
+		springCtl.run((e : number) => {
+			currentX = fromX + (target - fromX) * e
+			driveContent(currentX)
+			// 进度钳 1（绕开 drive 的橡皮筋段：过界态起收会触发宽度拉伸写；两侧分调同款换算）
+			sides[SIDE_R].driveAt(clamp(-currentX / Math.max(1, sides[SIDE_R].g.total), 0, 1))
+			sides[SIDE_L].driveAt(clamp(currentX / Math.max(1, sides[SIDE_L].g.total), 0, 1))
+		}, () => {
+			currentX = target
+			drive(target)
+		})
 	}
 
 	// ---------- 手势 ----------
@@ -629,7 +613,6 @@
 		startY = t.screenY
 		baseX = currentX
 		horizontal = null
-		setTransition(0)
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
@@ -647,17 +630,12 @@
 			if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
 				horizontal = Math.abs(dx) > Math.abs(dy)
 				if (horizontal) {
-					// 横滑接管：锁默认行为；并发闸（动画忙期或他行拖拽中→本轮整轮作废，
-					// 重划再试）——认领成功才登记互斥（防 markOpen 反收拖拽中的他行）
+					// 横滑接管：锁默认行为
 					e.preventDefault()
 					// 清确认文案驻留（滑出收起后文字保持确认态，按钮复见前还原）
 					confirmIndex.value = -1
-					if (progressCount() >= 2 || hasOtherDrag(closeSelf)) {
-						dragCancelled = true
-					} else {
-						markOpen(closeSelf)
-						progressHold(closeSelf, 0)
-					}
+					// 认领互斥（markOpen 会收起持有者，含拖拽中的行→其 dragCancelled 冻结让位）
+					markOpen(closeSelf)
 				}
 			}
 			return
@@ -690,7 +668,6 @@
 			return
 		}
 		dragTouchId = -1
-		progressRelease(closeSelf)
 		// 被互斥打断的轮次：静默终结（不复位 horizontal 之外的任何手势态）
 		if (dragCancelled) {
 			dragCancelled = false
@@ -699,6 +676,15 @@
 		}
 		if (horizontal !== true) {
 			horizontal = null
+			// 非横滑收尾（MP 纵滚抢走手势/纯点按）：touchstart 可能掐了在途补间、行停半途
+			// ——按阈值归位，否则冻结在中间态（回退 CSS 时代的语义缺口，全 JS 化后位置真停中）
+			if (-currentX > sides[SIDE_R].g.total / 2) {
+				openAt(sides[SIDE_R])
+			} else if (currentX > sides[SIDE_L].g.total / 2) {
+				openAt(sides[SIDE_L])
+			} else if (Math.abs(currentX) > 0.5) {
+				closeSelf()
+			}
 			return
 		}
 		horizontal = null
@@ -718,7 +704,6 @@
 			springReturn()
 			return
 		}
-		setTransition(300)
 		// 分侧分向阈值：收起域起拖 5px 轻扫即开（灵敏）；开态域起拖回拖过半保持本侧开
 		if (!fromL && -currentX > (fromR ? sides[SIDE_R].g.total / 2 : 5)) {
 			openAt(sides[SIDE_R])
@@ -751,12 +736,9 @@
 			return
 		}
 		markOpen(closeSelf)
-		setTransition(0)
 		// 全元素同弹簧：onUpdate 完整 drive(x)（content+两侧彩带进度）——彩带与 item 共享
-		// 同一条物理曲线（收回+过冲全同步=连贯）；曾用「彩带 CSS 300ms+content 弹簧」双线并行，
-		// 两曲线时长/形状各异=割裂感；过 0 冲出时对侧彩带随物理微露（真实抽屉感，drive 符号
-		// 过滤天然实现）——纯单侧行对侧 total=0 不受影响
-		progressHold(closeSelf, 600)
+		// 同一条物理曲线（收回+过冲全同步=连贯）；过 0 冲出时对侧彩带随物理微露（真实抽屉感，
+		// drive 符号过滤天然实现）——纯单侧行对侧 total=0 不受影响
 		inertiaSpring.run(currentX, 0, velocity * 1000, (x : number) => {
 			currentX = x
 			drive(x)
@@ -778,8 +760,7 @@
 			confirmResidueSide = -1
 			confirmIndex.value = -1
 		}
-		currentX = -s.fixedSign * s.g.total
-		drive(currentX)
+		glideTo(-s.fixedSign * s.g.total)
 		markOpen(closeSelf)
 		emit('open', s === sides[SIDE_L] ? 'left' : 'right')
 	}
@@ -788,19 +769,16 @@
 		if (props.loading === true) {
 			return
 		}
-		// 拖拽中被外部（互斥）收起=打断本轮流（见 dragCancelled 声明处注释）；
-		// 同时释放活跃认领（本行已成死手势，让后来行可接管）
+		// 拖拽中被外部（互斥）收起=打断本轮流（见 dragCancelled 声明处注释）
 		if (dragTouchId >= 0) {
 			dragCancelled = true
-			progressRelease(closeSelf)
 		}
 		cancelSpringTween()
 		cancelInertia()
 		if (confirming.value) {
 			// 确认态收起=保持确认形态整体滑出（不走 cancelConfirmTween——resetStatic 会先
 			// 还原为按钮堆再收=两段观感）：被点彩带按延展宽 toW 出界（drive(0) 按 fan 写它
-			// =藏不完露条），内容归位与其同段 CSS transition；延展宽残留挂标记，下次交互前
-			// 复位（行已关、按钮在界外=不可见）
+			// =藏不完露条），内容归位与其同段补间；延展宽残留挂标记，下次交互前复位
 			const idx = confirmIndex.value
 			const cs = sides[confirmSide.value]
 			const toW = cs.g.total + confirmExtra
@@ -812,10 +790,18 @@
 			confirmResidueSide = confirmSide.value
 			directBusy.value = false
 			directIndex.value = -1
-			setTransition(300)
-			currentX = 0
-			drive(0)
-			cs.wBtn(idx, 'transform', `translateX(${cs.fixedSign * toW}px)`)
+			const fromX = currentX
+			springCtl.run((e : number) => {
+				currentX = fromX * (1 - e)
+				driveContent(currentX)
+				// 逐钮直写出界位，勿走 drive——起点 |x|>total（extra 顶开段）会触发橡皮筋
+				// 宽度写=毁确认形态，且 effX 橡皮封顶让内容瞬跳；j>idx 本就在界外保持
+				for (let j = 0; j < cs.g.fan.length; j++) {
+					const dj = j > idx ? cs.g.fan[j] : cs.g.fan[j] * e
+					cs.wBtn(j, 'transform', `translateX(${cs.fixedSign * dj}px)`)
+				}
+				cs.wBtn(idx, 'transform', `translateX(${cs.fixedSign * toW * e}px)`)
+			})
 			clearOpen(closeSelf)
 			emit('close')
 			return
@@ -823,9 +809,7 @@
 		cancelConfirmTween()
 		directBusy.value = false
 		directIndex.value = -1
-		currentX = 0
-		setTransition(300)
-		drive(0)
+		glideTo(0)
 		clearOpen(closeSelf)
 		emit('close')
 	}
@@ -925,7 +909,6 @@
 			return
 		}
 		cancelConfirmAnim()
-		progressHold(closeSelf, 600)
 		confirmCtl.run((e : number) => {
 			confirmM = safe(fromM + (toM - fromM) * e, toM)
 			s.wText(idx, 'margin-left', `${confirmM}px`)
@@ -949,7 +932,6 @@
 	watch(() => props.actions, () => {
 		cancelSpringTween()
 		cancelConfirmTween()
-		setTransition(0)
 		syncCarriers()
 		nextTick(() => {
 			for (let s = 0; s < 2; s++) {

@@ -107,7 +107,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
    根本分歧（如 MP setData 撑不起逐帧跟手、须换 CSS transition 开合模型）；须用户
    明确拍板 + 双核文件头标「改动须双侧同步」纪律，双平台绿后尽快抽 engine 降回第 4 级。
 
-先例：app-swipe-action 现处第 5 级（临时——iOS 已验优先保 app，engine 抽取后降第 4 级）。
+先例：app-swipe-action 已降至第 3 级（单核+platform/{app,mp}.ts 适配器；模板按钮组与
+内容层按平台 #ifdef 各一份、只差元素 ref——MP 真机上模板 ref 致拖动失效，开发工具掩盖）；
+其动画全面 JS 补间/弹簧驱动（CSS 过渡退役，见 cross-platform-pitfalls）。
 
 **薄入口形态**（第 4/5 级共用）：
 - 入口 `app-*.uvue`：**script 条件 import** 选核心（`#ifdef MP-WEIXIN` 等），模板单份

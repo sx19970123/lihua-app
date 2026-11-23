@@ -10,18 +10,14 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 		const st = h.contentStyle.value
 		if (prop === 'transform') {
 			st.transform = val
-		} else if (prop === 'transition') {
-			st.transition = val
 		}
 	}
-	// 显式属性赋值（不走动态键，编译行为可预期）
+	// 显式属性赋值（不走动态键，编译行为可预期；transition 通道已退役——动画全面 JS 化）
 	const writeBtn = (st : any, prop : string, val : string) => {
 		if (prop === 'width') {
 			st.width = val
 		} else if (prop === 'transform') {
 			st.transform = val
-		} else if (prop === 'transition') {
-			st.transition = val
 		}
 	}
 	return {
@@ -58,9 +54,9 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 		clearConfirmBarHit : () => {
 			confirmBarHit = false
 		},
-		// 载体须预置全部写入键（width/transform/transition），首帧即藏外
+		// 载体须预置全部写入键（width/transform），首帧即藏外（transition 通道已退役）
 		initBtnStyle : (color : string, sign : number) : any => {
-			const st : any = { width: '', transform: `translateX(${sign * 999}px)`, transition: '' }
+			const st : any = { width: '', transform: `translateX(${sign * 999}px)` }
 			if (color !== '') {
 				st.backgroundColor = color
 			}
@@ -70,7 +66,7 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			return { marginLeft: '' }
 		},
 		initContentStyle : () : any => {
-			return { transform: '', transition: '' }
+			return { transform: '' }
 		}
 	}
 }
