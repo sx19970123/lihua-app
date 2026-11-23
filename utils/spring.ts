@@ -1,7 +1,11 @@
 // 物理弹簧引擎（欠阻尼积分）：16ms setTimeout 链+代际 token（cancel 后已入队帧不执行）
-// k=170/c=18——多周期果冻振荡；初速 v0 承接松手末速度（fling 惯性自然衰减成弹）
-// 消费方：app-segmented 滑块弹簧 / app-swipe-action 惯性收起——回调驱动（onUpdate 收每帧位置）
-export const createSpringControl = () => {
+// 默认 k=170/c=18、收敛阈值 0.5/30（px 域）；可选参覆盖——进度域（0→1）调用须收紧阈值
+// 初速 v0 承接松手末速度；消费方：app-segmented 滑块 / app-swipe-action 惯性收起+确认链
+export const createSpringControl = (k ?: number, c ?: number, settleX ?: number, settleV ?: number) => {
+	const K = k ?? 170
+	const C = c ?? 18
+	const SX = settleX ?? 0.5
+	const SV = settleV ?? 30
 	let timer : number | null = null
 	let gen = 0
 	const cancel = () => {
@@ -11,9 +15,11 @@ export const createSpringControl = () => {
 			timer = null
 		}
 	}
-	// v0 单位 px/s（clamp 防病态值进积分）；onUpdate 每帧收当前位置（终帧收 to 精确值）
-	const run = (from : number, to : number, v0 : number, onUpdate : (x : number) => void, onDone ?: () => void) => {
+	// v0 单位 px/s（clamp 防病态值进积分）；onUpdate 每帧收当前位置（终帧收 to 精确值）；
+	// c 可按次覆盖阻尼（过冲幅度归一用，缺省=构造值）
+	const run = (from : number, to : number, v0 : number, onUpdate : (x : number) => void, onDone ?: () => void, c ?: number) => {
 		cancel()
+		const CC = c ?? C
 		let x = from
 		let v = Math.max(-2000, Math.min(2000, v0))
 		let last = Date.now()
@@ -25,9 +31,9 @@ export const createSpringControl = () => {
 			const now = Date.now()
 			const dt = Math.min(0.04, (now - last) / 1000)
 			last = now
-			v += (-170 * (x - to) - 18 * v) * dt
+			v += (-K * (x - to) - CC * v) * dt
 			x += v * dt
-			if (Math.abs(x - to) < 0.5 && Math.abs(v) < 30) {
+			if (Math.abs(x - to) < SX && Math.abs(v) < SV) {
 				onUpdate(to)
 				onDone?.()
 				return
