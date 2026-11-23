@@ -21,7 +21,7 @@
 				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<text ref="textElsL" class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirming && confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
+				<text ref="textElsL" class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
 			<!-- 右组（恒宽叠塔）：锚行右缘藏行右外 -->
 			<view v-for="(action, index) in rightList" :key="action.event" ref="btnElsR" class="app-swipe-btn"
@@ -31,7 +31,7 @@
 				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<text ref="textElsR" class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirming && confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
+				<text ref="textElsR" class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
 			<!-- #endif -->
 			<!-- #ifdef MP-WEIXIN -->
@@ -42,7 +42,7 @@
 				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<text class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirming && confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
+				<text class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
 			<!-- 右组（恒宽叠塔）：锚行右缘藏行右外 -->
 			<view v-for="(action, index) in rightList" :key="action.event" class="app-swipe-btn"
@@ -52,7 +52,7 @@
 				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<text class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirming && confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
+				<text class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
 			<!-- #endif -->
 		</view>
@@ -77,8 +77,9 @@
 	// 侧滑操作（双侧，恒宽叠塔模型）：actions 单集合按 side 分左右组——彩带宽恒=自身+
 	// 靠内容侧全部（右组锚右缘藏右外/左组锚左缘反转渲染序完全镜像），动画只做进入位移
 	// d=W_i'×(1-p) 线性跟手；弹簧段可见段平分阻尼行程（width 拉伸）、松手 JS 同帧补间复原；
-	// 确认态=彩带自延长盖场（装不下时 item 顺势顶开）；确认执行=现场冻结，去向仅两途：
-	// 删除=remove() 带现场收场；单条操作=完成（loading 撤离/同步未置）自动收起。
+	// 确认态=彩带自延长盖场（装不下时 item 顺势顶开）；确认执行=现场冻结，去向：删除=remove()
+	// 带现场收场；单条操作=完成（loading 撤离/同步未置）自动收起；取消（触摸确认条外）=
+	// 保持确认形态整体滑出关行（微信式，不回按钮态）。
 	// 直点钮同权：loading 冻结展开档+钮上 spinner，撤离同收；未置 loading 乐观即收。
 	// currentX 双向语义：负=右组/正=左组/0=收起；手势 touch+方向判定让位纵滚，位移经适配器写
 
@@ -432,8 +433,10 @@
 	// 确认补间状态（跟踪变量=当前值，打断后新补间从实际位起跳）
 	let confirmW = 0
 	let confirmM = 0
-	// 进确认时的 item 顶开量（>0=确认时 item 被顶开过，取消时需收回）
+	// 进确认时的 item 顶开量（>0=确认时 item 被顶开过；loading 归心计算也用）
 	let confirmExtra = 0
+	// 确认形态滑出收起后的宽度残留侧（-1=无）：延展宽驻留按钮上，下次交互前复位（行已关、按钮在界外=不可见）
+	let confirmResidueSide = -1
 
 	const cancelConfirmTween = () => {
 		cancelConfirmAnim()
@@ -443,11 +446,11 @@
 		confirmW = -1
 	}
 
-	// toX 传 null = 不驱动 content（item 渲染态冻结——取消确认路径用：按钮还在 item 就绝不动）
-	// backD=取消路径 j>idx 回位插值（fan[j]→backD 滑回；过冲段转宽长防行缘露底）；slideOut=进确认 j>idx 滑出插值
-	// （0→fan[j] 藏外）——不靠 CSS transition 承担滑出：摘 transition（setTransition(0)）
-	// 对在途动画两端语义不同（App=在途免疫继续播、MP/WebView=立即终止瞬跳=直接消失）
-	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, backD ?: number | null, onDone ?: () => void, slideOut ?: boolean) => {
+	// toX 传 null = 不驱动 content（item 渲染态冻结——extra=0 时：按钮还在 item 就绝不动）
+	// slideOut=进确认 j>idx 滑出插值（0→fan[j] 藏外）——不靠 CSS transition 承担滑出：摘
+	// transition（setTransition(0)）对在途动画两端语义不同（App=在途免疫继续播、
+	// MP/WebView=立即终止瞬跳=直接消失）
+	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, onDone ?: () => void, slideOut ?: boolean) => {
 		// 只清旧动画不清算（纯停表）——起步前的清旧 ≠ 打断清算（见 cancelConfirmTween 注释）
 		cancelConfirmAnim()
 		const fromW = confirmW >= 0 ? confirmW : s.g.fan[index]
@@ -489,20 +492,6 @@
 					driveContent(currentX)
 				}
 				s.wText(index, 'margin-left', `${confirmM}px`)
-				if (backD != null) {
-					for (let j = index + 1; j < n; j++) {
-						const d = safe(s.g.fan[j] + (backD - s.g.fan[j]) * e, backD ?? 0)
-						if (d >= 0) {
-							// 回位段：位移（行界外被裁切层裁掉，可见面=从行缘生长）
-							s.wBtn(j, 'width', `${s.g.fan[j]}px`)
-							s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
-						} else {
-							// 过冲段（e>1）：再位移=按钮内滑、行缘露底——改向内伸长（锚位端钉住）
-							s.wBtn(j, 'transform', 'translateX(0px)')
-							s.wBtn(j, 'width', `${s.g.fan[j] - d}px`)
-						}
-					}
-				}
 				if (slideOut === true) {
 					for (let j = index + 1; j < n; j++) {
 						const d = safe(s.g.fan[j] * e, s.g.fan[j])
@@ -530,7 +519,7 @@
 			driveContent(currentX)
 		}
 		confirmExtra = extra
-		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2), null, null, true)
+		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2), null, true)
 	}
 
 	// 弹簧回位补间（引擎驱动）：内容+彩带 width 同帧，终态移交 openAt 就位
@@ -623,11 +612,9 @@
 		cancelSpringTween()
 		cancelInertia()
 		if (confirming.value) {
-			// 确认态触摸=受控取消路径：纯停表（cancelConfirmAnim）——不走去打断清算
-			// （resetStatic 会抹掉延长态，退出补间起点=终点 settled 瞬闪=取消无动画的根因）
-			cancelConfirmAnim()
+			// 确认态触摸=直接关闭（微信式）：与互斥收起同款全收——彩带静态复位+行收起一段完成
 			closeOthers(closeSelf)
-			exitConfirm()
+			closeSelf()
 			return
 		}
 		// 非确认态=打断场景（如退出补间进行中再触摸转拖动）→ 全量清算防中间值残留
@@ -663,6 +650,8 @@
 					// 横滑接管：锁默认行为；并发闸（动画忙期或他行拖拽中→本轮整轮作废，
 					// 重划再试）——认领成功才登记互斥（防 markOpen 反收拖拽中的他行）
 					e.preventDefault()
+					// 清确认文案驻留（滑出收起后文字保持确认态，按钮复见前还原）
+					confirmIndex.value = -1
 					if (progressCount() >= 2 || hasOtherDrag(closeSelf)) {
 						dragCancelled = true
 					} else {
@@ -783,6 +772,12 @@
 		if (props.loading === true) {
 			return
 		}
+		// 确认形态滑出后的残留清算（此时行必为关态，界外复位不可见；含确认文案驻留）
+		if (confirmResidueSide >= 0) {
+			sides[confirmResidueSide].resetStatic()
+			confirmResidueSide = -1
+			confirmIndex.value = -1
+		}
 		currentX = -s.fixedSign * s.g.total
 		drive(currentX)
 		markOpen(closeSelf)
@@ -801,21 +796,33 @@
 		}
 		cancelSpringTween()
 		cancelInertia()
-		cancelConfirmTween()
-		directBusy.value = false
-		directIndex.value = -1
 		if (confirming.value) {
-			// 确认态被互斥收起=一段全收（与取消确认不同：按钮要全部隐藏）——静态复位已由上方
-			// cancelConfirmTween 完成，彩带藏外+item 归零同一 CSS transition 一起收
+			// 确认态收起=保持确认形态整体滑出（不走 cancelConfirmTween——resetStatic 会先
+			// 还原为按钮堆再收=两段观感）：被点彩带按延展宽 toW 出界（drive(0) 按 fan 写它
+			// =藏不完露条），内容归位与其同段 CSS transition；延展宽残留挂标记，下次交互前
+			// 复位（行已关、按钮在界外=不可见）
+			const idx = confirmIndex.value
+			const cs = sides[confirmSide.value]
+			const toW = cs.g.total + confirmExtra
+			cancelConfirmAnim()
 			confirming.value = false
-			confirmIndex.value = -1
+			// confirmIndex 不清：滑出期间文字保持确认文案（以二次确认形态收起），
+			// 下次按钮可复见前再清（拖拽横滑判定/open 时，界外不可见）
+			confirmW = -1
+			confirmResidueSide = confirmSide.value
+			directBusy.value = false
+			directIndex.value = -1
 			setTransition(300)
 			currentX = 0
 			drive(0)
+			cs.wBtn(idx, 'transform', `translateX(${cs.fixedSign * toW}px)`)
 			clearOpen(closeSelf)
 			emit('close')
 			return
 		}
+		cancelConfirmTween()
+		directBusy.value = false
+		directIndex.value = -1
 		currentX = 0
 		setTransition(300)
 		drive(0)
@@ -882,34 +889,6 @@
 			if (props.loading !== true && confirming.value) {
 				closeSelf()
 			}
-		})
-	}
-
-	// 确认态退回展开档（触摸取消路径）：反向补间（彩带收回+item 回 -W+文字复位换回），
-	// 毕了归位登记
-	const exitConfirm = () => {
-		if (!confirming.value) {
-			return
-		}
-		const idx = confirmIndex.value
-		const s = sides[confirmSide.value]
-		confirming.value = false
-		confirmIndex.value = -1
-		// 反向补间开始即登记互斥（登记在终态的话，300ms 窗口期他行 closeOthers 找不到本行，
-		// 补间毕还会覆盖他行登记——springReturn 同款缺口）
-		markOpen(closeSelf)
-		// 补间同步起跑（参数全同步值不须等换文 flush——nextTick 等 flush 老安卓 20-45ms、
-		// 偶发 GC 数百 ms 会把取消动画压后；文字回切晚一拍跟上，与进确认路径同取舍）。
-		// extra=0（确认时 item 没被顶开）→ content 冻结（按钮还在 item 绝不动）；
-		// extra>0 → 收回顶开量回该侧展开档
-		const toX = confirmExtra > 0 ? -s.fixedSign * s.g.total : null
-		// 内容侧彩带随补间从滑出位滑回开态位（0）——与被点彩带收回同帧，不再瞬现
-		confirmTweenDrive(s, idx, s.g.fan[idx], toX, s.g.margins[idx] ?? 0, 0, () => {
-			// 终态只驱动彩带归位+登记（不走 openAt 的 drive——其对 content 的同值
-			// setProperty 在 x 端的过渡行为不赌，取消路径 content 物理不碰）
-			currentX = -s.fixedSign * s.g.total
-			s.driveAt(1)
-			markOpen(closeSelf)
 		})
 	}
 
