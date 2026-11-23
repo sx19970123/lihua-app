@@ -1,7 +1,7 @@
 <template>
-		<view class="app-list-item" :class="divider !== false ? 'app-list-item-with-line' : ''"
-			:hover-class="hover ? (themeStore.isDark ? 'app-pressed-row-dark' : 'app-pressed-row') : 'none'"
-			:hover-stay-time="100" @click="onClick">
+	<view class="app-list-item" :class="(divider !== false ? 'app-list-item-with-line' : '') + (hover && pressSuppressed ? ' app-pressed-none' : '')"
+		:hover-class="hover ? (themeStore.isDark ? 'app-pressed-row-dark' : 'app-pressed-row') : 'none'"
+		:hover-stay-time="100" @touchstart="onTouchStart" @touchmove="onTouchMove" @click="onClick">
 		<view v-if="divider !== false" class="app-list-item-line app-pressed-row" :style="{ left: lineLeft }" />
 		<view v-if="hasIcon" class="app-list-item-icon">
 			<slot name="icon">
@@ -63,6 +63,33 @@
 
 	const onClick = () => {
 		emit('click')
+	}
+
+	// 滑动/滚动自动抑制按压（组件自治）：位移>5px 判滑动（与侧滑方向判定同阈值）——横滑、
+	// 纵滚统一判定；:class 叠加透明类盖按压底色（hover-class 值恒定，中途切值 Android 双失效）；
+	// 复位在下次 touchstart——盖满 stay-time 余韵防按压色闪回，类滞留无视觉差（透明=未按压常态）
+	const pressSuppressed = ref(false)
+	let pressX = 0
+	let pressY = 0
+	let pressJudged = false
+	const onTouchStart = (e : TouchEvent) => {
+		pressSuppressed.value = false
+		pressJudged = false
+		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
+		if (t != null) {
+			pressX = t.screenX
+			pressY = t.screenY
+		}
+	}
+	const onTouchMove = (e : TouchEvent) => {
+		if (pressJudged) {
+			return
+		}
+		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
+		if (t != null && (Math.abs(t.screenX - pressX) > 5 || Math.abs(t.screenY - pressY) > 5)) {
+			pressJudged = true
+			pressSuppressed.value = true
+		}
 	}
 </script>
 

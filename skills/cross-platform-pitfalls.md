@@ -68,9 +68,10 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
 - 按压周期中途把 hover-class 切 `'none'`：**既不刷新当前视觉**（官方语义=组件区域
   内移动不取消，release.md:1796）**又废掉 up 摘除**（up 读当前值判「无 hover 态」→
   down 时类永久残留）。iOS 端两样都正常（实现晚一代，属性变化即时反映）。
-- **统一写法**：hover-class 恒定类名（亮暗双类字面量由 isDark 选），拖动期间按压
-  保持、松手 ~100ms 自然褪（本项目拍板行为）。轻放即滑（<50ms）不亮=hover-start-time
-  防误显，非 bug。
+- **统一写法**：hover-class 恒定类名（亮暗双类字面量由 isDark 选）；滑动/滚动中自动
+  抑制按压=组件自治触摸检测（>5px 判滑动）+ `app-pressed-none` 透明覆盖类（详规见
+  create-component「按压反馈」节），仍勿中途切 hover-class 值。轻放即滑（<50ms）不亮=
+  hover-start-time 防误显，非 bug。
 
 ### ⑦ 摘 transition 对在途动画的语义分叉（2026-11-22 实锤）
 

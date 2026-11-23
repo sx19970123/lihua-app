@@ -57,6 +57,11 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   row/block 在该底色上各有一半场景同色不可见）、
   文本级 `.app-pressed-text`（opacity .5，跨亮暗免双类）。
 - **hover 类不能走 var/@media**（原生驱动不重算，主题切换停旧色）——必须字面量双类。
+- **滑动/滚动自动抑制按压（组件自治，勿用 props/页面状态广播）**：组件自绑
+  `@touchstart`/`@touchmove` 测位移，>5px（与侧滑方向判定同阈值）即滑动——横滑、
+  纵滚统一判定；`:class` 叠加 `app-pressed-none` 透明类盖按压底色（press.scss 末位=
+  同特异性压制在前的按压类）；复位在下次 touchstart（盖满 stay-time 余韵防闪回，
+  类滞留无视觉差=透明即未按压常态）。hover-class 值全程恒定铁律不变（坑⑥）。
 - **线色强制=按压色（全组件统一，用户拍板 2026-11-21）**：带分隔线的载体，线色直接挂
   同名按压类 `app-pressed-row`（行级载体）/`app-pressed-block`（卡片级载体）——常驻渲染
   走类的 @media 暗色段自动亮暗，与按压色同一定义（按压时线画在灰上同色隐形，物理上

@@ -66,3 +66,10 @@
 .app-pressed-text {
 	opacity: 0.5;
 }
+
+/* 滑动/滚动抑制类（透明覆盖）：放文件末位=同特异性压制在前的按压类；抑制走常规 :class
+   通道（hover-class 值恒定铁律——中途切值 Android 双失效，见 cross-platform-pitfalls 坑⑥）；
+   复位在下次 touchstart（盖满 stay-time 余韵防按压色闪回） */
+.app-pressed-none {
+	background-color: transparent;
+}
