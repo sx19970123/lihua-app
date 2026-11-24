@@ -5,25 +5,25 @@
 }
 
 .proto-title {
-	font-size: var(--lh-text-xl);
+	font-size: var(--std-text-2xl);
 	font-weight: bold;
-	line-height: var(--lh-leading-tight);
+	line-height: var(--std-leading-2xl);
 	color: var(--lh-emphasis-color);
 	text-align: center;
 	margin-bottom: var(--lh-gap-xl);
 }
 
 .proto-h3 {
-	font-size: var(--lh-text-base);
+	font-size: var(--std-text-lg);
 	font-weight: bold;
-	line-height: var(--lh-leading-snug);
+	line-height: var(--std-leading-lg);
 	color: var(--lh-emphasis-color);
 	margin-top: var(--lh-gap-xl);
 }
 
 .proto-p {
-	font-size: var(--lh-text-base);
-	line-height: var(--lh-leading-normal);
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 	color: var(--lh-emphasis-color);
 	margin-top: var(--lh-gap-sm);
 }
@@ -35,15 +35,15 @@
 }
 
 .proto-bullet {
-	font-size: var(--lh-text-base);
-	line-height: var(--lh-leading-normal);
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 	color: var(--lh-tertiary-color);
 	margin-right: var(--lh-gap-xs);
 }
 
 .proto-li-text {
 	flex: 1;
-	font-size: var(--lh-text-base);
-	line-height: var(--lh-leading-normal);
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 	color: var(--lh-emphasis-color);
 }

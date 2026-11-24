@@ -24,18 +24,17 @@
 		flex-direction: column;
 	}
 
-	/* 组标题：卡外小字，左右与行内距对齐 16 */
+	/* 组标题：卡外小字，左右与行内距对齐 16（外距=std 语义 token 复合值） */
 	.app-list-title {
-		margin: 16px 16px 8px;
+		margin: var(--std-list-title-margin);
 		/* line-height 双写（view 份，口径同 app-list-item） */
-		line-height: 18px;
+		line-height: var(--std-leading-sm);
 	}
 
 	.app-list-title-text {
-		font-size: 13px;
-		/* px 字面量：x 端 line-height 仅保证 length 值，比例 token(1.375) 在 App 宽容生效、
-		   MP 被丢弃=行高塌（=13×1.375 预算值） */
-		line-height: 18px;
+		font-size: var(--std-text-sm);
+		/* 行高配对走 std 绝对值 token（两端安全，口径同 list-item） */
+		line-height: var(--std-leading-sm);
 		color: var(--lh-tertiary-color);
 	}
 

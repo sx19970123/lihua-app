@@ -162,21 +162,23 @@ defineExpose({ remeasure: measureStrength })
 }
 
 /* 卡片层：height prop 显式定高（对象 style 绑定），缺省按内容自然高；row 布局输入行垂直居中。
-   勿加 flex:1——不定高壳内 flex-basis 0% 会抢占 height 的主轴尺寸 */
+   勿加 flex:1——不定高壳内 flex-basis 0% 会抢占 height 的主轴尺寸。
+   std 尺寸账（Apple 真机实测阶梯，带边框件外高=行盒+内距×2+边框×2）：
+   sm 32=18+6×2+2 / default 44=22+10×2+2 / lg 52=22+14×2+2（lg 与列表行同高） */
 .app-input-card {
 	flex-direction: row;
 	align-items: center;
 	width: 100%;
-	/* 卡片底色：亮=sar-white 面 / 暗=sar gray-900（dark emphasis-bg surface）；组件级 token 可被主题覆盖 */
-	background-color: var(--lh-input-bg, #ffffff);
-	padding: 5px 12px;
-	border: 1px solid var(--lh-border-color, #e2e3e4);
+	/* 卡片底色（token 亮暗双态） */
+	background-color: var(--lh-input-bg);
+	padding: var(--std-control-pad-y) var(--lh-gap-md);
+	border: 1px solid var(--lh-border-color);
 	border-radius: var(--lh-radius);
 }
 
 @media (prefers-color-scheme: dark) {
 	.app-input-card {
-		background-color: var(--lh-input-bg, #242628);
+		background-color: var(--lh-input-bg);
 	}
 }
 
@@ -184,14 +186,15 @@ defineExpose({ remeasure: measureStrength })
 	border-radius: var(--lh-radius-full);
 }
 
+/* size 档内距（单组件尺寸档，本地字面量）：sm 6→外高 32、lg 14→外高 52 */
 .app-input-sm {
-	padding-top: 3px;
-	padding-bottom: 3px;
+	padding-top: 6px;
+	padding-bottom: 6px;
 }
 
 .app-input-lg {
-	padding-top: 6px;
-	padding-bottom: 6px;
+	padding-top: 14px;
+	padding-bottom: 14px;
 }
 
 .app-input-disabled {
@@ -209,11 +212,12 @@ defineExpose({ remeasure: measureStrength })
 }
 
 /* 内置 input 透明底融入根容器，根壳负责底色与边框；
-   default 档 16px 对齐主流输入规格（iOS/微信/抖音 16-17），兼远离 iOS <17pt 聚焦自动缩放 */
+   default 档 std 正文 17px（Apple 输入 17pt），行高配对 --std-leading-lg */
 .app-input-control {
 	flex: 1;
-	height: 24px;
-	font-size: var(--lh-text-lg);
+	height: 22px;
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 	color: var(--lh-emphasis-color);
 	background-color: transparent;
 	padding: 0;
@@ -224,15 +228,18 @@ defineExpose({ remeasure: measureStrength })
 	color: var(--lh-fourth-color);
 }
 
-/* size 三档=完整视觉档位（control 高度+字号，根高由 padding+control 自然撑，页面可用 class 定死） */
+/* size 三档=完整视觉档位（control 行盒+字号，根高由 padding+control+边框自然撑）；
+   lg 档文本与 default 同（17px），档差只在纵向留白 */
 .app-input-control-sm {
-	height: 20px;
-	font-size: var(--lh-text-base);
+	height: 18px;
+	font-size: var(--std-text-sm);
+	line-height: var(--std-leading-sm);
 }
 
 .app-input-control-lg {
-	height: 28px;
-	font-size: 18px;
+	height: 22px;
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 }
 
 .app-input-control-readonly {

@@ -1,0 +1,21 @@
+/* 全局文本标准类：字号+行高配对原子（app-t-*，消费 --std-* Apple 数值）+ 语义色（app-c-*，token 亮暗自动）。
+   页面全局可用；组件内使用须在组件 style 头 @import 本文件（样式隔离 2.0，press.scss 同款纪律）。
+   改字号必须连行高一起改（改本文件类定义单点，勿在使用处单覆写一边）。
+   尺度基准与配对规则见 skills/create-component.md「尺度基准」节 */
+.app-t-2xs  { font-size: var(--std-text-2xs);  line-height: var(--std-leading-2xs);  }  /* Caption2 11/13 = 官方最小字号 */
+.app-t-sm   { font-size: var(--std-text-sm);   line-height: var(--std-leading-sm);   }  /* Footnote 13/18 */
+.app-t-base { font-size: var(--std-text-base); line-height: var(--std-leading-base); }  /* Subhead 15/20 */
+.app-t-lg   { font-size: var(--std-text-lg);   line-height: var(--std-leading-lg);   }  /* Body 17/22 = 行盒锚 */
+.app-t-xl   { font-size: var(--std-text-xl);   line-height: var(--std-leading-xl);   }  /* Title2 22/28 */
+.app-t-2xl  { font-size: var(--std-text-2xl);  line-height: var(--std-leading-2xl);  }  /* Title1 28/34 */
+.app-t-3xl  { font-size: var(--std-text-3xl);  line-height: var(--std-leading-3xl);  }  /* LargeTitle 34/41 */
+
+.app-c-emphasis  { color: var(--lh-emphasis-color); }
+.app-c-secondary { color: var(--lh-secondary-color); }
+.app-c-tertiary  { color: var(--lh-tertiary-color); }
+.app-c-fourth    { color: var(--lh-fourth-color); }
+.app-c-primary   { color: var(--lh-primary); }
+.app-c-danger    { color: var(--lh-danger); }
+.app-c-disabled  { color: var(--lh-disabled-color); }
+
+.app-w-bold { font-weight: 700; }

@@ -98,8 +98,9 @@ const onClick = () => {
 }
 
 .app-checkbox-label {
-	margin-left: 8px;
-	font-size: 14px;
+	margin-left: var(--lh-gap-sm);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-emphasis-color);
 }
 

@@ -921,7 +921,7 @@
 		background-color: var(--lh-emphasis-bg, #ffffff);
 		/* 浮层软影：单层大弥散中等透明度 */
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-		padding: 16px;
+		padding: var(--lh-gap-lg);
 		overflow: hidden;
 		transform: scale(0.92);
 		transition: height 300ms ease, transform 250ms ease-out;
@@ -1079,12 +1079,12 @@
 		   刷新钮 icon 偏右 4px、关闭钮偏左 4px（--end）——视觉间距 8px（缓冲 4×2），
 		   外缘 icon 距卡片右缘=容器 right 4+右钮右侧余 12=16px（padding 线）不变 */
 		justify-content: flex-end;
-		padding-right: 4px;
+		padding-right: var(--lh-gap-xs);
 	}
 
 	.lh-cap-opts-btn--end {
 		justify-content: flex-start;
-		padding-left: 4px;
+		padding-left: var(--lh-gap-xs);
 		padding-right: 0;
 	}
 
@@ -1101,7 +1101,7 @@
 	}
 
 	.lh-cap-zone-text {
-		margin-top: 8px;
+		margin-top: var(--lh-gap-sm);
 		font-size: 14px;
 		color: var(--lh-secondary-color, #1f2329);
 	}
@@ -1169,7 +1169,7 @@
 	}
 
 	.lh-cap-ribbon-text {
-		font-size: 13px;
+		font-size: var(--std-text-sm);
 		color: #ffffff;
 		opacity: 0;
 		animation: lh-cap-ribbon-text 300ms ease 250ms forwards;
@@ -1230,13 +1230,13 @@
 		font-weight: bold;
 		color: var(--lh-secondary-color, #1f2329);
 		/* 上 0=与左右/图区下边距同为 padding 16；下 12=承接原 margin-top 4px 守恒内容总高（卡片高不动） */
-		margin: 0 0 12px 4px;
+		margin: 0 0 var(--lh-gap-md) var(--lh-gap-xs);
 	}
 
 	.lh-cap-click-tips {
 		flex-direction: row;
 		align-items: center;
-		margin-bottom: 8px;
+		margin-bottom: var(--lh-gap-sm);
 	}
 
 	.lh-cap-click-hint {
@@ -1371,7 +1371,7 @@
 	.lh-cap-track {
 		width: 288px;
 		height: 40px;
-		margin-top: 12px;
+		margin-top: var(--lh-gap-md);
 		border-radius: var(--lh-radius-full, 9999px);
 		background-color: var(--lh-active-bg, #f0f0f0);
 		position: relative;
@@ -1425,7 +1425,7 @@
 		height: 40px;
 		line-height: 40px;
 		text-align: center;
-		font-size: 13px;
+		font-size: var(--std-text-sm);
 		color: var(--lh-fourth-color, #b5b9bd);
 	}
 

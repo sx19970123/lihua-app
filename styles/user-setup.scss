@@ -40,17 +40,17 @@
 }
 
 .setup-title {
-	font-size: var(--lh-text-xl);
+	font-size: var(--std-text-2xl);
 	font-weight: bold;
-	line-height: var(--lh-leading-tight);
+	line-height: var(--std-leading-2xl);
 	/* 主字体色（亮黑/暗白），与主题色图标区分 */
 	color: var(--lh-emphasis-color);
 	margin-top: var(--lh-gap-2xl);
 }
 
 .setup-desc {
-	font-size: var(--lh-text-base);
-	line-height: var(--lh-leading-normal);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-tertiary-color);
 	text-align: center;
 	margin-top: var(--lh-gap-sm);
@@ -58,25 +58,27 @@
 
 .setup-form {
 	width: 100%;
-	margin-top: var(--lh-gap-3xl);
+	margin-top: var(--std-section-gap);
 }
 
-/* 表单项间距（对齐登录域 auth-field 刻度） */
+/* 表单项间距（对齐登录域 auth-field；std=Apple 带边框控件外距锚 12） */
 .setup-field {
-	margin-top: var(--lh-gap-xl);
+	margin-top: var(--std-form-gap);
 }
 
 .setup-btns {
 	width: 100%;
 }
 
-/* 主按钮：与登录域 auth-btn 同视觉（原生 type=primary 提供 loading/点击态） */
+/* 主按钮：与登录域 auth-btn 同视觉（原生 type=primary 提供 loading/点击态）；
+   高度走 padding 直构（Apple 默认控件档 44=行盒 22+11×2） */
 .setup-btn {
 	width: 100%;
-	height: 45px;
+	padding: var(--std-btn-pad-y) var(--lh-gap-lg);
 	border-radius: var(--lh-radius-full);
 	background-color: var(--lh-primary);
-	font-size: var(--lh-text-lg);
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 	color: #ffffff;
 }
 
@@ -89,7 +91,8 @@
 
 /* 次级文字按钮（上一步/以后再说/返回登录） */
 .setup-ghost-btn {
-	font-size: var(--lh-text-base);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-tertiary-color);
 	padding: var(--lh-gap-xs) var(--lh-gap-sm);
 }
@@ -99,13 +102,13 @@
 	color: var(--lh-tertiary-color);
 }
 
-/* 性别选择行：与 app-input 卡片同视觉（45px 胶囊行），值/placeholder 居左+右箭头 */
+/* 性别选择行：与 app-input 卡片同视觉（带边框控件 44=行盒 22+内距 10×2+边框 2 的自然高），
+   值/placeholder 居左+右箭头 */
 .setup-select-row {
 	flex-direction: row;
 	align-items: center;
 	width: 100%;
-	height: 45px;
-	padding: 0 12px;
+	padding: var(--std-control-pad-y) var(--lh-gap-md);
 	border: 1px solid var(--lh-border-color);
 	border-radius: var(--lh-radius-full);
 	background-color: #ffffff;
@@ -119,7 +122,8 @@
 
 .setup-select-text {
 	flex: 1;
-	font-size: var(--lh-text-base);
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 }
 
 .setup-select-placeholder {

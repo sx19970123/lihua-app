@@ -13,7 +13,7 @@
 				</view>
 
 				<view class="auth-field">
-					<app-input shape="round" :height="45" placeholder="用户名" v-model="loginData.username" clearable>
+					<app-input shape="round" placeholder="用户名" v-model="loginData.username" clearable>
 						<template #prepend>
 							<uni-icons class="auth-icon" type="person" />
 						</template>
@@ -21,7 +21,7 @@
 				</view>
 
 				<view class="auth-field">
-					<app-input shape="round" :height="45" placeholder="密码" password v-model="loginData.password" clearable>
+					<app-input shape="round" placeholder="密码" password v-model="loginData.password" clearable>
 						<template #prepend>
 							<uni-icons class="auth-icon" type="locked" />
 						</template>

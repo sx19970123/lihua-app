@@ -18,24 +18,25 @@
 }
 
 .auth-title {
-	font-size: var(--lh-text-2xl);
+	font-size: var(--std-text-2xl);
 	font-weight: bold;
-	line-height: var(--lh-leading-tight);
+	line-height: var(--std-leading-2xl);
 	color: var(--lh-emphasis-color);
 	margin-bottom: var(--lh-gap-lg);
 }
 
-/* 断连提示与注册入口互斥单槽（防跳动）：外层定高等于按钮行，状态切换零位移 */
+/* 断连提示与注册入口互斥单槽（防跳动）：外层定高等于按钮行（Apple 默认控件档 44），状态切换零位移 */
 .tip-slot {
-	height: var(--lh-button-height);
+	height: 44px;
 	justify-content: center;
 	align-items: flex-start;
 	margin-bottom: var(--lh-gap-sm);
 }
 
-/* 表单项与登录按钮的间距包裹（间距属页面布局，组件根隔离不承接页面类内部样式） */
+/* 表单项与登录按钮的间距包裹（间距属页面布局，组件根隔离不承接页面类内部样式）；
+   std 表单项间距=Apple 带边框控件外距锚 12 */
 .auth-field {
-	margin-top: var(--lh-gap-xl);
+	margin-top: var(--std-form-gap);
 }
 
 /* 前置图标（uni-icons 单 text 根落 class）：tertiary 色自适应暗色 */
@@ -45,16 +46,18 @@
 }
 
 .login-btn-wrap {
-	margin-top: var(--lh-gap-3xl);
+	margin-top: var(--std-section-gap);
 }
 
-/* 内置 button 覆盖：对齐登录页视觉（type=primary 自带 loading 转圈/点击态） */
+/* 内置 button 覆盖：对齐登录页视觉（type=primary 自带 loading 转圈/点击态）；
+   高度走 padding 直构（Apple 默认控件档 44=行盒 22+11×2，不设 height） */
 .auth-btn {
 	width: 100%;
-	height: 45px;
+	padding: var(--std-btn-pad-y) var(--lh-gap-lg);
 	border-radius: var(--lh-radius-full);
 	background-color: var(--lh-primary);
-	font-size: 16px;
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 	color: #ffffff;
 }
 
@@ -70,12 +73,14 @@
 }
 
 .text-font {
-	font-size: var(--lh-text-base);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-emphasis-color);
 }
 
 .text-btn {
-	font-size: var(--lh-text-base);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-primary);
 	margin-left: var(--lh-gap-xs);
 }
@@ -103,6 +108,7 @@
 .protocol-text {
 	margin-left: var(--lh-gap-xs);
 	color: var(--lh-tertiary-color);
-	font-size: var(--lh-text-base);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 }
 

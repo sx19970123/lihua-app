@@ -23,8 +23,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - 无伪类（:first-child/:not）、无伪元素（::before）——分隔线用独立 1px view，首末行
   特殊化用烘焙字段。
 - **rpx 归零**，全 px（官方推荐；rpx 仅随屏宽的 width 合法，本项目无此场景）。
-- 颜色/字号/圆角/间距走 `styles/tokens.scss`：圆角三档 `--lh-radius`(12)/`-sm`(4)/
-  `-full`(9999)；字号 xs10~2xl32；列表行主文字用 `--lh-text-lg`(16) 对齐 iOS/微信规格。
+- 色板/gap/圆角走 `styles/tokens.scss`（老标准，冻结——无新旧值之分）；新标准字号/行高=
+  `tokens-std.scss`（`--std-*` Apple 值）经标准类 `app-t-*`/`app-c-*` 消费
+  （styles/typography.scss，详规见「尺度基准」节）；存量组件的 `--lh-text-*`/`leading-*`
+  用法冻结不新增，统一轮迁 std。
 - **text 样式不继承**：每段 text 显式 color/font-size/line-height（行高用 leading 比例
   token，固定 px 行高+token 字号混用会裁字）。
 - 横向 flex 布局必须显式 `flex-direction: row`——**uvue view 默认 column**，
@@ -40,6 +42,63 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   图形列（icon/arrow）容器钉 `height: 22px + overflow: visible`，防 uni-icons 默认
   行盒撑高；tree 式 max-height 钳制法（内容自然高+max 单属性）为同哲学替代。
 - 条件编译铁律：业务页面禁 #ifdef；平台分叉收敛在工具类/组件内。
+
+## 尺度基准（2026-11-24 定，iOS 式：高度不进全局 token）
+
+- 标准三层：`styles/tokens-std.scss`（新标准变量 `--std-*`，Apple 数值+间距语义层）+
+  `styles/typography.scss`（文本标准类，消费 std）+ `styles/tokens.scss`（老标准 `--lh-*`
+  残留=色板/gap 刻度/圆角/分段器高/input-bg，字号行高档已于 2026-11-24 统一轮退役删除）。
+  文本标准=CSS 工具类形态（2026-11-24 拍板，组件形态否决：MP 每文本节点一个组件实例的
+  热路径成本；旧版 sard 工具类 sar-text-* 同构先例）。
+- **独立文本节点默认挂标准类**：`app-t-2xs|sm|base|lg|xl|2xl|3xl`（字号+行高配对原子，
+  Apple 档：Caption2 11/13、Footnote 13/18、Subhead 15/20、Body 17/22、Title2 22/28、
+  Title1 28/34、LargeTitle 34/41——官方 11 档压缩为 7 档，跳过 Caption1/Callout/Title3
+  需要时按官方值补；std 层行高为**绝对值成对制**，改字号必连行高=改 tokens-std/
+  typography 单点，勿在使用处单覆写一边）+
+  `app-c-emphasis|secondary|tertiary|fourth|primary|danger|disabled`（语义色，暗色自动）+
+  `app-w-bold`；行内富文本片段（一段话内变色词）仍裸 text+组件本地类（text 子节点不能是
+  组件）。**组件内使用须在 style 头 @import typography.scss**（样式隔离 2.0，全局类进不了
+  组件，press.scss 同款纪律）。
+- **间距语义层**（tokens-std.scss）：边距按**用途**挂 `--std-*` 语义 token——page-margin-x 16/
+  list-pad-y 15·x 16/list-title-margin 16·16·8/list-icon-gap 12/card-pad-y 12·x 16/
+  form-gap 12/control-pad-y 10/btn-pad-y 11/section-gap 32——同名值不同位置=不同 token，一眼可读用途；x 端值不可嵌套
+  var→各带字面量=独立旋钮。**建名纪律**：只为跨页面复用概念建名（≥2 消费点），组件内
+  一次性微距留组件本地；通用无概念小间隙仍用 `--lh-gap-*` 值层。
+- **高度档位表（2026-11-24 统一轮落地，同日两次按 Apple 真机截图实测修正）**：
+  高度 = 行盒 + 纵向留白×2（带边框件再+边框×2）。Apple 实测三档（iPhone 402pt 机型，
+  原生截图 px/3）：**小号 32 / 默认 44 / 列表行 52**，每档=行盒+对称留白——
+  **紧凑档 32**（App Store「获取」胶囊 20+6×2；input small=18+6×2+边框2）；
+  **控件档 44**（App Store 搜索框 44.0pt=HIG 默认控件 44×44；按钮 22+11×2、带边框 input/
+  选择行 22+10×2+边框2；内距走 --std-btn-pad-y / --std-control-pad-y）；
+  **列表行 52**（设置页实测 52.3pt=22+15×2；list-item/tree 节点/swipe 收起首档；
+  input large 同高 22+14×2+边框2）。**行≠控件**：早先按 UIKit 默认行高 44 推的
+  「行=控件 46」已作废。按钮/列表行=padding 直构不设 height；档位内距是语义 token 自带值
+  （Apple 实测，不要求落在 4pt 刻度上）。卡片头暂留 46（card-pad-y 12，不在三档上，待定）。
+- 档位做在组件 size prop（small/default/large ↔ 留白 8/12/16），高度数字由公式长出
+  （iOS 原生同型：档位是组件枚举，高度是 intrinsic 产物，无公开高度 token）。
+- HIG 明文仅字号阶梯/控件 44×44pt/带边框控件间距 12pt；行高等无官方数值，按本公式自定。
+- **JS 侧镜像**：`utils/tokens-std.ts`（STD_* 常量，与 tokens-std.scss 同名同值成对）——
+  供 @keyframes 与 TS 布局算式消费（CSS 变量进不了这两处）；改尺度值两处成对改。
+- **交编译前一致性自查（AI 必跑，内联临时脚本执行勿留检查文件；凡改 tokens/尺度/行高/
+  样式大改后）**，全绿才交用户：① tokens-std.scss ↔ tokens-std.ts 同名同值
+  （--std-list-pad-y↔STD_LIST_PAD_Y、--std-leading-lg/sm↔STD_LEADING_LG/SM、
+  --std-row-height↔STD_ROW_HEIGHT——显式定高消费=tree node max-height/hit-first/arrow，
+  @keyframes 用不了 var 仍为字面量）+派生式
+  （STD_ROW_HEIGHT=leading-lg+list-pad-y×2、STD_TREE_EMPTY_HEIGHT=leading-sm+8×2）；
+  ② 行高字面量同步=派生行高，共三处 keyframes（CSS 变量进不了 keyframes，字面量永远
+  存在）：tree 收起 `app-tree-shrink` 的 from、tree 展开 `app-tree-grow` 的 to、
+  swipe `app-swipe-remove` 首帧；非动画处（tree node max-height/hit-first/arrow）须挂
+  `--std-row-height` 不得回退成字面量，唯一例外=tree `.app-tree-hit` 的 `height` 为派生
+  字面量「行高+1」（上探 1px 并入自身高度，行距恒=行高），一并核对（内联脚本解析前先剥
+  块注释——keyframes 块内声明前常带注释，不剥会误报缺失）；
+  ③ 注释提前闭合（`*/` 后同一行有内容）全仓零；④ 样式块括号配平（剥注释后
+  `{}`/`()`/`[]` 计数相等）零差；⑤ 老 token（--lh-text-/--lh-leading-/--lh-button-height）
+  消费零。历史上两次跑偏（行 46 应 52、控件 46 应 44）均属此范围，机器查代替靠记忆。
+- 存量已统一（2026-11-24 统一轮）：全局正文 17px、list/tree 行 52、input 44（small 32/
+  large 52）、按钮 44、
+  卡片头 46、表单间距 12、手写 45/38/13px 清零；老 `--lh-text-*/leading-*/button-height`
+  已退役删除。残留暂不动：分段器三档高（真机手感定档）、index 尖峰页（S2-09 重做时按
+  std 写）、页面级锚（auth 80px/向导 48·24px）。
 
 ## 暗色模式
 
@@ -70,12 +129,26 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 ## 动画
 
-- transform/opacity 过渡可靠；**height 与 max-height 的 transition 在 Vapor 全灭**
-  （Web/微信生效）。
+- **单属性**过渡可靠；**App 端 transition 不支持多效果/多时长**（官方文档），一条过渡
+  驱动多个属性（如 `transition-property: transform, opacity`）不可靠——内容淡出/位移勿
+  依赖它；**height 与 max-height 的 transition 在 Vapor 全灭**（Web/微信生效）。
 - keyframes 宽高动画可行（5.31+）但**只支持固定值**（动态目标高度做不了，改 JS 显式
   计算高度）。
+- **keyframes 收展动画四规则**（app-tree 收起/展开真机实证，2026-11-24/25；先例=
+  swipe remove）：
+  ① 动画类的**静态值取起始值**，终值靠 `animation-fill-mode: forwards` 保持（Vapor 仅支持
+  forwards，backwards/both 标 ×）——静态值取终值时，起播前的间隙帧先落终值=先塌后弹
+  （眨眼）；
+  ② forwards 只动**每个状态类都显式声明**的属性（如 max-height）——只被动画写过的属性
+  （opacity）类切换后无值还原，展开后内容全白；
+  ③ 高度收展加 `justify-content: flex-end`（内容贴底随底边滑动）——顶对齐时首行内容
+  原地被裁=「第一个子节点不动、其他节点收到它上面」；配「上探 1px 并入自身高度（行高+1）」
+  使行距恒=行高、稳态与动画态几何连续；
+  ④ 展开与收起同构成对（ease-out / ease-in 互为时间镜像、时长一致），两个方向都播完
+  重烘焙。
 - **动画瞬态化**：稳态不挂 animation（后台切换系统重置渲染层动画，常驻动画被打回起始帧
-  撑空白，触摸才复原）——用前后状态快照判定「刚变化」挂变体类，下次烘焙切回静态类。
+  撑空白，触摸才复原）——用前后状态快照判定「刚变化」挂变体类，播完由 JS 定时触发
+  重烘焙切回稳态类（forwards 同理不可常驻）。
 - 容器高度显式静态可算（不靠内容自然撑——测量链在后台恢复会陈旧）。
 - v-if 无法过渡→常驻+opacity/pointer-events；同 class 复挂 animation 不重触发→双 class
   交替或 :key 重建。
@@ -124,8 +197,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 ## 交互
 
-- 触区意识：可点元素热区 ≥32（理想 44）；**热区可大于视觉**（icon 居中留缓冲）。
-- 相邻按钮热区紧贴零死区（系统 toolbar 同款），视觉间距用盒内非对称偏移收窄。
+- 触区意识（Apple 官方 accessibility 条文，2026-11-24 对齐）：控件**默认 44×44、最小
+  28×28**——常规按 44 设计、紧凑件下限 28（旧口径 ≥32 作废）；**热区可大于视觉**
+  （icon 居中留缓冲）。相邻按钮热区紧贴零死区（系统 toolbar 同款），视觉间距用盒内
+  非对称偏移收窄。
 
 ## 收尾自查
 

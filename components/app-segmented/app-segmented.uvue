@@ -401,8 +401,8 @@
 	}
 
 	.app-segmented-label {
-		font-size: var(--lh-text-base);
-		line-height: var(--lh-leading-normal);
+		font-size: var(--std-text-base);
+		line-height: var(--std-leading-base);
 		color: var(--lh-secondary-color);
 	}
 

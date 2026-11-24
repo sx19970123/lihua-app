@@ -1,6 +1,6 @@
 /* 全局工具类（页面可引用，App.uvue 全局引入）：只收跨页面高频组合，克制新增 */
 .page-padding {
-	padding: 0 var(--lh-gap-lg);
+	padding: 0 var(--std-page-margin-x);
 }
 
 /* 安全区顶部避让：custom 导航页最外层挂载（内部布局与状态栏语义解耦）；

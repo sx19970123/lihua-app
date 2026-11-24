@@ -9,7 +9,7 @@
 				</view>
 
 				<view class="auth-field">
-					<app-input shape="round" :height="45" placeholder="用户名" clearable
+					<app-input shape="round" placeholder="用户名" clearable
 						@blur="handleCheckUsername" v-model="registerData.username">
 						<template #prepend>
 							<uni-icons class="auth-icon" type="person" />
@@ -18,7 +18,7 @@
 				</view>
 
 				<view class="auth-field">
-					<app-input shape="round" :height="45" placeholder="密码" password showStrength :maxlength="30"
+					<app-input shape="round" placeholder="密码" password showStrength :maxlength="30"
 						clearable v-model="registerData.password">
 						<template #prepend>
 							<uni-icons class="auth-icon" type="locked" />
@@ -27,7 +27,7 @@
 				</view>
 
 				<view class="auth-field">
-					<app-input shape="round" :height="45" placeholder="再次输入" password :maxlength="30" clearable
+					<app-input shape="round" placeholder="再次输入" password :maxlength="30" clearable
 						v-model="registerData.confirmPassword">
 						<template #prepend>
 							<uni-icons class="auth-icon" type="locked" />

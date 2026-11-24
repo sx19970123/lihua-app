@@ -41,6 +41,8 @@
 
 <style lang="scss">
 	@import '@/styles/tokens.scss';
+	@import '@/styles/tokens-std.scss';
+	@import '@/styles/typography.scss';
 	@import '@/styles/common.scss';
 
 	/*每个页面公共css */

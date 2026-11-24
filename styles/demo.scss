@@ -5,34 +5,37 @@
 
 /* 外部 class 落 app-card 根（隔离 2.0 单根组件），间距归消费方 */
 .demo-card {
-	margin-top: 16px;
+	margin-top: var(--lh-gap-lg);
 }
 
 .demo-body-text {
-	font-size: 14px;
-	line-height: var(--lh-leading-normal);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-emphasis-color);
 }
 
 .demo-label {
-	font-size: 13px;
+	font-size: var(--std-text-sm);
+	line-height: var(--std-leading-sm);
 	color: var(--lh-tertiary-color);
 }
 
 .demo-row {
-	margin-top: 12px;
+	margin-top: var(--lh-gap-md);
 }
 
 .demo-value {
-	margin-top: 8px;
-	font-size: 14px;
+	margin-top: var(--lh-gap-sm);
+	font-size: var(--std-text-base);
+	line-height: var(--std-leading-base);
 	color: var(--lh-emphasis-color);
 }
 
 /* 自带卡片壳的组件（tree/list）不套外卡，标签直接落页面：与上方卡片的间距+与组件的间距 */
 .demo-bare-label {
-	margin-top: 16px;
-	margin-bottom: 12px;
-	font-size: 13px;
+	margin-top: var(--lh-gap-lg);
+	margin-bottom: var(--lh-gap-md);
+	font-size: var(--std-text-sm);
+	line-height: var(--std-leading-sm);
 	color: var(--lh-tertiary-color);
 }

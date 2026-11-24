@@ -1,235 +1,62 @@
-/* 主题 token 亮暗双态（值源 sard 1.30.6，全字面量——x 值不可嵌套 var；暗色走 media dark） */
+/* 老标准 token（--lh-*，sard 源值）：冻结供存量组件，统一轮迁 --std-*（tokens-std.scss）后退役；
+   色板/gap/圆角无新旧值之分，长期留此（--std-* 体系经 --lh-* 语义色引用）。
+   全字面量——x 值不可嵌套 var；暗色走 media dark。标准见 skills/create-component.md「尺度基准」 */
 page {
-	/* 灰度 */
-	--lh-gray-100: #f7f7f8;
+	/* 灰度（在用两档） */
 	--lh-gray-200: #ecedee;
-	--lh-gray-300: #e2e3e4;
-	--lh-gray-400: #d1d4d6;
-	--lh-gray-500: #b5b9bd;
-	--lh-gray-600: #74787c;
 	--lh-gray-700: #505457;
-	--lh-gray-800: #393c3f;
-	--lh-gray-900: #242628;
-	--lh-gray-100-rgb: 247,247,248;
-	--lh-gray-200-rgb: 236,237,238;
-	--lh-gray-300-rgb: 226,227,228;
-	--lh-gray-400-rgb: 209,212,214;
-	--lh-gray-500-rgb: 181,185,189;
-	--lh-gray-600-rgb: 116,120,124;
-	--lh-gray-700-rgb: 80,84,87;
-	--lh-gray-800-rgb: 57,60,63;
-	--lh-gray-900-rgb: 36,38,40;
 
-	/* 基础色 */
-	--lh-white: #fff;
-	--lh-black: #000;
-	--lh-white-rgb: 255,255,255;
-	--lh-black-rgb: 0,0,0;
-	--lh-blue: #3b82f6;
-	--lh-indigo: #6366f1;
-	--lh-purple: #a855f7;
-	--lh-pink: #ec4899;
-	--lh-red: #ef4444;
-	--lh-orange: #f97316;
-	--lh-yellow: #eab308;
-	--lh-green: #22c55e;
-	--lh-teal: #14b8a6;
-	--lh-cyan: #06b6d4;
-	--lh-blue-rgb: 59,130,246;
-	--lh-indigo-rgb: 99,102,241;
-	--lh-purple-rgb: 168,85,247;
-	--lh-pink-rgb: 236,72,153;
-	--lh-red-rgb: 239,68,68;
-	--lh-orange-rgb: 249,115,22;
-	--lh-yellow-rgb: 234,179,8;
-	--lh-green-rgb: 34,197,94;
-	--lh-teal-rgb: 20,184,166;
-	--lh-cyan-rgb: 6,182,212;
-
-	/* 主题色 */
+	/* 主题/语义色 */
 	--lh-primary: #3b82f6;
-	--lh-secondary: #74787c;
-	--lh-success: #22c55e;
-	--lh-info: #06b6d4;
-	--lh-warning: #eab308;
 	--lh-danger: #ef4444;
-	--lh-neutral: #505457;
-	--lh-primary-rgb: 59,130,246;
-	--lh-secondary-rgb: 116,120,124;
-	--lh-success-rgb: 34,197,94;
-	--lh-info-rgb: 6,182,212;
-	--lh-warning-rgb: 234,179,8;
-	--lh-danger-rgb: 239,68,68;
-	--lh-neutral-rgb: 80,84,87;
-	--lh-primary-text: rgb(23.137254902%, 43.654818077%, 77.1764705882%);
-	--lh-secondary-text: rgb(42.6784400294%, 42.6784400294%, 42.6784400294%);
-	--lh-success-text: rgb(13.3333333333%, 69.5294117647%, 34.0190063756%);
-	--lh-info-text: rgb(2.3529411765%, 57.166571483%, 66.5098039216%);
-	--lh-warning-text: rgb(73.4117647059%, 56.3095609925%, 3.137254902%);
-	--lh-danger-text: rgb(74.9803921569%, 26.6666666667%, 26.6666666667%);
 	--lh-secondary-color: #505457;
 	--lh-secondary-bg: #ecedee;
-	--lh-secondary-color-rgb: 80,84,87;
-	--lh-secondary-bg-rgb: 236,237,238;
-
-	/* 场景语义 */
-	--lh-body-color: #242628;
-	--lh-body-bg: #f7f7f8;
 	--lh-tertiary-color: #74787c;
-	--lh-tertiary-bg: #e2e3e4;
 	--lh-fourth-color: #b5b9bd;
-	--lh-fourth-bg: #d1d4d6;
 	--lh-emphasis-color: #000;
 	--lh-emphasis-bg: #fff;
 	--lh-border-color: #e2e3e4;
 	--lh-active-bg: #ecedee;
-	--lh-active-deep-bg: #e2e3e4;
-	--lh-body-color-rgb: 36,38,40;
-	--lh-body-bg-rgb: 247,247,248;
-	--lh-tertiary-color-rgb: 116,120,124;
-	--lh-tertiary-bg-rgb: 226,227,228;
-	--lh-fourth-color-rgb: 181,185,189;
-	--lh-fourth-bg-rgb: 209,212,214;
-	--lh-emphasis-color-rgb: 0,0,0;
-	--lh-emphasis-bg-rgb: 255,255,255;
-	--lh-border-color-rgb: 226,227,228;
-	--lh-active-bg-rgb: 236,237,238;
-	--lh-disabled-pointer-events: none;
-	--lh-disabled-opacity: 0.6;
-	--lh-disabled-cursor: not-allowed;
-	--lh-disabled-filter: grayscale(100%);
-	--lh-disabled-color: #b5b9bd;
-	--lh-disabled-bg: #d1d4d6;
-	--lh-disabled-shallow-bg: #ecedee;
-	--lh-disabled-deep-bg: #b5b9bd;
-	--lh-disabled-border-color: #d1d4d6;
 	--lh-active-opacity: 0.5;
+	--lh-disabled-color: #b5b9bd;
+	--lh-disabled-border-color: #d1d4d6;
+	--lh-disabled-shallow-bg: #ecedee;
+	--lh-input-bg: #ffffff;
 
-	/* 遮罩 */
-	--lh-mask-legible: rgba(0, 0, 0, 0.1);
-	--lh-mask: rgba(0, 0, 0, 0.5);
-	--lh-mask-illegible: rgba(0, 0, 0, 0.7);
-	--lh-mask-white-legible: rgba(255, 255, 255, 0.3);
-	--lh-mask-white: rgba(255, 255, 255, 0.5);
-	--lh-mask-white-illegible: rgba(255, 255, 255, 0.7);
-
-	/* 阴影 */
-	--lh-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-	--lh-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-	--lh-shadow-md: 0 2px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-	--lh-shadow-lg: 0 3px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-	--lh-shadow-xl: 0 5px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-	--lh-shadow-2xl: 0 10px 50px -12px rgb(0 0 0 / 0.25);
-	--lh-shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
-	--lh-shadow-dragging: 0 0 2px 0 rgb(0 0 0 / 0.1), 0 2px 12px rgb(0 0 0 / 0.2);
-	--lh-scroll-shadow-start: inset 0 10px 10px -10px rgba(0, 0, 0, 0.1);
-	--lh-scroll-shadow-end: inset 0 -10px 10px -10px rgba(0, 0, 0, 0.1);
-
-	/* 字号 */
-	--lh-text-xs: 10px;
-	--lh-text-sm: 12px;
-	--lh-text-base: 14px;
-	--lh-text-lg: 16px;
-	--lh-text-xl: 24px;
-	--lh-text-2xl: 32px;
-
-	/* 字重/字体族 */
-	--lh-font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-	--lh-font-serif: ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif;
-	--lh-font-mono: SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-	--lh-font-bold: 700;
-	--lh-font-normal: 400;
-	--lh-font-light: 300;
-
-	/* 行高 */
-	--lh-leading-none: 1;
-	--lh-leading-tight: 1.25;
-	--lh-leading-snug: 1.375;
-	--lh-leading-normal: 1.5;
-	--lh-leading-relaxed: 1.625;
-	--lh-leading-loose: 2;
-
-
-	/* 过渡时长 */
-	--lh-duration-slow: 500ms;
-	--lh-duration: 300ms;
-	--lh-duration-fast: 150ms;
-
-	/* 其他 */
-	--lh-border-style: solid;
-	--lh-border-width: 1px;
-	--lh-loading-pointer-events: none;
-	--lh-loading-opacity: 0.6;
-	--lh-loading-cursor: wait;
+	/* 字号/行高档已退役（2026-11-24 统一轮迁 tokens-std.scss 的 --std-text 与 --std-leading
+	   两族，typography.scss 类层消费） */
 }
 
 @media (prefers-color-scheme: dark) {
 	page {
-		/* 主色暗色档：提亮一档适配深底（sard 原主题亮暗恒值为妥协，产品决策双档化） */
+		/* 主色暗色档：提亮一档适配深底（产品决策双档化） */
 		--lh-primary: #60a5fa;
-		/* 主题色 */
-		--lh-neutral: #d1d4d6;
+
+		/* 语义色暗色档 */
 		--lh-secondary-color: #e2e3e4;
 		--lh-secondary-bg: #505457;
-		--lh-secondary-color-rgb: 209,212,214;
-		--lh-secondary-bg-rgb: 80,84,87;
-
-		/* 场景语义 */
-		--lh-body-color: #f7f7f8;
-		--lh-body-bg: #000;
 		--lh-tertiary-color: #b5b9bd;
-		--lh-tertiary-bg: #74787c;
 		--lh-fourth-color: #74787c;
-		--lh-fourth-bg: #b5b9bd;
 		--lh-emphasis-color: #fff;
 		--lh-emphasis-bg: #242628;
 		--lh-border-color: #505457;
 		--lh-active-bg: #505457;
-		--lh-active-deep-bg: #74787c;
-		--lh-body-color-rgb: 226,227,228;
-		--lh-body-bg-rgb: 36,38,40;
-		--lh-tertiary-color-rgb: 181,185,189;
-		--lh-tertiary-bg-rgb: 80,84,87;
-		--lh-fourth-color-rgb: 116,120,124;
-		--lh-fourth-bg-rgb: 80,84,87;
-		--lh-emphasis-color-rgb: 255,255,255;
-		--lh-emphasis-bg-rgb: 36,38,40;
-		--lh-border-color-rgb: 116,120,124;
-		--lh-active-bg-rgb: 80,84,87;
-		--lh-disabled-pointer-events: none;
-		--lh-disabled-opacity: 0.6;
-		--lh-disabled-cursor: not-allowed;
-		--lh-disabled-filter: grayscale(100%);
 		--lh-disabled-color: #74787c;
-		--lh-disabled-bg: #d1d4d6;
-		--lh-disabled-shallow-bg: #505457;
-		--lh-disabled-deep-bg: #b5b9bd;
 		--lh-disabled-border-color: #74787c;
-
-		/* 阴影 */
-		--lh-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.1);
-		--lh-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.2);
-		--lh-shadow-md: 0 2px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-		--lh-shadow-lg: 0 5px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-		--lh-shadow-xl: 0 10px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-		--lh-shadow-2xl: 0 15px 50px -12px rgb(0 0 0 / 0.5);
-		--lh-shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.1);
+		--lh-disabled-shallow-bg: #505457;
+		--lh-input-bg: #242628;
 	}
 }
 
-/* 项目补充段：组件级/项目专属 token（全量 sard theme 外） */
+/* 项目补充段：组件级/项目专属 token（sard theme 外） */
 page {
-    /* 按钮基准高（=sar button 组件级变量） */
-    --lh-button-height: 40px;
+	/* 分段器三档高（2026-11-21 真机手感定档，暂不动；档位归一随统一轮后续） */
+	--lh-segmented-height-sm: 32px;
+	--lh-segmented-height-md: 40px;
+	--lh-segmented-height-lg: 44px;
 
-    /* 分段器三档高（2026-11-21 真机反馈偏矮整体上调一档：md 对齐按钮 40、lg=44 触区理想值） */
-    --lh-segmented-height-sm: 32px;
-    --lh-segmented-height-md: 40px;
-    --lh-segmented-height-lg: 44px;
-
-	/* 圆角三档：主=卡片/按钮/input；小=tag/badge/缩略图天生小组件；胶囊=固定全圆 */
+	/* 圆角两档：主=卡片/按钮/input；胶囊=固定全圆 */
 	--lh-radius: 12px;
-	--lh-radius-sm: 4px;
 	--lh-radius-full: 9999px;
 
 	/* 间距刻度（页面/组件引用，禁裸魔法数；特殊布局=页面级覆盖或评审新增） */

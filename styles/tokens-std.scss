@@ -1,0 +1,55 @@
+/* 新标准 token（--std-*）：字号/行高=值层档位（Apple HIG 数值，typography.scss 类层成对消费，
+   勿单改一边）+ 间距语义层（按用途命名——两个 16px 因位置不同而不同名；x 端值不可嵌套 var，
+   各带字面量=独立旋钮）。
+   与老标准关系：tokens.scss（--lh-*，sard 值）冻结供存量组件，统一轮迁毕退役；
+   色板/gap 刻度/圆角无新旧值之分长期留此（std 色类经 --lh-* 语义色引用）。
+   标准详规见 skills/create-component.md「尺度基准」；JS 侧镜像=utils/tokens-std.ts
+   （keyframes/TS 算式消费，改值两处成对改），交编译前一致性自查规则同见 skill */
+page {
+	/* 字号（Apple 语义档；官方 11 档压缩为 7 档，跳过 Caption1 12/16、Callout 16/21、
+	   Title3 20/25——需要时按官方值补） */
+	--std-text-2xs: 11px;  /* Caption 2 = 官方 iOS 最小字号 */
+	--std-text-sm: 13px;   /* Footnote */
+	--std-text-base: 15px; /* Subhead */
+	--std-text-lg: 17px;   /* Body 正文主字号 */
+	--std-text-xl: 22px;   /* Title 2 */
+	--std-text-2xl: 28px;  /* Title 1 */
+	--std-text-3xl: 34px;  /* Large Title 页首大标题 */
+
+	/* 行高（Apple 每档绝对值） */
+	--std-leading-2xs: 13px;  /* Caption 2 行高 */
+	--std-leading-sm: 18px;   /* Footnote 行高 */
+	--std-leading-base: 20px; /* Subhead 行高 */
+	--std-leading-lg: 22px;   /* Body 行高 = 行盒锚 */
+	--std-leading-xl: 28px;   /* Title 2 行高 */
+	--std-leading-2xl: 34px;  /* Title 1 行高 */
+	--std-leading-3xl: 41px;  /* Large Title 行高 */
+
+	/* ---- 间距语义层（按用途命名，不按值命名——两个 16px 因位置不同而不同名）。
+	     x 端值不可嵌套 var→各带字面量=独立旋钮（改列表内距物理上不影响页边距）；
+	     只为跨页面复用概念建名，组件内一次性微距留组件本地 ---- */
+
+	/* 页面层 */
+	--std-page-margin-x: 16px;               /* 页面左右边距 = UIKit layoutMargins 16 */
+
+	/* 列表层 */
+	--std-row-height: 52px;                  /* 列表行/树节点显式高度（=leading-lg+list-pad-y×2 派生值的落地；消费=tree node max-height/hit/hit-first/arrow 与 JS 镜像 STD_ROW_HEIGHT；@keyframes 用不了 var 仍为字面量，由 skill 自查规则守同步） */
+	--std-list-pad-y: 15px;                  /* 列表行纵向内距：行高 52=行盒22+15×2（Apple 设置页真机实测 157px/3=52.3pt，2026-11-24；UIKit 默认 44 是旧值） */
+	--std-list-pad-x: 16px;                  /* 列表行水平内距 = Apple separatorInset/列表左缩进 16 */
+	--std-list-title-margin: 16px 16px 8px;  /* 列表组标题外距（上 | 左右 | 下），复合值 */
+	--std-list-icon-gap: 12px;               /* 列表行图标列↔文字列间距（Apple 无明文，沿用现值） */
+
+	/* 卡片层 */
+	--std-card-pad-y: 12px;                  /* 卡片三区（头/体/脚）纵向内距：头 46=22+12×2 */
+	--std-card-pad-x: 16px;                  /* 卡片三区水平内距 */
+
+	/* 表单层 */
+	--std-form-gap: 12px;                    /* 表单项纵向间距 = Apple 带边框控件外距锚 12（2026-11-24 拍板） */
+
+	/* 控件层（Apple 真机实测阶梯：小号 32 / 默认 44 / 列表行 52，每档=行盒+对称留白） */
+	--std-control-pad-y: 10px;               /* 带边框控件（输入框/选择行）纵向内距：外高 44=行盒22+10×2+边框×2（Apple 默认控件 44pt=HIG 条文+App Store 搜索框实测 44.0pt） */
+	--std-btn-pad-y: 11px;                   /* 无边框按钮纵向内距：高 44=行盒22+11×2（同上 Apple 默认控件档） */
+
+	/* 区块层 */
+	--std-section-gap: 32px;                 /* 区块间强分隔（登录按钮上方这类） */
+}

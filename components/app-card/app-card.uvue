@@ -74,12 +74,12 @@
 		overflow: hidden;
 	}
 
-	/* 头部：标题左（占主轴）+ 附加右；三区内距统一 10px 16px（sard 换算 20rpx 32rpx） */
+	/* 头部：标题左（占主轴）+ 附加右；三区内距统一 std 卡片档（--std-card-pad-y/x） */
 	.app-card-header {
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px 16px;
+		padding: var(--std-card-pad-y) var(--std-card-pad-x);
 	}
 
 	.app-card-title {
@@ -87,8 +87,8 @@
 	}
 
 	.app-card-title-text {
-		font-size: 16px;
-		line-height: var(--lh-leading-normal);
+		font-size: var(--std-text-lg);
+		line-height: var(--std-leading-lg);
 		color: var(--lh-emphasis-color);
 	}
 
@@ -98,7 +98,8 @@
 	}
 
 	.app-card-extra-text {
-		font-size: 13px;
+		font-size: var(--std-text-sm);
+		line-height: var(--std-leading-sm);
 		color: var(--lh-tertiary-color);
 	}
 
@@ -108,17 +109,17 @@
 		height: 1px;
 	}
 
-	/* body 内距组件级变量（消费方可覆盖，如面板容器需要均匀边距）；默认 sard 标准 10px 16px */
 	.app-card-body {
-		padding: var(--lh-card-body-padding-y, 10px) var(--lh-card-body-padding-x, 16px);
+		padding: var(--std-card-pad-y) var(--std-card-pad-x);
 	}
 
 	.app-card-footer {
-		padding: 10px 16px;
+		padding: var(--std-card-pad-y) var(--std-card-pad-x);
 	}
 
 	.app-card-footer-text {
-		font-size: 14px;
+		font-size: var(--std-text-base);
+		line-height: var(--std-leading-base);
 		color: var(--lh-tertiary-color);
 	}
 </style>

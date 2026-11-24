@@ -8,14 +8,14 @@
 		<scroll-view class="setup-step-body" :bounces="false" :show-scrollbar="false">
 			<view class="setup-form">
 			<view class="setup-field">
-				<app-input shape="round" :height="45" placeholder="请输入用户昵称" :maxlength="20" clearable
+				<app-input shape="round" placeholder="请输入用户昵称" :maxlength="20" clearable
 					v-model="nickname" />
 			</view>
 			<view class="setup-field">
-				<app-input shape="round" :height="45" placeholder="请输入手机号码（非必填）" clearable v-model="phoneNumber" />
+				<app-input shape="round" placeholder="请输入手机号码（非必填）" clearable v-model="phoneNumber" />
 			</view>
 			<view class="setup-field">
-				<app-input shape="round" :height="45" placeholder="请输入电子邮箱（非必填）" clearable v-model="email" />
+				<app-input shape="round" placeholder="请输入电子邮箱（非必填）" clearable v-model="email" />
 			</view>
 			<view class="setup-field">
 				<!-- 性别选择行：与输入框行同构（值/placeholder 居左+右箭头），点击弹底部操作菜单 -->

@@ -994,10 +994,10 @@
 		animation: app-swipe-remove 300ms ease forwards;
 	}
 
-	/* 行收起动画（tree 同款 max-height 两档；行盒 54 与列表行同构（padding 直构后），内容更高的消费场景届时按实高适配） */
+	/* 行收起动画（tree 同款 max-height 两档；首档 52=列表行高（行盒 22+留白 15×2），内容更高的消费场景届时按实高适配） */
 	@keyframes app-swipe-remove {
 		0% {
-			max-height: 54px;
+			max-height: 52px;
 			opacity: 1;
 		}
 
