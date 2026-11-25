@@ -180,15 +180,15 @@ defineExpose({ remeasure: measureStrength })
 	border-radius: var(--std-radius-full);
 }
 
-/* size 档内距：sm 6 / lg 14 */
+/* size 档内距：sm / lg 走控件留白 token */
 .app-input-sm {
-	padding-top: 6px;
-	padding-bottom: 6px;
+	padding-top: var(--std-control-pad-y-sm);
+	padding-bottom: var(--std-control-pad-y-sm);
 }
 
 .app-input-lg {
-	padding-top: 14px;
-	padding-bottom: 14px;
+	padding-top: var(--std-control-pad-y-lg);
+	padding-bottom: var(--std-control-pad-y-lg);
 }
 
 .app-input-disabled {

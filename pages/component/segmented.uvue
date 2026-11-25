@@ -1,7 +1,7 @@
 <template>
 	<view class="page-padding">
 		<app-card>
-			<text class="demo-label">基础（v-model + 拖动滑块）</text>
+			<text class="demo-label">基础（v-model + 按住滑块拖动）</text>
 			<view class="demo-row">
 				<app-segmented v-model="segValue" :options="segOptions" @change="onSegChange" />
 			</view>
@@ -18,7 +18,29 @@
 		</app-card>
 
 		<app-card class="demo-card">
-			<text class="demo-label">shape=round 胶囊 + size 三档（32/40/44）</text>
+			<text class="demo-label">size 三档：外高与同档输入框相等（32 / 44 / 52）</text>
+			<view class="demo-row">
+				<app-segmented v-model="segSize" :options="segOptions" size="small" />
+			</view>
+			<view class="demo-row">
+				<app-input v-model="cmpText" size="small" placeholder="输入框 small（32）" />
+			</view>
+			<view class="demo-row">
+				<app-segmented v-model="segSize" :options="segOptions" />
+			</view>
+			<view class="demo-row">
+				<app-input v-model="cmpText" placeholder="输入框 default（44）" />
+			</view>
+			<view class="demo-row">
+				<app-segmented v-model="segSize" :options="segOptions" size="large" />
+			</view>
+			<view class="demo-row">
+				<app-input v-model="cmpText" size="large" placeholder="输入框 large（52）" />
+			</view>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">shape=round 胶囊 + size 三档</text>
 			<view class="demo-row">
 				<app-segmented v-model="segRound" :options="segOptions" shape="round" size="small" />
 			</view>
@@ -31,21 +53,44 @@
 			<text class="demo-value">value = {{ segRound }}</text>
 		</app-card>
 
-		<!-- iOS 液态玻璃滑块：彩色背景供玻璃采样 -->
 		<app-card class="demo-card">
-			<text class="demo-label">iOS 液态玻璃滑块（彩色背景采样，拖动看材质）</text>
-			<view class="seg-stage">
-				<view class="seg-color-row">
-					<view class="seg-color-block seg-c1" />
-					<view class="seg-color-block seg-c2" />
-					<view class="seg-color-block seg-c3" />
-					<view class="seg-color-block seg-c4" />
-					<view class="seg-color-block seg-c5" />
+			<text class="demo-label">图标：options 的 icon 字段（图标+文字 / 纯图标）</text>
+			<view class="demo-row">
+				<app-segmented v-model="segIcon" :options="segIconOptions" />
+			</view>
+			<view class="demo-row">
+				<app-segmented v-model="segIconOnly" :options="segIconOnlyOptions" shape="round" />
+			</view>
+			<text class="demo-label">#icon 作用域插槽自定义（item / index / selected）</text>
+			<view class="demo-row">
+				<app-segmented v-model="segSlot" :options="segOptions">
+					<template #icon="{ index, selected }">
+						<uni-icons class="seg-slot-icon" :class="selected ? 'seg-slot-icon-on' : ''"
+							:type="slotIcons[index]" />
+					</template>
+				</app-segmented>
+			</view>
+			<text class="demo-value">value = {{ segSlot }}</text>
+		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">宽度随内容、靠左（block=false）：段位取最宽者等分</text>
+			<view class="demo-row">
+				<app-segmented v-model="segHug" :options="segHugOptions" :block="false" />
+			</view>
+			<text class="demo-label">触感自检：点一下看结果</text>
+			<view class="demo-row demo-haptic-row">
+				<view class="demo-haptic-btn" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="onHaptic('light')">
+					<text class="demo-haptic-btn-text">轻震</text>
 				</view>
-				<view class="seg-stage-control">
-					<app-segmented v-model="segGlass" :options="segGlassOptions" shape="round" />
+				<view class="demo-haptic-btn" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="onHaptic('heavy')">
+					<text class="demo-haptic-btn-text">强震</text>
 				</view>
 			</view>
+			<text class="demo-value">{{ hapticLog }}</text>
+			<text class="demo-label">{{ envText }}</text>
 		</app-card>
 	</view>
 </template>
@@ -53,8 +98,10 @@
 <script setup lang="ts">
 	import AppCard from '@/components/app-card/app-card.uvue'
 	import AppSegmented from '@/components/app-segmented/app-segmented.uvue'
+	import AppInput from '@/components/app-input/app-input.uvue'
+	import { haptic } from '@/utils/haptic'
 
-	// 基础（字符串选项；拖动/点选双通道）
+	// 基础（字符串选项；点选/拖动）
 	const segOptions = ['全部', '未读', '已读']
 	const segValue = ref<string>('全部')
 	const segValue3 = ref<string>('未读')
@@ -71,63 +118,82 @@
 	]
 	const segValue2 = ref<string>('day')
 
+	// size 三档（与同档输入框上下比高）
+	const segSize = ref<string>('全部')
+	const cmpText = ref<string>('')
+
 	// 胶囊形态 + 三档尺寸（同值联动）
 	const segRound = ref<string>('全部')
 
-	// iOS 玻璃演示（彩色舞台上采样）
-	const segGlassOptions = ['一', '二', '三']
-	const segGlass = ref<string>('一')
+	// 图标：icon 字段（uni-icons 字形名）
+	const segIconOptions = [
+		{ label: '列表', value: 'list', icon: 'list' },
+		{ label: '日历', value: 'calendar', icon: 'calendar' }
+	]
+	const segIcon = ref<string>('list')
+
+	// 纯图标段（label 空串）
+	const segIconOnlyOptions = [
+		{ label: '', value: 'list', icon: 'list' },
+		{ label: '', value: 'images', icon: 'images' }
+	]
+	const segIconOnly = ref<string>('list')
+
+	// #icon 作用域插槽：按段序号取字形，选中色由 selected 控制
+	const segSlot = ref<string>('全部')
+	const slotIcons = ['email', 'notification', 'checkmarkempty']
+
+	// 宽度随内容（block=false）：不等宽文案也取最宽者等分
+	const segHug = ref<string>('日')
+	const segHugOptions = ['列表', '日', '日历视图']
+
+	// 触感自检：点击即显示「已调用」，回调/异常/超时分别显示；另显示运行环境
+	const hapticLog = ref<string>('未测试')
+	const sysInfo = uni.getSystemInfoSync()
+	const envText = `运行时 ${sysInfo.uniRuntimeVersion} · 编译器 ${sysInfo.uniCompilerVersion} · ${sysInfo.osName} ${sysInfo.osVersion}`
+	const onHaptic = (type : 'light' | 'medium' | 'heavy') => {
+		hapticLog.value = `${type}：已调用，等待回调…`
+		const state = { done: false }
+		haptic(type, (text : string) => {
+			state.done = true
+			hapticLog.value = text
+		})
+		setTimeout(() => {
+			if (!state.done) {
+				hapticLog.value = `${type}：1.5 秒内没有回调`
+			}
+		}, 1500)
+	}
 </script>
 
 <style lang="scss">
 	@import '@/styles/demo.scss';
+	/* 按压类（styles/press.scss）：触感自检按钮 */
+	@import '@/styles/press.scss';
 
-	/* iOS 玻璃采样舞台：五色块铺底，分段器浮上 */
-	.seg-stage {
-		position: relative;
-		margin-top: 12px;
-		height: 96px;
-		border-radius: 8px;
-		overflow: hidden;
-	}
-
-	.seg-color-row {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		left: 0;
-		right: 0;
+	/* 触感自检按钮行 */
+	.demo-haptic-row {
 		flex-direction: row;
 	}
 
-	.seg-color-block {
-		flex: 1;
+	.demo-haptic-btn {
+		margin-right: var(--std-gap-lg);
 	}
 
-	.seg-c1 {
-		background-color: #ff453a;
+	.demo-haptic-btn-text {
+		font-size: var(--std-text-lg);
+		line-height: var(--std-leading-lg);
+		color: var(--std-primary);
 	}
 
-	.seg-c2 {
-		background-color: #ffd60a;
+	/* #icon 插槽内容样式归消费方：与文字的间距、选中色自管 */
+	.seg-slot-icon {
+		margin-right: var(--std-gap-xs);
+		font-size: 18px;
+		color: var(--std-secondary-color);
 	}
 
-	.seg-c3 {
-		background-color: #30d158;
-	}
-
-	.seg-c4 {
-		background-color: #0a84ff;
-	}
-
-	.seg-c5 {
-		background-color: #bf5af2;
-	}
-
-	.seg-stage-control {
-		position: absolute;
-		top: 30px;
-		left: 32px;
-		right: 32px;
+	.seg-slot-icon-on {
+		color: var(--std-emphasis-color);
 	}
 </style>

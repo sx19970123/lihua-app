@@ -33,7 +33,9 @@ page {
 
 	--std-form-gap: 12px;  /* 表单项纵向间距 */
 
-	--std-control-pad-y: 10px;  /* 带边框控件（输入框/选择行）纵向内距 */
+	--std-control-pad-y-sm: 6px;  /* 紧凑控件纵向内距（输入框/分段器 small 档） */
+	--std-control-pad-y: 10px;  /* 控件纵向内距（输入框/选择行/分段器 default 档） */
+	--std-control-pad-y-lg: 14px;  /* 大档控件纵向内距（输入框/分段器 large 档） */
 	--std-btn-pad-y: 11px;  /* 无边框按钮纵向内距 */
 
 	--std-radius: 12px;  /* 主圆角 */
