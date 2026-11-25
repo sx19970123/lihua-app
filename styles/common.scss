@@ -3,8 +3,7 @@
 	padding: 0 var(--std-page-margin-x);
 }
 
-/* 安全区顶部避让：custom 导航页最外层挂载（内部布局与状态栏语义解耦）；
-   padding 实现（等价 margin 且无父子折叠风险），Web 端变量为 0 天然退化 */
+/* 安全区顶部避让：custom 导航页最外层挂载（padding 实现，Web 端变量为 0） */
 .safe-top {
 	padding-top: var(--status-bar-height);
 }

@@ -1,4 +1,4 @@
-// crypto-js 为纯 CJS 包在 x 打包器无互操作，换其 ESM 同源移植 crypto-es（扁平具名导出形态）
+// MD5 计算（crypto-es：crypto-js 的 ESM 同源移植）
 import { MD5, WordArray } from 'crypto-es'
 import type {FileInfoType} from '../attachment-utils'
 

@@ -14,7 +14,7 @@
 <script setup lang="ts">
 	import AppTree from '@/components/app-tree/app-tree.uvue'
 
-	// 示例数据（key 全树唯一——组件契约，重复 key 致过滤失效/diff 崩溃）
+	// 示例数据（key 须全树唯一）
 	const demoTree = [
 		{
 			key: 'hq', title: '狸花猫科技', children: [

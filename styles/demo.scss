@@ -1,9 +1,6 @@
-/**
- * 组件 demo 页公共样式（pages/component/* 各页 @import，编译期合并）
- * 从原 pages/demo/demo.uvue 抽取，类名单源维护勿在各页复制
- */
+/** 组件 demo 页公共样式（pages/component/* 各页 @import） */
 
-/* 外部 class 落 app-card 根（隔离 2.0 单根组件），间距归消费方 */
+/* 外部 class 落 app-card 根，间距归消费方 */
 .demo-card {
 	margin-top: var(--std-gap-lg);
 }
@@ -31,7 +28,7 @@
 	color: var(--std-emphasis-color);
 }
 
-/* 自带卡片壳的组件（tree/list）不套外卡，标签直接落页面：与上方卡片的间距+与组件的间距 */
+/* 自带卡片壳的组件（tree/list）不套外卡，标签直接落页面 */
 .demo-bare-label {
 	margin-top: var(--std-gap-lg);
 	margin-bottom: var(--std-gap-md);

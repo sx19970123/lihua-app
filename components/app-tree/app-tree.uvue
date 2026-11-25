@@ -1,14 +1,12 @@
 <template>
-	<!-- 面板+筛选框+树整体封装：外部只传数据与开关（filterable 控制搜索框显隐）；
-	     面板自管（不套 app-card——树行自带结构边距，叠卡片 body 内距会双重边距），圆角与 card 同款 token -->
+	<!-- 面板+筛选框+树整体封装：外部只传数据与开关（filterable 控制搜索框显隐） -->
 	<view class="app-tree-panel">
 		<view v-if="filterable" class="app-tree-search">
 			<app-input shape="round" :size="searchSize" :height="searchHeight"
 				:placeholder="searchPlaceholder ?? '请输入关键词'" clearable v-model="keyword" />
 		</view>
 		<scroll-view class="app-tree-scroll" :style="{height: scrollHeight + 'px'}">
-			<!-- 节点全量常驻（过滤/收起只切烘焙 class 的 max-height、元素永不销毁——x 端批量行销毁
-			     触发框架 Element::Dispose 崩溃，sard 的 v-if 销毁流派在 Vapor 不可用）；缩进按层级内联 -->
+			<!-- 节点全量常驻：过滤/收起只切 class，元素不销毁；缩进按层级内联 -->
 			<view v-for="state in allStates" :key="state.item.key" :class="state.nodeCls"
 				:style="{paddingLeft: (state.level * 20) + 'px'}">
 				<view :class="state.hitCls"
@@ -19,7 +17,7 @@
 						<uni-icons v-if="hasChildren(state.item)" class="app-tree-arrow-icon" :class="state.arrowCls"
 							type="right" />
 					</view>
-					<!-- 关键词高亮=三段常驻 text（空串零宽度；内容烘焙进 state，纯文本 patch 无元素增删） -->
+					<!-- 关键词高亮=三段常驻 text（空串零宽度，无元素增删） -->
 					<text class="app-tree-title"><text class="app-tree-title-seg">{{ state.segBefore }}</text><text
 							class="app-tree-title-hit">{{ state.segHit }}</text><text
 							class="app-tree-title-seg">{{ state.segAfter }}</text></text>
@@ -27,9 +25,7 @@
 					<loading v-if="loading && state.item.key === loadingKey" class="app-tree-loading" />
 					<uni-icons v-else-if="state.item.key === current" class="app-tree-check"
 						type="checkmarkempty" />
-					<!-- 行底分隔线（hit 内=左端随行缩进从标题发出、右端与按压块右缘平齐；
-					     与按压色同 token——按压时本行底线在高亮上同色隐形、上一行底线由高亮上探阴影盖住；
-					     显隐烘焙 state.showLine——首个可见行上方与末行下方无线） -->
+					<!-- 行底分隔线：色挂按压类（按压时同色隐形）；显隐烘焙 state.showLine -->
 					<view v-show="state.showLine" class="app-tree-line app-pressed-row" />
 				</view>
 			</view>
@@ -39,15 +35,14 @@
 </template>
 
 <script setup lang="ts">
-	// 通用树形组件（sard Tree 最小复刻）：卡片+可选筛选框+层级缩进+展开收起+单选（行尾对勾）+宽松过滤。
-	// 渲染=全量常驻+可见性切换（非销毁；x 端 Element::Dispose 崩溃规避），
-	// 非组件递归（x 编译链递归组件无先例）；整块点击=选中，箭头点击=展开收起
+	// 通用树形组件：面板+可选筛选框+层级缩进+展开收起+单选（行尾对勾）+宽松过滤。
+	// 渲染=全量常驻+可见性切换（不销毁元素）；整块点击=选中，箭头点击=展开收起
 	import AppInput from '@/components/app-input/app-input.uvue'
 	import { useThemeStore } from '@/stores/theme'
 	import { STD_ROW_HEIGHT, STD_TREE_EMPTY_HEIGHT } from '@/utils/tokens-std'
 
 	interface TreeItem {
-		// key 必须全树唯一（显隐集合/v-for 复用都以其为身份；重复 key 会导致过滤失效与 diff 崩溃，sard 同款契约）
+		// key 必须全树唯一（显隐集合/v-for 复用以其为身份）
 		key: string
 		title: string
 		children?: TreeItem[]
@@ -65,7 +60,7 @@
 		showLine: boolean
 		// 首个可见行（上方无线，hit 不上探；过滤态重算）
 		firstVisible: boolean
-		// 行/按压块的完整 class（烘焙纯读——x 端仅单类选择器，嵌套/后代选择器不生效）
+		// 行/按压块的完整 class（模板纯读；x 端仅单类选择器）
 		nodeCls: string
 		hitCls: string
 		// 标题三段（命中段高亮；非过滤态 segBefore=整段、其余空串）
@@ -82,12 +77,12 @@
 		current?: string
 		// 显示内置筛选框（关键词宽松过滤+命中高亮）
 		filterable?: boolean
-		// 筛选框透传子集（同名显式转发给内置 app-input；缺省 default 档=标准控件高 44，搜索框属默认控件非紧凑档）
+		// 筛选框透传子集（转发给内置 app-input；缺省 default 档）
 		searchPlaceholder?: string
 		searchSize?: 'small' | 'default' | 'large'
 		searchHeight?: number
-		// 行内加载态：loadingKey 对应行尾显示转圈（替代全屏 showLoading；结束后 current 更新为对勾）
-		// 只读：整行点击不触发选中与按压反馈（箭头展开收起保留，纯浏览场景）
+		// 行内加载态：loadingKey 对应行尾显示转圈
+		// 只读：整行点击不触发选中与按压反馈（箭头展开收起保留）
 		readonly?: boolean
 		loading?: boolean
 		loadingKey?: string
@@ -136,7 +131,7 @@
 		}
 	}, { immediate: true })
 
-	// 过滤关键字（经 filter 方法置入，sard 同款调用面）
+	// 过滤关键字（经 filter 方法置入）
 	const keyword = ref<string>('')
 	const filtering = computed(() : boolean => keyword.value !== '')
 
@@ -154,7 +149,7 @@
 		}
 	}
 
-	// 行内 loading 兼任操作锁：loading 期间拒绝新选中（转圈即就地反馈，无需额外提示）
+	// 行内 loading 兼任操作锁：loading 期间拒绝新选中
 	const onSelect = (item : TreeItem) => {
 		if (props.readonly || props.loading) {
 			return
@@ -217,14 +212,11 @@
 		})
 	}
 
-	// 状态烘焙：写入 state 字段、模板纯属性读（class 绑定读烘焙字段可靠；不可靠的是
-	// 函数调用形态 :class="fn()"——不跟踪函数内依赖，v3 实证）
-	// 上一次烘焙的可见快照（判定「刚收起」：仅这些行挂动画变体类，稳态收起行无 animation——
-	// 切后台恢复时系统重置渲染层动画会把常驻动画打回起始帧撑出空白，触摸触发 relayout 才复原）
+	// 状态烘焙：写入 state 字段，模板纯属性读。
+	// prevShownMap 为上次的可见快照：与快照相反的行挂动画变体类，稳态不挂 animation
 	const prevShownMap = new Map<string, boolean>()
 
-	// 动画收尾重烘焙触发器：收起动画播完后自增（见 deferredRows 定时器），把 -anim 变体
-	// 切回静态收起类——forwards 不可常驻（切后台恢复时动画被重置会打回起始帧撑出空白）
+	// 动画收尾重烘焙触发器：收起/展开动画播完后自增，把动画变体切回静态类
 	const animEpoch = ref(0)
 
 	watchEffect(() => {
@@ -249,14 +241,12 @@
 				state.segHit = ''
 				state.segAfter = ''
 			}
-			// 首可见行：上方无线可盖无需上探（上探 1px 会伸出 scroll-view 内容顶被裁，
-			// 按压时灰块顶部圆角削平）
+			// 首可见行不上探（上探会伸出滚动区顶被裁）
 			state.firstVisible = !seenBefore && state.shown
 			if (state.shown) {
 				seenBefore = true
 			}
-		// class（x 端仅单类选择器，模板 class 全走烘焙字段纯读）；展开/收起各两态：
-		// 刚变化（与上次可见快照相反）挂动画变体播 180ms，稳态挂无动画静态类
+		// class：刚变化的行挂动画变体（180ms），稳态挂无动画静态类
 		const wasShown = prevShownMap.get(state.item.key) ?? state.shown
 		let nodeCls = 'app-tree-node'
 		if (!state.shown) {
@@ -281,14 +271,12 @@
 
 	const visibleCount = computed(() : number => visibleKeySet.value.size)
 
-	// 行高/空态高度：std token JS 镜像（utils/tokens-std.ts，与 tokens-std.scss 成对；
-	// node max-height/keyframes/hit/arrow 的 52px 字面量同源——改值两处+校验脚本）
+	// 行高/空态高度：std token 的 JS 镜像（utils/tokens-std.ts）
 	const ROW_HEIGHT = STD_ROW_HEIGHT
 	const EMPTY_HEIGHT = STD_TREE_EMPTY_HEIGHT
 
-	// 容器行数延迟跟随（仅收起方向）：行渐收动画 180ms 播完容器再收终值——否则容器瞬缩会把
-	// 渐收中的末尾行裁在视口外（收起末尾子树时动画完全不可见）；到点读实时行数，连续操作幂等。
-	// 展开或收起后 200ms 都重烘焙一次：把播完的动画变体切回稳态类
+	// 容器行数延迟跟随（收起方向）：动画播完容器再收终值，否则渐收中的末尾行会被裁在视口外；
+	// 展开/收起后 200ms 重烘焙一次，把播完的动画变体切回稳态类
 	const deferredRows = ref<number>(visibleCount.value)
 	watch(visibleCount, (rows) => {
 		const collapsing = rows < deferredRows.value
@@ -303,8 +291,7 @@
 		}, 200)
 	})
 
-	// 滚动区显式高度：行数×行高（空态给 empty 高度），超 maxHeight 截断——不依赖内容
-	// 自然测量（后台恢复时内容已收、容器测量链陈旧会残留底部空白，显式高度静态可算）
+	// 滚动区显式高度：行数×行高（空态给 empty 高度），超 maxHeight 截断
 	const scrollHeight = computed(() : number => {
 		return deferredRows.value === 0 ? EMPTY_HEIGHT : Math.min(deferredRows.value * ROW_HEIGHT, props.maxHeight ?? 210)
 	})
@@ -314,8 +301,7 @@
 		keyword.value = value
 	}
 
-	// 按压高亮亮暗感知走 theme store（hover-class 原生驱动不重算 @media/var，
-	// 双类字面量+动态绑定的选类依据；感知实现收敛于 stores/theme.ts）
+	// 按压高亮亮暗感知（选 hover 亮/暗类）
 	const themeStore = useThemeStore()
 	themeStore.init()
 
@@ -323,11 +309,10 @@
 </script>
 
 <style lang="scss">
-	/* 按压三等级统一维护点（styles/press.scss，编译期合并）；按压色与分隔线同色规范见彼处 */
+	/* 按压类（styles/press.scss） */
 	@import '@/styles/press.scss';
 
-	/* 面板壳：底色/圆角与 app-card 同款 token；上下常驻 8px（scroll-view 的 css padding
-	   在 x 端不生效，边距收在面板上兜底）；纵向 16px 等距体系（面板 8+区间 8） */
+	/* 面板壳：底色/圆角走 token；上下内距 8px（scroll-view 的 css padding 在 x 端不生效） */
 	.app-tree-panel {
 		flex-direction: column;
 		width: 100%;
@@ -338,64 +323,49 @@
 		overflow: hidden;
 	}
 
-	/* 搜索区内距：上 8（面板 8+8=框顶 16）、下 8——与首行按压高亮留出间隙（下内距 0 时高亮
-	   紧贴框底；按行间节奏留 15 则框底到首行文字合计 30 偏大，2026-11-25 两轮用户反馈）；
-	   左右=行内距；filterable 关闭时不渲染零残留 */
+	/* 搜索区内距：上下 8px（下内距与首行按压高亮留出间隙），左右=行内距 */
 	.app-tree-search {
 		padding: var(--std-gap-sm) var(--std-list-pad-x);
 	}
 
-	/* 滚动区（.app-tree-scroll）高度由 scrollHeight 计算显式驱动（可见行数×行高，超 maxHeight
-	   截断、空态给 empty 高度）——不靠内容自然撑，规避后台恢复的容器测量陈旧 */
+	/* 滚动区高度由 scrollHeight 显式驱动 */
 
-	/* 行基准=std 行高 token（--std-row-height=行盒 22+留白 15×2，与 list-item 同构同高），
-	   缩进 20px/级，箭头 16px 旋 90°，选中=仅行尾对勾 */
+	/* 行基准：高度=行高 token；缩进 20px/级，箭头 16px 旋 90°，选中=行尾对勾 */
 	.app-tree-node {
-		/* 高度权威源=max-height 单属性（官方 collapse 同款：内容自然高被压到行高，hit 上探
-		   1px 靠 overflow visible 溢出渲染）；两态 行高↔0 由展开收起动画过渡 */
+		/* 高度权威源=max-height 单属性：展开=行高，收起=0，由动画过渡 */
 		max-height: var(--std-row-height);
 		position: relative;
-		/* 允许 hit 上探 1px 渲染（x 端 overflow 默认 hidden 裁子内容，官方 overflow.md：
-		   view 显式 visible 全端可用；子元素仅越盒 1px，渲染开销可忽略） */
+		/* 允许按压块上探 1px 渲染 */
 		overflow: visible;
-		/* max-height 过渡：App(Vapor) 端不生效，两端展开收起均走 keyframes 变体类；此过渡仅在
-		   Web/微信端动画被重烘焙提前打断时补一段平滑收尾 */
+		/* max-height 过渡：App 端不生效（走下方 keyframes），仅 Web/微信端用于被打断时的平滑收尾 */
 		transition-property: max-height;
 		transition-duration: 180ms;
 		transition-timing-function: ease;
 	}
 
-	/* 收起稳态：纯静态（无 animation）——后台切换恢复时系统会重置渲染层动画，常驻动画被
-	   打回起始帧撑出空白占位（触摸触发 relayout 才复原），故动画只由 -anim 变体短暂承担 */
+	/* 收起稳态：静态无 animation（常驻动画切后台恢复时会被重置） */
 	.app-tree-node-collapsed {
 		max-height: 0px;
 		overflow: hidden;
 	}
 
-	/* 刚收起行的动画变体（烘焙按 prevShown 快照判定，播完由 animEpoch 重烘焙切回静态类）：
-	   max-height 的 transition 在 Vapor 端不生效，改 keyframes（宽高 animation 5.31+ 可行）。
-	   静态值取起始高而非 0——否则动画起播前的间隙帧按 0 布局=行先塌后弹（眨眼）；
-	   forwards（Vapor 唯一支持的 fill-mode）保持终值到重烘焙，与静态 0 同值无缝 */
+	/* 刚收起行的动画变体：静态值取起始高，forwards 保持终值到重烘焙切回静态类 */
 	.app-tree-node-collapsed-anim {
 		max-height: var(--std-row-height);
 		overflow: hidden;
-		/* 内容贴底：行高变化时内容随底边滑动（收起向上滑入父节点/展开自上方滑下）；
-		   顶对齐则首行内容原地被裁=「第一个子节点不动、其他节点收到它上面」 */
+		/* 内容贴底：行高变化时内容随底边滑动 */
 		justify-content: flex-end;
 		animation-name: app-tree-shrink;
 		animation-duration: 180ms;
-		/* 缓起快收=打开（ease 快起缓收）的时间镜像，收起才不显快（2026-11-24 用户反馈） */
+		/* 缓起快收，与展开的 ease-out 互为时间镜像 */
 		animation-timing-function: ease-in;
 		animation-fill-mode: forwards;
 	}
 
-	/* 收起动画只动 max-height：每个状态类都显式声明它，forwards 保持的终值在类切换时有值可还原。
-	   勿把 opacity 放进来——节点各状态类都不声明 opacity，forwards 写入的 0 在类移除后无值还原，
-	   展开后内容全白（2026-11-24 真机实证）；内容层不做淡出/位移，由行高收缩裁切
-	   （App 端 transition 不支持多属性多参数，内容层单独过渡不可靠） */
+	/* 收起动画只动 max-height（各状态类都显式声明它，类切换后有值可还原）；勿加 opacity */
 	@keyframes app-tree-shrink {
 		from {
-			/* keyframes 只认固定字面量（x 端限制），与 --std-row-height 同步由 skill 自查规则②守 */
+			/* 字面量须与 --std-row-height 同值（keyframes 不支持 var） */
 			max-height: 52px;
 		}
 		to {
@@ -403,9 +373,7 @@
 		}
 	}
 
-	/* 刚展开行的动画变体（与收起同构：静态值取起始高 0、forwards 保持终值到重烘焙切回基类）：
-	   快起缓收（ease-out）=收起 ease-in 的时间镜像，时长一致——两端展开收起观感对称。
-	   只动 max-height（理由同收起 keyframes） */
+	/* 刚展开行的动画变体：与收起同构（起始 0、forwards 保持终值到重烘焙） */
 	.app-tree-node-entering {
 		max-height: 0px;
 		overflow: hidden;
@@ -421,15 +389,12 @@
 			max-height: 0px;
 		}
 		to {
-			/* keyframes 只认固定字面量（x 端限制），与 --std-row-height 同步由 skill 自查规则②守 */
+			/* 字面量须与 --std-row-height 同值（keyframes 不支持 var） */
 			max-height: 52px;
 		}
 	}
 
-	/* 按压块：高 53=行高+1，配 margin-top -1px 上探 1px——上探的 1px 并入自身高度，
-     行距恒=行高 52 且稳态与动画态几何连续（按压高亮同色盖住上一行底线，本行底线贴行底、
-     在块内同色隐形=上下两线按压时齐隐）；左右内缩 8px（面板内边距兼按压高亮区）；
-     不用 absolute（其 left 基准=行 padding box 外缘，行上内联的层级缩进 paddingLeft 会失效） */
+	/* 按压块：高=行高+1，配 margin-top -1px 上探 1px（行距恒=行高，可盖住上一行底线）；左右内缩 8px */
 	.app-tree-hit {
 		flex-direction: row;
 		align-items: center;
@@ -443,17 +408,13 @@
 		position: relative;
 	}
 
-	/* 首个可见行不上探（正满行高）：上方无线可盖，且上探 1px 会伸出 scroll-view 内容顶被裁，
-	   按压灰块顶部圆角削平=「上方截断」观感 */
+	/* 首个可见行不上探（满行高，上方无线可盖） */
 	.app-tree-hit-first {
 		height: var(--std-row-height);
 		margin-top: 0;
 	}
 
-	/* 分隔线挂行底（视觉习惯=行的下边框）：左端 40（箭头槽右缘+2，标题起点附近）——右端 8 止于
-	   本行圆角切点；两端坐标同时避开「下一行按压灰块的左/右上圆角缺口」：父子相邻时上行缩进浅
-	   20px，线左端相对子行灰块偏移=40-20=20，远出切点（圆角 8）无交叠；
-	   色挂同名按压类 app-pressed-row（常驻走 @media 自动亮暗，与按压同一定义——按压时本行底线同色隐形） */
+	/* 分隔线挂行底：左端 40=箭头槽右缘+2，右端 8；色挂按压类 */
 	.app-tree-line {
 		position: absolute;
 		left: 40px;
@@ -462,8 +423,7 @@
 		height: 1px;
 	}
 
-	/* 箭头触区扩大（视觉图标仍 16 居中）：宽 32×满行高 52——约 3 倍触区超 iOS 最小触目标，
-	   展开收起不用精准戳小方块；标题起点随之右移（hit 内距 6+槽 32=38），分隔线 left 联动 40 */
+	/* 箭头触区：宽 32×满行高（视觉图标 16 居中）；标题起点与分隔线 left 随之联动 */
 	.app-tree-arrow {
 		width: 32px;
 		height: var(--std-row-height);
@@ -482,7 +442,7 @@
 		transform: rotate(90deg);
 	}
 
-	/* 标题单行省略（挂外层容器：嵌套子 text 的 text 独有样式不生效，官方单行三件套） */
+	/* 标题单行省略（挂外层容器） */
 	.app-tree-title {
 		flex: 1;
 		white-space: nowrap;
@@ -490,7 +450,7 @@
 		overflow: hidden;
 	}
 
-	/* 标题分段（x 端 text 样式不继承，字号/行高/颜色逐段显式；暗色随 token 自适应） */
+	/* 标题分段（text 样式不继承，字号/行高/颜色逐段显式） */
 	.app-tree-title-seg {
 		font-size: var(--std-text-lg);
 		line-height: var(--std-leading-lg);
@@ -511,7 +471,7 @@
 		margin-left: 8px;
 	}
 
-	/* 行内加载转圈（内置 loading 组件：渲染线程驱动，与对勾同位） */
+	/* 行内加载转圈（与对勾同位） */
 	.app-tree-loading {
 		width: 16px;
 		height: 16px;
@@ -519,7 +479,7 @@
 		margin-left: 8px;
 	}
 
-	/* 空态外包 view 承载居中（x 端 text 自身 text-align 居中不可靠）；v-show 常驻不销毁 */
+	/* 空态：外包 view 承载居中；v-show 常驻不销毁 */
 	.app-tree-empty {
 		justify-content: center;
 		padding: 8px 0;

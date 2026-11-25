@@ -31,7 +31,7 @@
 			<text class="demo-value">value = {{ segRound }}</text>
 		</app-card>
 
-		<!-- iOS 液态玻璃滑块：彩色背景供玻璃采样（26+ 液态/15-25 毛玻璃；其余端实色滑块） -->
+		<!-- iOS 液态玻璃滑块：彩色背景供玻璃采样 -->
 		<app-card class="demo-card">
 			<text class="demo-label">iOS 液态玻璃滑块（彩色背景采样，拖动看材质）</text>
 			<view class="seg-stage">
@@ -82,7 +82,7 @@
 <style lang="scss">
 	@import '@/styles/demo.scss';
 
-	/* iOS 玻璃采样舞台：五色块铺底，分段器浮上（官方示例 color-row 手法） */
+	/* iOS 玻璃采样舞台：五色块铺底，分段器浮上 */
 	.seg-stage {
 		position: relative;
 		margin-top: 12px;

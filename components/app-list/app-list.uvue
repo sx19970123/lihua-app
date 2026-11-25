@@ -10,11 +10,10 @@
 </template>
 
 <script setup lang="ts">
-	// 通用列表容器（sard List card 模式最小复刻，旧仓消费 100% card）：卡外组标题+卡片内容区；
-	// 行组件 app-list-item 经默认插槽装入，两组件纯插槽解耦
+	// 通用列表容器：卡外组标题 + 卡片内容区；行组件 app-list-item 经默认插槽装入
 
 	defineProps<{
-		// 卡片外组标题（iOS 设置页分组小字风格，如设置页「基础设置/权限信息/安全设置」）
+		// 卡外组标题
 		title?: string
 	}>()
 </script>
@@ -24,21 +23,21 @@
 		flex-direction: column;
 	}
 
-	/* 组标题：卡外小字，左右与行内距对齐 16（外距=std 语义 token 复合值） */
+	/* 组标题：左右与行内距对齐 */
 	.app-list-title {
 		margin: var(--std-list-title-margin);
-		/* line-height 双写（view 份，口径同 app-list-item） */
+		/* line-height 双写（view 份） */
 		line-height: var(--std-leading-sm);
 	}
 
 	.app-list-title-text {
 		font-size: var(--std-text-sm);
-		/* 行高配对走 std 绝对值 token（两端安全，口径同 list-item） */
+		/* line-height 双写（text 份） */
 		line-height: var(--std-leading-sm);
 		color: var(--std-tertiary-color);
 	}
 
-	/* 内容区=卡片形态：白/暗底 token+圆角+overflow hidden 裁子项（首末行圆角继承的 x 替代） */
+	/* 内容区：卡片底色+圆角，overflow hidden 裁子项圆角 */
 	.app-list-content {
 		flex-direction: column;
 		background-color: var(--std-emphasis-bg);

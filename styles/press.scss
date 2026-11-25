@@ -1,21 +1,10 @@
 /*
- * 按压反馈四等级（全仓统一维护点，组件/页面 style 内 @import 使用——scss 编译期
- * 合并进导入者作用域，不受样式隔离限制；页面先例 user-setup.scss）
- *
- * 机制规范（全等级一致）：
- * - hover-class 原生驱动（不走 JS class patch）+ :hover-stay-time="100"（x 默认 400 太长）
- * - 按压场景选类依据=stores/theme.ts 的 isDark（themeStore.isDark ? '-dark' : ''）——
- *   hover 类不能走 var/@media（原生驱动不重算，主题切换停旧色），必须字面量双类
- * - 分隔线强制挂同名按压类（app-pressed-row/block）：常驻渲染走 @media 段自动亮暗，
- *   与按压色同一定义（按压时线画在灰上同色隐形，物理上不可能不同色）；
- *   线自身类只管几何（position/端点/高度）。调按压色/线色只改本文件
- * - 文本级用 opacity（跨亮暗通用，免双类）
- *
- * 色值：亮 gray-200/gray-300、暗 gray-800/gray-700 同源；
- * 行级亮曾用 gray-100 与页面背景 #f7f7f8 同值按压不可见，2026-11-21 用户拍板加深一档
+ * 按压反馈四等级（全仓统一维护，组件/页面 style 内 @import）。
+ * 用法：hover-class 驱动 + :hover-stay-time="100"，暗色按 themeStore.isDark 选 -dark 类；
+ * 类内色值须写字面量（原生驱动不走 var/@media）。
  */
 
-/* 行级（小载体：树行/列表行/行级分隔线） */
+/* 行级（树行/列表行）：行级分隔线也挂本类，自身类只管几何 */
 .app-pressed-row {
 	background-color: #ecedee;
 }
@@ -30,7 +19,7 @@
 	}
 }
 
-/* 卡片级（大载体：整卡可按/卡片分隔线） */
+/* 卡片级（整卡可按/卡片分隔线） */
 .app-pressed-block {
 	background-color: #e2e3e4;
 }
@@ -45,9 +34,7 @@
 	}
 }
 
-/* 灰底内嵌级（secondary-bg 灰底上的内嵌控件：分段器段、胶囊按钮组）——底色锚点与
-   白底载体不同：亮需 gray-300（比 gray-200 底深一档）、暗需 gray-800（比 gray-700 底深一档），
-   现有 row/block 两对各有一半场景与该底同色不可见（2026-11-21 分段器轮实证） */
+/* 灰底内嵌级（secondary-bg 灰底上的控件：分段器段、胶囊按钮组） */
 .app-pressed-inset {
 	background-color: #e2e3e4;
 }
@@ -62,14 +49,13 @@
 	}
 }
 
-/* 文本级（文字链接等无面积元素）——按压压淡不加底，跨亮暗通用 */
+/* 文本级（文字链接等无面积元素）：按压压淡不加底 */
 .app-pressed-text {
 	opacity: 0.5;
 }
 
-/* 滑动/滚动抑制类（透明覆盖）：放文件末位=同特异性压制在前的按压类；抑制走常规 :class
-   通道（hover-class 值恒定铁律——中途切值 Android 双失效，见 cross-platform-pitfalls 坑⑥）；
-   复位在下次 touchstart（盖满 stay-time 余韵防按压色闪回） */
+/* 滑动/滚动抑制类（透明覆盖，须保持在按压类之后）：组件测到位移后经 :class 叠加，
+   下次 touchstart 移除 */
 .app-pressed-none {
 	background-color: transparent;
 }

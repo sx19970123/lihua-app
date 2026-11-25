@@ -5,8 +5,7 @@
 </template>
 
 <script setup lang="ts">
-// checkbox 组容器：provide 上下文使子 app-checkbox 受控于选中值集合（子项需 value prop）；
-// 子项勾选/取消经 toggle 转为 update:modelValue+change。纵向列表布局，横向组合由页面自行排列
+// checkbox 组容器：provide 上下文，子 app-checkbox 受控于选中值集合；勾选/取消转为 update:modelValue+change
 const props = defineProps<{
 	// 选中值集合（v-model，与子项 value 对应）
 	modelValue?: string[]
@@ -32,7 +31,7 @@ provide('app-checkbox-group', {
 <style>
 .app-checkbox-group {
 	flex-direction: column;
-	/* 组首呼吸边距（与组尾子项 margin-bottom 对称），防与上方内容贴合 */
+	/* 组首边距（与组尾对称） */
 	padding-top: var(--std-gap-sm);
 }
 </style>

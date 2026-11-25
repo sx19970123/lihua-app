@@ -1,6 +1,5 @@
 <template>
-	<!-- 假轨道（根）：透明占地——比真轨道四周外扩 12px 形变预算区（液态玻璃拖动形变越轨可见），
-	     视觉全在真轨道上不变；手势挂根（bleed 区也可起拖） -->
+	<!-- 假轨道（根）：透明占地，比真轨道四周外扩 12px；手势挂根 -->
 	<view class="app-segmented" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd"
 		@touchcancel="onTouchEnd">
 		<view :class="trackCls">
@@ -9,10 +8,7 @@
 					:hover-class="hoverCls[i]" :hover-stay-time="100" @click="onItemTap(i)">
 					<text class="app-segmented-label" :class="labelCls[i]">{{ opt.label }}</text>
 				</view>
-				<!-- 滑块：纯材质无文案（选中态=段内文字变色，落下后才高亮）。iOS 端 glass-effect-view
-				     即滑块本体直接吃 transform（原生玻璃孤岛须自身 layer 运动才触发液态形变）；
-				     位移纯响应式单通道（:style 绑定）——glass 元素 ref 无 .style 访问器，
-				     setProperty 直驱在其上全灭（真机实证 undefined is not an object） -->
+				<!-- 滑块：纯材质无文案；位移走 :style 绑定（glass 元素 ref 无 .style 访问器） -->
 				<!-- #ifdef APP-IOS -->
 				<glass-effect-view class="app-segmented-glass" :class="glassRoundCls" :style="pointerStyle"
 					glass-style="clear" :interactive="true" :tint-color="glassTint" />
@@ -26,10 +22,8 @@
 </template>
 
 <script setup lang="ts">
-	// 分段器（sard Segmented x 端复刻+扩展）：等分滑块、点选/拖动切换（默认开启）、
-	// iOS 滑块液态玻璃（26+ 液态/15-25 官方毛玻璃降级，其余端实色 token）。
-	// 滑块位移纯响应式单通道（:style 绑定）：拖动 dragX 1:1 跟手、松手弹簧飞落（utils/spring，
-	// 初速承接末速度=fling 惯性）；玻璃铁律③ ref 无 .style，setProperty 直驱路线不可用
+	// 分段器：等分滑块，点选/拖动切换；iOS 端滑块为液态玻璃，其余端实色。
+	// 滑块位移走 :style 绑定：拖动跟手，松手弹簧落位（utils/spring）
 
 	import { useThemeStore } from '@/stores/theme'
 	import { createSpringControl } from '@/utils/spring'
@@ -45,7 +39,7 @@
 		options : (string | SegmentedOption)[]
 		// 当前值（v-model）
 		modelValue ?: string
-		// 三档：small 28 / middle 36（默认）/ large 40
+		// 三档：small / middle（默认）/ large
 		size ?: 'small' | 'middle' | 'large'
 		// square=主圆角（默认）；round=胶囊
 		shape ?: 'square' | 'round'
@@ -90,18 +84,17 @@
 	// 选中索引（单一响应式真源：滑块位移/段文字变色同源）
 	const index = ref<number>(0)
 
-	// 烘焙类（纯属性读；hover 双类字面量按 isDark 选——原生驱动不重算 var）
+	// 烘焙类（纯属性读）
 	const isRound = computed<boolean>(() => props.shape === 'round')
 	const isDisabledAll = computed<boolean>(() => props.disabled === true)
 
 	const trackCls = computed<string>(() => 'app-segmented-track'
 		+ (isRound.value ? ' app-segmented-track--round' : ''))
-	// 尺寸档落段位（内距直构尺寸，见样式层账）；轨道只管底色圆角
+	// 尺寸档落段位（内距直构）；轨道只管底色圆角
 	const itemCls = computed<string>(() => 'app-segmented-item app-segmented-item--' + (props.size ?? 'middle'))
 	const pointerCls = computed<string>(() => 'app-segmented-pointer' + (isRound.value ? ' app-segmented-pointer--round' : ''))
 	const glassRoundCls = computed<string>(() => (isRound.value ? 'app-segmented-glass--round' : ''))
-	// 滑块位移（纯响应式单通道）：拖动 dragX 1:1 跟手 / 弹簧 animX 逐帧 / 稳态=index×segW；
-	// 全 JS 驱动无 CSS transition（玻璃铁律③：驱动只能走 :style 响应式绑定）
+	// 滑块位移：拖动 dragX 1:1 跟手 / 弹簧 animX 逐帧 / 稳态=index×segW（全 JS 驱动，走 :style 绑定）
 	const segW = ref<number>(0)
 	const dragX = ref<number | null>(null)
 	const animX = ref<number | null>(null)
@@ -127,16 +120,13 @@
 		return themeStore.isDark ? 'app-pressed-inset-dark' : 'app-pressed-inset'
 	}))
 
-	// iOS 玻璃着色=恒透明（试验终态 2026-11-21：拖动现形方案撤——tap 微滑误触 tint=「点击泛白」
-	// 根因；纯色轨道上材质本身无折射内容也不现形，滑块全时隐形、选中态只由段内文字表达）
+	// iOS 玻璃着色=恒透明（滑块隐形，选中态只由段内文字表达）
 	const glassTint = 'transparent'
 
 	// ---------- 量测与弹簧 ----------
 	const groupEl = ref<any>(null)
 
-	// 段宽=组实宽/段数（拖动开始时刻重量测，天然免疫容器尺寸陈旧）；
-	// Async 版跨端通吃——MP 的 UniElement 无同步 getBoundingClientRect（裸调必炸
-	// TypeError in promise），App 端异步晚一帧无害（segW 会话内基本恒定，重量测本防御性）
+	// 段宽=组实宽/段数（拖动开始时重量测）；Async 版跨端通吃（MP 端无同步 getBoundingClientRect）
 	const measure = () : void => {
 		groupEl.value?.getBoundingClientRectAsync().then((r : any) => {
 			const n = items.value.length
@@ -151,7 +141,7 @@
 	// 当前视觉位置（手势抢断/弹簧起点取值用）
 	const visualX = () : number => dragX.value != null ? dragX.value : (animX.value != null ? animX.value : index.value * segW.value)
 
-	// 提交选中：弹簧滑到位+对外回传（值未变不 emit，sard 同款）
+	// 提交选中：弹簧滑到位 + 对外回传（值未变不 emit）
 	const commit = (idx : number, velPxPerS : number = 0) => {
 		springCtl.cancel()
 		const from = visualX()
@@ -182,7 +172,7 @@
 		commit(i)
 	}
 
-	// ---------- 拖动手势（方向判定让位纵滚，横滑接管锁默认行为——swipe 同款） ----------
+	// ---------- 拖动手势 ----------
 	let dragTouchId = -1
 	let startX = 0
 	let startY = 0
@@ -352,19 +342,17 @@
 </script>
 
 <style lang="scss">
-	/* 按压等级统一维护点（styles/press.scss，编译期合并） */
+	/* 按压类（styles/press.scss） */
 	@import '@/styles/press.scss';
 
-	/* 假轨道（根）：透明占地——四周外扩 12px（形变预算区），视觉与占地解耦；
-	   占地代价=footprint 比视觉轨道大 24×24，消费方留间距时须知 */
+	/* 假轨道（根）：透明占地，四周外扩 12px；占地比视觉轨道大 24×24 */
 	.app-segmented {
 		flex-direction: column;
 		padding: 12px;
 		overflow: visible;
 	}
 
-	/* 真轨道：视觉（灰底/圆角）在此；高度不设于此——由段位内距直构（行盒 20+留白×2），
-	   滑块外探与形变越轨放行 */
+	/* 真轨道：灰底/圆角；高度由段位内距撑出 */
 	.app-segmented-track {
 		flex-direction: column;
 		border-radius: var(--std-radius);
@@ -376,7 +364,7 @@
 		border-radius: var(--std-radius-full);
 	}
 
-	/* 组：显式层序=组 1<滑块 2（滑块带 transform，层序不赌 DOM 序） */
+	/* 组：层序低于滑块 */
 	.app-segmented-group {
 		position: relative;
 		z-index: 1;
@@ -386,9 +374,7 @@
 		overflow: visible;
 	}
 
-	/* 段位=高度权威源（std 控件档公式：行盒 base 20+留白×2）——
-	   middle 44→40=20+10×2(--std-control-pad-y)；留白必须挂段位不挂轨道/组：
-	   挂轨道=组塌到内容高、滑块(top/bottom 4 内嵌)缩成 12；挂组=段位触区从整段高塌到 20 */
+	/* 段位：高度由内距撑出（内距必须挂段位，不挂轨道/组） */
 	.app-segmented-item {
 		flex: 1;
 		flex-direction: row;
@@ -398,7 +384,7 @@
 		padding: var(--std-control-pad-y) 0;
 	}
 
-	/* 尺寸档（sm/lg 内距为单组件尺寸档本地字面量，同 app-input sm/lg 惯例）：32 / 44 */
+	/* 尺寸档：sm/lg 内距为本地字面量 */
 	.app-segmented-item--small {
 		padding-top: 6px;
 		padding-bottom: 6px;
@@ -424,8 +410,7 @@
 		color: var(--std-disabled-color);
 	}
 
-	/* 滑块（非 iOS 端实色 pill）：内嵌槽内（上下各让 4=缩小一号），水平贴段位；
-	   宽=1/n（响应式），位移弹簧 JS 驱动；圆角=主圆角 12−内嵌 4 同心 */
+	/* 滑块（非 iOS 端实色）：内嵌槽内上下各让 4px，宽=1/n，位移由 JS 驱动 */
 	.app-segmented-pointer {
 		position: absolute;
 		top: 4px;
@@ -445,8 +430,7 @@
 		border-radius: var(--std-radius-full);
 	}
 
-	/* iOS 滑块本体=液态玻璃（26+ 液态/15-25 毛玻璃降级）：几何与非 iOS 滑块同构（内嵌小一号）；
-	   自身直接被 transform 驱动（玻璃 layer 运动=液态形变触发条件）；不挂 overflow/裁切 */
+	/* iOS 滑块=液态玻璃：几何与非 iOS 滑块同构；由 transform 驱动，不挂 overflow */
 	.app-segmented-glass {
 		position: absolute;
 		top: 4px;

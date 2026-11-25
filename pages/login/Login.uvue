@@ -126,7 +126,7 @@ const initLogin = () => {
 				toast(resp.msg)
 			}
 		} catch (err) {
-			// 凭据错误(401)请求层已 toast 且不再跳转，此处兜底提示其余失败（网络异常等）并保留表单已输入内容
+			// 凭据错误(401)由请求层 toast 并中止；此处兜底提示其余失败（网络异常等）并保留已输入内容
 			console.error(err)
 			toastRequestError(err)
 		} finally {
@@ -253,7 +253,7 @@ const initRegister = () => {
 const { isRegistrationEnable, toRegister, onRegisterSuccess } = initRegister()
 
 /**
- * 登录后校验编排（对齐 web index.vue 的 initUserSetup 块：校验项获取→向导/首页分支）
+ * 登录后校验编排：校验项获取 → 向导/首页分支
  */
 const initPostLoginCheck = () => {
 	// 登录后校验待补全项：null 表示校验失败（超时/异常），与空数组（无需补全）区分
@@ -268,8 +268,7 @@ const initPostLoginCheck = () => {
 		}
 	}
 
-	// 校验通过后的去向：失败回滚登录态留在登录页（登录流程原子性，防止跳过信息补全进首页），
-	// 有待补全项进初始设置向导，无则清历史残留进首页。返回 false=校验失败已回滚
+	// 校验通过后的去向：失败回滚登录态留在登录页；有待补全项进向导，无则进首页。返回 false=校验失败已回滚
 	const routeAfterCheck = async (): Promise<boolean> => {
 		const checkItems = await getPostLoginCheckItems()
 		if (checkItems === null) {
@@ -277,7 +276,7 @@ const initPostLoginCheck = () => {
 			return false
 		}
 		if (checkItems.length > 0) {
-			// 有待补全项进初始设置向导（防绕过守卫属 S2-03，暂由向导 onBackPress 拦截兜底）
+			// 有待补全项进初始设置向导
 			setUserSetupData(checkItems)
 			goUserSetup()
 		} else {
@@ -315,7 +314,7 @@ const initProtocol = () => {
 		checkProtocol.value = !!uni.getStorageSync(key)
 	}
 
-	// 打开协议确认弹窗（uni.showModal 原生 dialogPage 实现），并记录确认后需要继续执行的动作
+	// 打开协议确认弹窗，并记录确认后需要继续执行的动作
 	const openProtocolDialog = (action?: () => void | Promise<void>) => {
 		pendingProtocolAction = action || null
 		uni.showModal({

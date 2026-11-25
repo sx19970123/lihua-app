@@ -5,7 +5,7 @@ import {toast} from '@/utils/toast'
 import {BASE_API} from '@/utils/env'
 import {useUserStore} from '@/stores/user'
 
-// 请求配置（api 层调用形态与旧 sard Request 一致，api 文件零改动直迁）
+// 请求配置
 export interface RequestConfig {
 	url: string
 	method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -17,7 +17,7 @@ export interface RequestConfig {
 const TIMEOUT = 5000
 
 /**
- * 前置：组装通用请求头（对应 web/uniapp 请求拦截器）
+ * 前置：组装通用请求头
  */
 const before = (config: RequestConfig): Record<string, any> => {
 	const header: Record<string, any> = {...config.header}
@@ -30,10 +30,8 @@ const before = (config: RequestConfig): Record<string, any> => {
 }
 
 /**
- * 后置：业务码分流（对应 web/uniapp 响应拦截器）：
- * 401=登录信息失效｜账号密码错误：非登录页调 store 登录失效（清态+重登跳转）；登录页上的 401 是凭据错误，仅提示
- * 403=权限不足跳错误页（后端为 HTTP 200 + 业务码 403，statusCode 判断为网关直返防御）
- * 451=非法 IP 跳错误页；505=服务器处理文件异常仅提示
+ * 后置：业务码分流。401=登录信息失效｜账号密码错误（非登录页调 store 登录失效，登录页仅提示）；
+ * 403=权限不足跳错误页；451=非法 IP 跳错误页；505=服务器处理文件异常仅提示
  */
 const after = <T>(statusCode: number, data: any, resolve: (v: ResponseType<T>) => void, reject: (e: ResponseError) => void) => {
 	const resp = data as ResponseType<T>
@@ -119,8 +117,7 @@ const UPLOAD_TIMEOUT = 60 * 1000
 export const attachmentUpload = <T>(config: {url: string, filePath: string, name?: string, header?: Record<string, any>, formData?: Record<string, any>, timeout?: number}): Promise<ResponseType<T>> => {
 	return new Promise((resolve, reject) => {
 		const header = before(config as RequestConfig)
-		// multipart 头跟传输形态走（与 request 自加 JSON 头对称）：App/小程序手动声明、原生补 boundary；
-		// WEB 端不设（浏览器自动生成含 boundary 的头，手动指定必坏）
+		// multipart 头：App/小程序手动声明、原生补 boundary；WEB 端不设（浏览器自动生成）
 		// #ifdef APP || MP-WEIXIN
 		header['Content-Type'] = 'multipart/form-data'
 		// #endif

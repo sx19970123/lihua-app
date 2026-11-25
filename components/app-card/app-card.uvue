@@ -27,9 +27,7 @@
 </template>
 
 <script setup lang="ts">
-	// 通用卡片（sard Card 最小复刻）：header/body/footer 三区，title/extra/footer 全空时对应区自动省略；
-	// 暗色全走 token；hover 开启按压态（hover-class，x 端点击态正统——色用字面量双类：
-	// 原生驱动不重算 @media/var，主题切换会停旧色，tree 轮实证）
+	// 通用卡片：header/body/footer 三区，title/extra/footer 全空时对应区省略；hover 开启按压态
 
 	import { useThemeStore } from '@/stores/theme'
 
@@ -53,7 +51,7 @@
 
 	const slots = useSlots()
 
-	// 头/脚省略判定（sard headless/footless 同款：props 与插槽双通道全空才省略）
+	// 头/脚省略判定：props 与插槽都为空才省略
 	const headless = computed(() => (props.title ?? '') === '' && !slots.title && (props.extra ?? '') === '' && !slots.extra)
 	const footless = computed(() => (props.footer ?? '') === '' && !slots.footer)
 
@@ -63,10 +61,10 @@
 </script>
 
 <style lang="scss">
-	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	/* 按压类（styles/press.scss） */
 	@import '@/styles/press.scss';
 
-	/* 根：底色/圆角全走 token（亮白·暗 #242628 自动）；overflow hidden 完成圆角裁切 */
+	/* 根：底色/圆角走 token；overflow hidden 裁圆角 */
 	.app-card {
 		flex-direction: column;
 		background-color: var(--std-emphasis-bg);
@@ -74,7 +72,7 @@
 		overflow: hidden;
 	}
 
-	/* 头部：标题左（占主轴）+ 附加右；三区内距统一 std 卡片档（--std-card-pad-y/x） */
+	/* 头部：标题左 + 附加右 */
 	.app-card-header {
 		flex-direction: row;
 		align-items: center;
@@ -103,8 +101,7 @@
 		color: var(--std-tertiary-color);
 	}
 
-	/* 区间分隔线（sard 伪元素 border 换独立 1px view）；色挂同名按压类 app-pressed-block
-	   （press.scss，常驻走 @media 自动亮暗，与按压同一定义——按压时整卡变灰、线画在灰上同色隐形） */
+	/* 区间分隔线（独立 1px view）；色挂同名按压类 */
 	.app-card-line {
 		height: 1px;
 	}

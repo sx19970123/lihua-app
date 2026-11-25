@@ -82,6 +82,61 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
 - **统一写法**：凡「先挂过渡写值、后又立刻由 JS 补间接管」的动画，过渡期的帧驱动
   一律并入补间回调（同帧同曲线），不把任何一段视觉托付给「即将被摘的 CSS 过渡」。
 
+## 动效实现坑档案（Vapor / 微信 VDOM，captcha 2026-11 真机实测；鸿蒙版开发前必读）
+
+先例=captcha 的滑切/高度动画（`components/captcha/captcha.uvue`）。各端实现形态：
+App(iOS/Android Vapor)=静态 style 起点 + 滑入 keyframes 延后挂载 + 滑出 setProperty
+直驱；微信(VDOM)=keyframes class 三态(mp-out/mp-in)；点选量测走挂载期缓存的页面/
+组件实例 getElementById。通用动画规则（单属性过渡、forwards、重烘焙等）见
+create-component.md「动画」节。
+
+**Vapor 端（App 双端）**
+
+1. `animation-fill-mode` 的 backwards/both 不支持（仅 forwards）——animation 插入节点
+   会先闪一帧自然终态。插入型动画必须「自然态=动画起点」：静态 style 起点，或
+   keyframes from 与自然态一致。
+2. class 切换驱动的 transform transition 不可靠：常驻节点同 class 复挂不重触发动画
+   （解法=双 class 交替 a/b 强制值变化）；新建节点 class 变化跳变/吞动画。
+3. height/width 的 transition 三路全灭（class 挂载/:style 绑定/setProperty 直驱均不
+   触发）；但 @keyframes 动画宽高 5.31+ 可行。
+4. 安卓新建节点存在 transition 激活窗口：首绘后短窗内 setProperty 改值不触发过渡
+   （iOS 无此窗；诊断实证 ref/起点/调用全正常仍不播）——动画一律走 keyframes class
+   声明，不走「起点态+改值触发 transition」。
+5. 动画 class 与数据赋值同帧挂载，首帧渲染拥塞（图片解码/分支切换）会吃掉动画前段
+   →动画 class 延后挂载（nextTick+32ms 两帧）。**勿换 requestAnimationFrame**：
+   uni.requestAnimationFrame 在 dialogPage 实测调用即炸流程（透明页零内容白屏无
+   报错，机制未明），固定 timeout 是实测可用形态。
+6. 父级活跃 animation 会吞子容器的 transition →高度动画与滑入串行，不在同一时间窗共存。
+7. 动态绑定（:class/:style 三元）在安卓新节点首帧应用滞后，闪一帧自然态 →用静态
+   style 属性（DOM 创建即生效）做起点锚。微信端 mp-in 的触发依赖该静态 style 属性
+   存在（删除后微信动画消失，机制未明），两端模板保持共享勿拆。
+8. transform 位移用显式 px（百分比基准不可靠）。captcha 关键常量：内容区 288、滑距
+   288、卡片高 298（图形/加载）/136（POW）——图形内容实高 297，盒子小于内容会静默
+   裁切（曾致轨道被裁 1px，勿改回 296）。
+
+**微信小程序端（VDOM 渲染，与 Vapor 行为不同）**
+
+9. 同分支 :key 重建 diff 不可靠（复用容器）：绑定值 out→in 跳变会被 transition 过渡
+   成横穿卡片。滑切动画用 keyframes class 声明即播（mp-out/mp-in），与节点复用解耦。
+   相位→class 映射语义勿翻转：idle（滑入完成态）必须沿用 mp-in——曾改为「非 in 即
+   mp-out」致 idle 重播滑出动画=内容滑出后整卡白屏（小程序白屏第三案）。
+10. pointer-events 在 WXSS 不生效；uni-icons 组件的 click 转发不可靠（点击挂外层 view）。
+11. selectorQuery/uni.getElementById 在业务页可用，但 dialogPage 内查不到组件元素
+    （实测 null）——量测走挂载期缓存的实例（getCurrentInstance 异步上下文返回 null，
+    onMounted 缓存 ownerInstance/ownerPage）；非 dialogPage 宿主回退 selectorQuery。
+12. height transition 在微信浏览器内核天然可用（POW↔图形高度动画白赚）。
+
+**通用**
+
+13. 滑距 288=内容区宽，裁切层（overflow hidden，padding 内缘）保证内容碰边即消失；
+    层级（低→高）：卡片背景 < 切换 loading(z1) < 内容裁切层(z2) < freeze 阻断(z10)
+    < 结果横条(z11) < 操作区(z20)。
+14. POW 挖矿中刷新保持可用：stopJobs 取消标志在挖矿片间生效，无泄漏；慢平台真解法=
+    分端配置（小程序端不配 POW，3.1.0 后台已支持）。
+15. 鸿蒙（Vapor）预期缺口（未验证，届时逐条实测）：@keyframes 兼容表标 x（仅
+    transition 可用）→keyframes 方案若不可用，回退方案=requestAnimationFrame 全端
+    支持，JS 逐帧补间 setProperty；app-harmony 插件目录留白。
+
 ## 对数法（跨端差异诊断标准流程）
 
 1. **两端同屏控制变量**：诊断卡打 `uni.getWindowInfo()`（screen/win/dpr）——排除

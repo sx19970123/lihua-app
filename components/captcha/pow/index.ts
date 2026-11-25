@@ -52,9 +52,7 @@ export const solvePow = (token : string, powParam : number[], onProgress ?: PowP
 		// 引擎准备：App=原生恒就绪；Web/微信=插件内部回退纯 JS
 		await prepareEngine()
 
-		// 主线程分片挖矿：每片限量让出主线程，进度实时可见。
-		// 调度优先 MessageChannel：iOS 对 setTimeout 有节流（低电量模式可达 1s/次），
-		// MessageChannel 走任务队列不受节流（React 调度器同款）
+		// 主线程分片挖矿：每片限量让出主线程，进度实时可见；调度优先 MessageChannel（iOS 对 setTimeout 有节流）
 		await new Promise<void>(resolveItem => {
 			let cursor = 0
 			let nonce = 0

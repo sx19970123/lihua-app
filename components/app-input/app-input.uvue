@@ -1,7 +1,6 @@
 <template>
 	<view class="app-input">
-		<!-- 卡片层：height prop 显式定高（缺省自然高），输入行垂直居中。
-		     聚焦不染色：对齐原生 App 输入框习惯（光标即反馈），web design system 的 primary 边框不做 -->
+		<!-- 卡片层：height 显式定高（缺省自然高）；聚焦不改变边框色 -->
 		<view class="app-input-card" :style="cardStyle" :class="{
 			'app-input-round': shape === 'round',
 			'app-input-sm': size === 'small',
@@ -31,9 +30,7 @@
 				<slot name="append" />
 			</view>
 		</view>
-		<!-- 密码强度条（password + showStrength）：fixed 提升到页面根级布局（官方语义：不参与父节点
-		     布局），逃离组件盒边界（x 端盒外内容被裁切的实证），坐标由卡片层量测直驱（对象 style）；
-		     完全脱流组件对外高度恒等于卡片高。显隐=常驻节点 class 切换（值非空=下滑+淡入） -->
+		<!-- 密码强度条：fixed 定位悬浮于卡片下方，坐标由卡片量测给定，不占组件高度；显隐走 class 切换 -->
 		<view v-if="password && showStrength" class="app-input-strength" :style="strengthPos"
 			:class="modelValue ? 'app-input-strength-show' : ''">
 			<view class="app-input-strength-seg">
@@ -53,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-// 视觉对齐 sard-uniapp Input（白底卡片+灰边框；聚焦不染色对齐原生 App 习惯，ucss 无伪类）
+// 白底卡片+灰边框；聚焦不染色
 import { getPasswordStrength } from '@/helpers/password-strength'
 
 const props = defineProps<{
@@ -70,7 +67,7 @@ const props = defineProps<{
 	size?: 'small' | 'default' | 'large'
 	// 禁用（透传内置 input，含置灰样式）
 	disabled?: boolean
-	// 只读：pointer-events none（内置 input 无 readonly，x 原生支持该 css）
+	// 只读：pointer-events none 实现只读（内置 input 无 readonly）
 	readonly?: boolean
 	// 最大输入长度（透传内置 input）
 	maxlength?: number
@@ -78,7 +75,7 @@ const props = defineProps<{
 	showCount?: boolean
 	// 显式卡片高度（px，可选；缺省按内容自然高）
 	height?: number
-	// 密码强度条（仅 password 模式生效：fixed 定位三段指示，量测坐标悬浮于卡片下方，不占组件对外高度）
+	// 密码强度条（仅 password 模式生效，悬浮于卡片下方，不占组件高度）
 	showStrength?: boolean
 }>()
 
@@ -96,16 +93,16 @@ const showPassword = ref<boolean>(false)
 // maxlength 有效值（>0 才启用 count）
 const validMaxlength = computed(() => props.maxlength !== undefined && props.maxlength > 0)
 
-// 显式卡片高度：对象语法 style 绑定（Vapor 端字符串 style 不解析，项目先例 captcha themeBg）
+// 显式卡片高度：对象语法 style 绑定
 const cardStyle = computed(() : any => props.height !== undefined ? { height: props.height + 'px' } : {})
 
-// 组件实例（量测用）：onMounted 内缓存（异步上下文 getCurrentInstance 为 null，captcha 同坑）
+// 组件实例（量测用），onMounted 内缓存
 let ownerInstance : any = null
 
-// 强度条 fixed 坐标（卡片量测直驱；键盘覆盖不推挤、auth 页禁滚，坐标静态无需重测）
+// 强度条 fixed 坐标（由卡片量测给定）
 const strengthPos = ref<any>({})
 
-// 量测卡片层位置，驱动强度条 fixed 坐标（top=卡片底缘+4px，左右内缩 12px 对齐卡片 padding 内缘）
+// 量测卡片位置，驱动强度条坐标（top=卡片底缘+4px，左右内缩 12px）
 const measureStrength = () => {
 	uni.createSelectorQuery().in(ownerInstance ?? getCurrentInstance()?.proxy)?.select('.app-input-card')?.boundingClientRect()?.exec((ret) => {
 		const rect = ret[0] as { left : number, top : number, width : number, height : number } | null
@@ -119,14 +116,14 @@ const measureStrength = () => {
 	})
 }
 
-// 强度等级：0 未达弱 / 1 弱 / 2 中 / 3 强（阈值与 web/master 同源，见 helpers/password-strength）
+// 强度等级：0 未达弱 / 1 弱 / 2 中 / 3 强（阈值见 helpers/password-strength）
 const strengthLevel = computed(() : number => getPasswordStrength(props.modelValue))
 
 const onInput = (e: InputEvent) => {
 	emit('update:modelValue', e.detail.value)
 }
 
-// 焦点事件透传（组件不自带重量测——屏外挂载等场景的坐标补偿由消费方经 @focus + remeasure() 自行触发）
+// 焦点事件透传（屏外挂载等场景的坐标补偿由消费方经 @focus + remeasure() 触发）
 const onFocus = () => {
 	emit('focus')
 }
@@ -146,7 +143,7 @@ const togglePassword = () => {
 onMounted(() => {
 	ownerInstance = getCurrentInstance()?.proxy ?? null
 	if (props.password && props.showStrength) {
-		// 首帧渲染完成后量测（挂载即量可能拿到零尺寸；屏外挂载的坐标无效，消费方可调 remeasure()）
+		// 首帧渲染完成后量测（挂载即量可能拿到零尺寸）
 		nextTick(() => measureStrength())
 	}
 })
@@ -155,21 +152,18 @@ defineExpose({ remeasure: measureStrength })
 </script>
 
 <style>
-/* 壳：仅纵向堆叠容器（卡片 + fixed 强度条挂载点）；对外高度=卡片高度，强度条脱流不参与 */
+/* 壳：纵向堆叠容器（卡片 + 强度条挂载点） */
 .app-input {
 	flex-direction: column;
 	width: 100%;
 }
 
-/* 卡片层：height prop 显式定高（对象 style 绑定），缺省按内容自然高；row 布局输入行垂直居中。
-   勿加 flex:1——不定高壳内 flex-basis 0% 会抢占 height 的主轴尺寸。
-   std 尺寸账（Apple 真机实测阶梯，带边框件外高=行盒+内距×2+边框×2）：
-   sm 32=18+6×2+2 / default 44=22+10×2+2 / lg 52=22+14×2+2（lg 与列表行同高） */
+/* 卡片层：height 显式定高，缺省自然高；勿加 flex:1 */
 .app-input-card {
 	flex-direction: row;
 	align-items: center;
 	width: 100%;
-	/* 卡片底色（token 亮暗双态） */
+	/* 卡片底色 */
 	background-color: var(--std-input-bg);
 	padding: var(--std-control-pad-y) var(--std-gap-md);
 	border: 1px solid var(--std-border-color);
@@ -186,7 +180,7 @@ defineExpose({ remeasure: measureStrength })
 	border-radius: var(--std-radius-full);
 }
 
-/* size 档内距（单组件尺寸档，本地字面量）：sm 6→外高 32、lg 14→外高 52 */
+/* size 档内距：sm 6 / lg 14 */
 .app-input-sm {
 	padding-top: 6px;
 	padding-bottom: 6px;
@@ -211,8 +205,7 @@ defineExpose({ remeasure: measureStrength })
 	margin-right: 8px;
 }
 
-/* 内置 input 透明底融入根容器，根壳负责底色与边框；
-   default 档 std 正文 17px（Apple 输入 17pt），行高配对 --std-leading-lg */
+/* 内置 input：透明底，行高与字号配对 */
 .app-input-control {
 	flex: 1;
 	height: 22px;
@@ -223,13 +216,12 @@ defineExpose({ remeasure: measureStrength })
 	padding: 0;
 }
 
-/* placeholder 走 fourth token（亮 gray-500/暗 gray-600），placeholder-class App 端原生支持（Web/小程序 x，S6 再议） */
+/* placeholder 色 */
 .app-input-placeholder {
 	color: var(--std-fourth-color);
 }
 
-/* size 三档=完整视觉档位（control 行盒+字号，根高由 padding+control+边框自然撑）；
-   lg 档文本与 default 同（17px），档差只在纵向留白 */
+/* size 三档：sm 行盒与字号随之变小，lg 与 default 同文本 */
 .app-input-control-sm {
 	height: 18px;
 	font-size: var(--std-text-sm);
@@ -243,7 +235,7 @@ defineExpose({ remeasure: measureStrength })
 }
 
 .app-input-control-readonly {
-	/* x 内置 input 无 readonly，pointer-events none 实现只读（点不进、不弹键盘） */
+	/* 内置 input 无 readonly，pointer-events none 实现只读 */
 	pointer-events: none;
 }
 
@@ -255,7 +247,7 @@ defineExpose({ remeasure: measureStrength })
 	padding: 0 4px;
 }
 
-/* 图标色走语义 token（uni-icons 单 text 根，外部 class 落根）：clear 更醒目用 tertiary、eye 次要语义用 fourth */
+/* 清除/密码图标色 */
 .app-input-tool-clear {
 	font-size: 18px;
 	color: var(--std-tertiary-color);
@@ -276,9 +268,7 @@ defineExpose({ remeasure: measureStrength })
 	margin-left: 8px;
 }
 
-/* 密码强度条：fixed 提升到页面根级（官方语义：不参与父节点布局），top/left/width 由卡片量测
-   运行时直驱（对象 style），此处只定形态与动画。显隐=常驻节点 class 切换（v-if 卸载无过渡）：
-   值非空下滑+淡入，退场反向；轨道灰底常驻 */
+/* 密码强度条：fixed 定位，坐标由量测直驱，此处只定形态与动画；显隐走 class 切换 */
 .app-input-strength {
 	position: fixed;
 	flex-direction: row;
@@ -296,8 +286,7 @@ defineExpose({ remeasure: measureStrength })
 	transform: translateY(0);
 }
 
-/* 轨道层：未点亮底色，亮 gray-200 / 暗 gray-700（单点显式亮暗配对，精调例外摊平字面量，
-   不立 token——password+showStrength 专用） */
+/* 轨道层：未点亮底色（亮 gray-200 / 暗 gray-700，字面量） */
 .app-input-strength-seg {
 	flex: 1;
 	height: 3px;
@@ -313,7 +302,7 @@ defineExpose({ remeasure: measureStrength })
 	}
 }
 
-/* 彩色填充层：默认收起隐形，lit 从左向右展开覆盖轨道、退回时露出灰底（origin left 双向同轴） */
+/* 填充层：lit 从左向右展开覆盖轨道 */
 .app-input-strength-fill {
 	width: 100%;
 	height: 3px;
@@ -329,7 +318,7 @@ defineExpose({ remeasure: measureStrength })
 	transform: scaleX(1);
 }
 
-/* 三段点亮色与 web/master 三端一致（红/橙/绿） */
+/* 三段点亮色：红/橙/绿 */
 .app-input-strength-red {
 	background-color: #ff4d4f;
 }

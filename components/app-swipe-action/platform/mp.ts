@@ -1,5 +1,4 @@
-// 侧滑平台适配器·MP-微信：v-for 元素 ref 无 .style、无同步量测——响应式 style 载体单通道
-// （核心模板 :style 绑定，写点全落载体对象）+ 字符估算 + 触摸兜底；契约见 ../swipe-platform.ts
+// 侧滑平台适配器·MP-微信：v-for 元素 ref 无 .style、无同步量测——响应式 style 载体单通道 + 字符估算 + 触摸兜底；契约见 ../swipe-platform.ts
 import { SIDE_L, estimateWidth } from '../swipe-platform'
 import type { SwipeHandles, SwipePlatform } from '../swipe-platform'
 
@@ -12,7 +11,7 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			st.transform = val
 		}
 	}
-	// 显式属性赋值（不走动态键，编译行为可预期；transition 通道已退役——动画全面 JS 化）
+	// 显式属性赋值（不走动态键）
 	const writeBtn = (st : any, prop : string, val : string) => {
 		if (prop === 'width') {
 			st.width = val
@@ -54,7 +53,7 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 		clearConfirmBarHit : () => {
 			confirmBarHit = false
 		},
-		// 载体须预置全部写入键（width/transform），首帧即藏外（transition 通道已退役）
+		// 载体须预置全部写入键（width/transform），首帧即藏外
 		initBtnStyle : (color : string, sign : number) : any => {
 			const st : any = { width: '', transform: `translateX(${sign * 999}px)` }
 			if (color !== '') {

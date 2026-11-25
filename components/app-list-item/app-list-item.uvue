@@ -25,9 +25,7 @@
 </template>
 
 <script setup lang="ts">
-	// 通用列表行（sard ListItem 最小复刻）：icon/title/value/arrow 四槽 + #icon/#title/#value 插槽覆盖；
-	// 分隔线默认开、首行由消费方显式 :divider="false"（x 端无 :first-child 伪类）；
-	// 按压走 press.scss 行级类（hover-class 原生驱动，字面量双类 + isDark 选亮暗）
+	// 通用列表行：icon/title/value/arrow 四槽 + 同名插槽覆盖；分隔线默认开，首行由消费方显式 :divider="false"；按压走 press.scss 行级类
 
 	import { useThemeStore } from '@/stores/theme'
 
@@ -57,17 +55,14 @@
 
 	const hasIcon = computed(() => (props.icon ?? '') !== '' || !!slots.icon)
 	const hasValue = computed(() => (props.value ?? '') !== '' || !!slots.value)
-	// 线左端从标题列起点（苹果设置风格 icon 下方无线）：有图标=icon 右缘（padding 16+图标 24+间距 12），
-	// 无图标=内容左缘；#icon 插槽自定义宽度的偏移待真实消费再调
+	// 分隔线左端位置：有图标=图标右缘，无图标=内容左缘
 	const lineLeft = computed(() => hasIcon.value ? '52px' : '16px')
 
 	const onClick = () => {
 		emit('click')
 	}
 
-	// 滑动/滚动自动抑制按压（组件自治）：位移>5px 判滑动（与侧滑方向判定同阈值）——横滑、
-	// 纵滚统一判定；:class 叠加透明类盖按压底色（hover-class 值恒定，中途切值 Android 双失效）；
-	// 复位在下次 touchstart——盖满 stay-time 余韵防按压色闪回，类滞留无视觉差（透明=未按压常态）
+	// 滑动/滚动时抑制按压：位移超过 5px 判为滑动，叠加透明类盖按压底色；下次 touchstart 复位
 	const pressSuppressed = ref(false)
 	let pressX = 0
 	let pressY = 0
@@ -94,13 +89,10 @@
 </script>
 
 <style lang="scss">
-	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	/* 按压类（styles/press.scss） */
 	@import '@/styles/press.scss';
 
-	/* 行根：横向布局垂直居中；行高=padding 15×2+文字行高 22=52 直构（Apple 设置页真机
-	   实测 52.3pt；std 行账：--std-list-pad-y/--std-leading-lg）——不用 min-height：App 端
-	   引擎按 content 区计、MP 端按 border-box，同一声明两种账（诊断卡实测定案）；tree 式
-	   单账哲学；overflow visible 放行带线行上探 1px 越行顶（x 默认 hidden，tree 轮实证必需） */
+	/* 行根：横向布局垂直居中；行高由上下内距 + 文字行高撑出（不设 height） */
 	.app-list-item {
 		position: relative;
 		flex-direction: row;
@@ -109,14 +101,12 @@
 		overflow: visible;
 	}
 
-	/* 带线行上探 1px（tree 分隔线同款流内负 margin）：本行顶线画进上一行底缘，
-	   按压时灰块与上下两条线全部相交——同色隐形、上下齐隐；首行不带线不上探（位置不偏移） */
+	/* 带线行上探 1px：本行顶线画进上一行底缘；首行不带线不上探 */
 	.app-list-item-with-line {
 		margin-top: -1px;
 	}
 
-	/* 行顶分隔线（sard 非首行 ::before 换独立 view）：左端从标题列起点（见 lineLeft）、右端贴行内缘；
-	   色挂同名按压类 app-pressed-row（常驻走 @media 自动亮暗，与按压同一定义——按压时同色隐形） */
+	/* 行顶分隔线：左端位置见 lineLeft，右端贴行内缘；色挂同名按压类 */
 	.app-list-item-line {
 		position: absolute;
 		top: 0;
@@ -124,13 +114,12 @@
 		height: 1px;
 	}
 
-	/* 左侧图标槽：容器只管间距，自定义内容自适应占位 */
+	/* 左侧图标槽 */
 	.app-list-item-icon {
 		flex-direction: row;
 		align-items: center;
 		margin-right: var(--std-list-icon-gap);
-		/* 行盒钉死=文字行高同款 22（布局属性两端必生效，不赌 uni-icons text 行盒——
-		   其 24px 字号无显式行高，App 默认行盒 ~36 会撑高行）；visible 放行字形溢出渲染 */
+		/* 行盒钉死为文字行高，防 uni-icons 默认行盒撑高行 */
 		height: 22px;
 		overflow: visible;
 	}
@@ -145,14 +134,13 @@
 		flex: 1;
 		flex-direction: row;
 		align-items: center;
-		/* line-height 双写（view 份）：MP 端 text 自身不认 line-height、靠容器继承；
-		   App 端样式不继承、吃 text 份——两端相反，双写通吃 */
+		/* line-height 双写（view 份）：MP 端靠容器继承，App 端吃 text 份 */
 		line-height: var(--std-leading-lg);
 	}
 
 	.app-list-item-title-text {
 		font-size: var(--std-text-lg);
-		/* std leading 为绝对值 px token（两端安全）；行高配对改两处单点=tokens-std */
+		/* line-height 双写（text 份） */
 		line-height: var(--std-leading-lg);
 		color: var(--std-emphasis-color);
 	}
@@ -176,7 +164,7 @@
 		margin-left: var(--std-gap-sm);
 		flex-direction: row;
 		align-items: center;
-		/* 同 icon：行盒钉死 22，防 uni-icons 默认行盒撑高行 */
+		/* 行盒钉死为文字行高，防 uni-icons 默认行盒撑高行 */
 		height: 22px;
 		overflow: visible;
 	}

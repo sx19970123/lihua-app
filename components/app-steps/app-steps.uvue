@@ -8,8 +8,7 @@
 </template>
 
 <script setup lang="ts">
-	// 通用步进容器：translateX 驱动的横向轨道，current 受控、按钮是唯一驱动方式
-	// （无手势翻页；弃 swiper 因微信端 disable-touch 不支持会滑穿）
+	// 通用步进容器：translateX 驱动的横向轨道，current 受控，按钮是唯一驱动方式（无手势翻页）
 	const props = defineProps<{
 		current: number
 		count: number
@@ -18,8 +17,7 @@
 	const trackEl = ref<UniElement | null>(null)
 	const windowWidth = uni.getWindowInfo().windowWidth
 
-	// MP 端 :style 绑定驱动（WXSS transition 生效）；蒸汽端 transform 走 setProperty
-	// 直驱（:style patch 滞后，captcha 同款先例），此处只出宽度
+	// 轨道 :style：MP 端由此驱动位移；蒸汽端 transform 走 setProperty 直驱，此处只出宽度
 	const trackStyle = computed(() : any => {
 		// #ifndef APP || WEB
 		return { width: (windowWidth * props.count) + 'px', transform: 'translateX(' + -(props.current * windowWidth) + 'px)' }
@@ -29,7 +27,7 @@
 		// #endif
 	})
 
-	// 蒸汽端直驱（transition 挂 CSS；持久节点无新建激活窗口问题）
+	// 蒸汽端直驱（transition 挂 CSS）
 	// #ifdef APP || WEB
 	watch(() => props.current, (val) => {
 		trackEl.value?.style.setProperty('transform', `translateX(${-(val * windowWidth)}px)`)

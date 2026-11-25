@@ -65,8 +65,7 @@
 	const genderValues = computed(() : string[] => user_gender.value.map(item => item.value ?? ''))
 	const genderLabel = computed(() : string => getDictLabel(user_gender.value, gender.value) ?? '')
 
-	// 底部操作菜单选性别（picker 滚轮快速反滑丢 settle 动画系 native 实现不可修；3 项场景一键直达更优）
-	// 弹层打开时系统主题反转会糊底（颜色为打开瞬间快照、展示中不活更）——监听主题反转主动关闭规避
+	// 底部操作菜单选性别；弹层打开时系统主题反转会糊底，监听主题反转主动关闭
 	const sheetVisible = ref<boolean>(false)
 
 	const onThemeFlip = () => {
@@ -76,7 +75,7 @@
 	}
 
 	// #ifdef APP
-	// App 端主题=auto 跟随系统，OS 主题反转即触发（S3-08 三态切换落地时需补 onAppThemeChange）
+	// App 端主题=auto 跟随系统，OS 主题反转即触发
 	const themeCallbackId : number = uni.onOsThemeChange(onThemeFlip)
 	// #endif
 	// #ifdef WEB

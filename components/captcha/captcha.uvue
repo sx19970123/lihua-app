@@ -1,9 +1,8 @@
 <template>
 	<view v-if="visible" class="lh-cap-mask" :class="{ 'lh-cap-mask--in': entered }" @touchmove="onMaskTouchMove">
 		<view class="lh-cap-card" :class="sizeClass">
-			<!-- 右上操作区：App/Web 常驻节点 opacity 过渡淡入淡出（v-if 无法过渡）；
-				微信端 pointer-events 在 WXSS 不生效，改 v-if 挂卸（直接显隐） -->
-			<!-- 点击挂外层 view：uni-icons 组件的 click 转发在微信端不可靠，view tap 全端可靠 -->
+			<!-- 右上操作区：App/Web 常驻节点 opacity 过渡淡入淡出；微信端 v-if 挂卸 -->
+			<!-- 点击挂外层 view（uni-icons 的 click 转发在微信端不可靠） -->
 			<!-- #ifndef MP-WEIXIN -->
 			<view class="lh-cap-opts" :class="{ 'lh-cap-opts--show': optsVisible }">
 				<view class="lh-cap-opts-btn" hover-class="app-pressed-text" :hover-stay-time="100"
@@ -29,28 +28,26 @@
 			</view>
 			<!-- #endif -->
 
-			<!-- 切换期间中央 loading：与滑出动画互斥——滑出完成且响应未到才显示（网络波动兜底），
-				数据到进 in 相位即藏 -->
+			<!-- 切换期间中央 loading：滑出完成且响应未到才显示，数据到进 in 相位即藏 -->
 			<view v-if="slidePhase === 'waiting'" class="lh-cap-switch-loading">
 				<view class="lh-cap-spinner"></view>
 				<text class="lh-cap-zone-text">正在加载...</text>
 			</view>
 
-			<!-- 内容裁切层：overflow 收在 padding 内缘，滑出/滑入的内容碰到内容区边即消失（不穿过 padding 区） -->
+			<!-- 内容裁切层：overflow 收在 padding 内缘，滑出/滑入的内容碰边即消失 -->
 			<view class="lh-cap-clip">
 				<!-- 加载 / 错误 -->
 				<view v-if="captchaLoading" class="lh-cap-zone">
 					<view class="lh-cap-spinner"></view>
 					<text class="lh-cap-zone-text">加载中...</text>
 				</view>
-				<!-- view 承担居中（x 端 text 自身 flex 居中不生效），点击挂外层 -->
+				<!-- view 承担居中，点击挂外层 -->
 				<view v-else-if="loadingError" class="lh-cap-error" @click="refresh(false)">
 					<text class="lh-cap-error-text">{{ loadingError }}，点击重试</text>
 				</view>
 
-				<!-- 工作量证明（POW）：轨道全程保留——滑动→挖矿（钮变 spinner）→彩带结果；:key 换码重建防 transform 残留 -->
-				<!-- 静态 style 起点：Vapor 端（App/Web）DOM 创建即 -288（绑定 patch 在安卓首帧滞后必闪），setProperty 直驱；
-					微信端 VDOM 渲染 transition 可靠，:style 三态（全显式值）覆盖静态驱动（见 slideStyleMp） -->
+				<!-- 工作量证明（POW）：滑动→挖矿（钮变 spinner）→彩带结果；:key 换码重建 -->
+				<!-- 静态 style 起点 -288：App/Web 由 setProperty 直驱；微信端由 :style 三态覆盖（见 slideStyleMp） -->
 				<view v-else-if="type === 'POW'" :key="'pow-' + captchaId" class="lh-cap-pow"
 					style="transform: translateX(-288px)" :class="slideStyleMp" ref="contentEl">
 					<text class="lh-cap-tip">安全校验</text>
@@ -64,7 +61,7 @@
 						<view class="lh-cap-unit" ref="powUnitEl" @touchstart="onPowTouchStart"
 							@touchmove="onPowTouchMove" @touchend="onPowTouchEnd" @touchcancel="onPowTouchCancel">
 							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-fill" :style="themeBg"></view>
-							<!-- 结果期彩带铺满轨道，滑块随之隐藏（拖到中途时钮杵在彩带上观感怪） -->
+							<!-- 结果期彩带铺满轨道，滑块随之隐藏 -->
 							<view v-if="powPhase !== 'success' && powPhase !== 'fail'" class="lh-cap-unit-thumb" :style="themeBg">
 								<view v-if="powPhase === 'mining'" class="lh-cap-thumb-spinner"></view>
 								<uni-icons v-else class="lh-cap-unit-thumb-icon" type="arrow-right" />
@@ -82,7 +79,7 @@
 					</view>
 					<view class="lh-cap-image-wrap">
 						<image class="lh-cap-image" :src="backgroundImage" mode="scaleToFill" />
-						<!-- 拼接：overflow hidden 窗口 + 整图平移（x 无 background-position） -->
+						<!-- 拼接：overflow hidden 窗口 + 整图平移 -->
 						<view v-if="type === 'CONCAT'" key="concat" class="lh-cap-concat" :style="{ height: concatHeight + 'px' }">
 							<view class="lh-cap-concat-strip" ref="sliderEl">
 								<image class="lh-cap-concat-img" :src="backgroundImage" mode="scaleToFill" />
@@ -119,7 +116,7 @@
 						<view class="lh-cap-unit" ref="dragUnitEl" @touchstart="onDragStart"
 							@touchmove="onDragMove" @touchend="onDragEnd" @touchcancel="onDragCancel">
 							<view v-if="!showResult" class="lh-cap-unit-fill" :style="themeBg"></view>
-							<!-- 结果期彩带铺满轨道，滑块随之隐藏（拖到中途时钮杵在彩带上观感怪） -->
+							<!-- 结果期彩带铺满轨道，滑块随之隐藏 -->
 							<view v-if="!showResult" class="lh-cap-unit-thumb" :style="themeBg">
 								<view v-if="verifying" class="lh-cap-thumb-spinner"></view>
 								<uni-icons v-else class="lh-cap-unit-thumb-icon" type="arrow-right" />
@@ -136,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-	// 验证码组件本体（双底座）：App/Web 经 dialogPage 壳挂载（mode=active），微信端由业务页直接挂载（S6）。
+	// 验证码组件本体（双底座）：App/Web 经 dialogPage 壳挂载（mode=active），微信端由业务页直接挂载。
 	// 业务方统一 <Captcha ref @success> + captchaRef.open()，平台差异在组件内消化。
 	// 模式：proxy（业务页挂载，App/Web 下仅作 API 锚点与事件转发）/ active（dialogPage 壳挂载，渲染真身）
 	import { getCaptchaData, check } from '@/api/system/captcha/captcha'
@@ -154,14 +151,13 @@
 		themeDark ?: string
 	}>()
 
-	// 主题覆盖当前值：按亮暗取对应 prop，该态未传回落空串（class 内 token 接管）；
-	// 亮暗感知收敛于 theme store（stores/theme.ts，App/Web/微信三分叉+监听）
+	// 主题覆盖当前值：按亮暗取对应 prop，未传回落空串（class 内 token 接管）
 	const themeStore = useThemeStore()
 	themeStore.init()
 	const capTheme = computed(() : string => {
 		return themeStore.isDark ? (props.themeDark ?? '') : (props.themeLight ?? '')
 	})
-	// 对象语法（Vapor 端字符串 style 绑定不解析，项目先例全对象）
+	// 对象语法 style 绑定
 	const themeBg = computed(() : any => capTheme.value ? { backgroundColor: capTheme.value } : {})
 
 	const emit = defineEmits<{
@@ -179,15 +175,15 @@
 	const visible = ref<boolean>(false)
 	// 内容容器（pow/graphic 二选一存在）：滑切位移 setProperty 直驱用
 	const contentEl = ref<any>(null)
-	// 进场态：Vapor 无 animation-fill-mode，animation 插入帧会闪终态；改初始即起点+class 切换过渡
+	// 进场态：初始即起点，class 切换过渡
 	const entered = ref<boolean>(false)
-	// POW↔图形高度动画 class（a/b 交替强制重建，见 getCaptcha），并入 sizeClass 输出
+	// POW↔图形高度动画 class（a/b 交替，见 getCaptcha），并入 sizeClass 输出
 	const heightAnim = ref<string>('')
 	const heightFlip = ref<boolean>(false)
 	// 刷新切换相位：out=旧内容右滑出，waiting=滑出完成等响应（loading 唯一显示窗），
 	// in=新容器（:key 重建）首帧停左侧待滑入
 	const slidePhase = ref<'idle' | 'out' | 'waiting' | 'in'>('idle')
-	// 滑入动画放行标志：容器渲染稳定后再挂动画 class（延后启动防首帧渲染拥塞吃动画）
+	// 滑入动画放行标志：容器渲染稳定后再挂动画 class
 	const contentAnim = ref<boolean>(false)
 	// 按钮扣住标志：滑切/打开全程扣住，滑入动画播完（sleep 300 后）放行——按钮与滑入完成同步现身
 	const optsHold = ref<boolean>(false)
@@ -199,7 +195,7 @@
 	const sliderImage = ref<string>('')
 	const powParam = ref<number[]>()
 	const concatHeight = ref<number>(0)
-	// 图块渲染宽（高恒 180，宽按原图比例数据算——x 端 image 默认盒 320，heightFix 盒宽不可靠）
+	// 图块渲染宽（高恒 180，宽按原图比例计算）
 	const pieceWidth = ref<number>(0)
 
 	const startTime = ref<number>(0)
@@ -226,10 +222,9 @@
 	let verifyTimer : ReturnType<typeof setTimeout> | undefined
 	let cancelPowMining : (() => void) | undefined
 
-	// 所属页面实例（active 时=dialogPage）：getCurrentInstance 仅 setup/生命周期内可用，
-	// 点击回调里现取为 null，须挂载期缓存供 close 使用
+	// 所属页面实例（active 时=dialogPage），挂载期缓存供 close 使用
 	let ownerPage : any = null
-	// 微信端（组件挂业务页）：挂载期缓存的组件实例，量测用（异步上下文取 getCurrentInstance 为 null）
+	// 微信端：挂载期缓存的组件实例，量测用
 	let ownerInstance : any = null
 
 	const clamp = (v : number, min : number, max : number) : number => v < min ? min : v > max ? max : v
@@ -253,7 +248,7 @@
 	const open = () => {
 		// #ifdef APP || WEB
 		if (props.mode !== 'active') {
-			// proxy 只是 API 锚点不渲染，主题 prop 经 url query 转发给壳页真身（双底座透传）
+			// proxy 只是 API 锚点不渲染，主题 prop 经 url query 转发给壳页
 			let url = '/pages/captcha/captcha'
 			if (props.themeLight || props.themeDark) {
 				// # 是 url 片段符必须编码，壳页成对 decode
@@ -319,15 +314,14 @@
 
 	// ---------- 取码 ----------
 
-	// slide=true 走滑切流：旧内容右滑出与请求并行 → 换数据（:key 重建容器）→ 新内容从左滑入；
-	// Vapor 端 class 切换替换 animation 不可靠（终态残留卡右侧），全部改 transition+节点重建
+	// slide=true 走滑切流：旧内容右滑出与请求并行 → 换数据（:key 重建容器）→ 新内容从左滑入
 	const getCaptcha = async (slide : boolean = false) => {
 		const prevHeight = (captchaLoading.value || loadingError.value) ? 298 : (type.value === 'POW' ? 136 : 298)
 		optsHold.value = true
 		if (slide) {
 			slidePhase.value = 'out'
 			// #ifndef MP-WEIXIN
-			// 滑出直驱（与滑块回弹同构）：class 切换驱动的 transform 过渡在 Vapor 端跳变，不可用
+			// 滑出直驱（class 切换驱动的 transform 过渡在 Vapor 端跳变）
 			contentEl.value?.style.setProperty('transform', 'translateX(288px)')
 			// #endif
 			// 新容器以无动画 class 出生（渲染稳定后滑切尾再放行）
@@ -340,8 +334,7 @@
 			const job = getCaptchaData()
 			let resp
 			if (slide) {
-				// 滑出动画（300ms）与请求竞速：响应先到=全程无 loading（多数情况），
-				// 滑出先完成=waiting 相位补显示 loading（网络波动兜底）；响应先到也等滑出动画收尾
+				// 滑出动画（300ms）与请求竞速：响应先到=无 loading；滑出先完成=waiting 相位显示 loading
 				const slideDone = sleep(300)
 				const first = await Promise.race([job.then(() => 'job'), slideDone.then(() => 'slide')])
 				if (first === 'slide') {
@@ -358,9 +351,7 @@
 				throw new Error(`code=${resp.code}`)
 			}
 			const d = resp.data
-			// POW↔图形跨高：高度动画在空窗期独占播放（交替 class 强制重建——card 常驻节点同 class 复挂
-			// 在 Vapor 不重触发动画，首开连贯后续跳变的根因）；播完经赋值帧（静态类切目标高度=填充值）摘除，
-			// 滑入期间 card 无活跃 animation（父级动画层会吞子容器 transition——安卓滑入丢失根因）
+			// POW↔图形跨高：高度动画在空窗期独占播放（a/b 交替 class），播完摘除；滑入期间 card 须无活跃 animation
 			const targetHeight = (d.type === 'POW') ? 136 : 298
 			const crossHeight = slide && targetHeight !== prevHeight
 			if (crossHeight) {
@@ -370,8 +361,7 @@
 					: (heightFlip.value ? 'lh-cap-h-shrink-a' : 'lh-cap-h-shrink-b')
 				await sleep(120)
 			}
-			// 赋值前切 in：容器首渲染（打开=v-if 切入/滑切=:key 重建）即 prep 左外态，统一左滑入场；
-			// 滑切流若首渲染带 out 再切 in，位移跳变会被容器 transition 过渡成从右往左横穿
+			// 赋值前切 in：容器首渲染即 prep 左外态，统一左滑入场
 			slidePhase.value = 'in'
 			type.value = d.type
 			if (crossHeight) {
@@ -417,9 +407,7 @@
 				slidePhase.value = 'idle'
 				return
 			}
-			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放（延后启动防首帧渲染拥塞吃动画；
-			// 后挂 animation 在安卓有 heightAnim 交替 class 先例；idle 沿用不摘——forwards 终态 0，
-			// 摘除回落静态起点 -288 会跳回左外）。勿换 requestAnimationFrame：实测炸流程白屏
+			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放；idle 沿用不摘（forwards 终态 0）。勿换 requestAnimationFrame
 			// #ifndef MP-WEIXIN
 			await nextTick()
 			await sleep(32)
@@ -435,11 +423,9 @@
 			}
 			return
 		}
-		// 打开流：内容（prep 态已渲染）左滑入场，静止后补点选量测（动画中量绝对坐标带偏移必错）
+		// 打开流：内容左滑入场，静止后补点选量测
 		if (!loadingError.value) {
-			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放（延后启动防首帧渲染拥塞吃动画；
-			// 后挂 animation 在安卓有 heightAnim 交替 class 先例；idle 沿用不摘——forwards 终态 0，
-			// 摘除回落静态起点 -288 会跳回左外）。勿换 requestAnimationFrame：实测炸流程白屏
+			// 滑入：容器以静态起点渲染稳定后，再挂动画 class 播放；idle 沿用不摘（forwards 终态 0）。勿换 requestAnimationFrame
 			// #ifndef MP-WEIXIN
 			await nextTick()
 			await sleep(32)
@@ -458,11 +444,10 @@
 
 	const measureMask = () : Promise<void> => {
 		return new Promise(resolve => {
-			// dialogPage 内 selectorQuery 查不到组件元素（同 uni.getElementById 限制，实测 null），
-			// 经缓存页面实例 getElementById 取；非 dialogPage 宿主（S6 组件挂载）回退 selectorQuery
+			// dialogPage 内 selectorQuery 查不到组件元素，经缓存页面实例 getElementById 取；其他宿主回退 selectorQuery
 			const el = ownerPage?.getElementById('lh-cap-click-mask')
 			if (el) {
-				// Async 版跨端（MP 的 UniElement 无同步 getBoundingClientRect，裸调炸 promise）
+				// Async 版跨端（MP 端无同步 getBoundingClientRect）
 				el.getBoundingClientRectAsync().then((rect : any) => {
 					maskRect.left = rect.left
 					maskRect.top = rect.top
@@ -481,7 +466,7 @@
 		})
 	}
 
-	// 遮罩/阻断层滚动拦截（x 端 touch 修饰符不可靠，官方姿势=回调内手动调用）
+	// 遮罩/阻断层滚动拦截（x 端 touch 修饰符不可靠，须回调内手动调用）
 	const onMaskTouchMove = (e : TouchEvent) => {
 		e.stopPropagation()
 		e.preventDefault()
@@ -492,15 +477,14 @@
 		e.preventDefault()
 	}
 
-	// ---------- 拖动直驱（官方 touch-events 姿势） ----------
-	// 蒸汽端 :style 响应式链路逐帧更新必滞后，元素引用 setProperty 直驱绕开；
-	// 色带+圆钮为一体元素（色带藏轨道左侧外，拖动=整体拖入），单元素单次 setProperty，
-	// 同步问题结构性消除；transition 摘除/恢复同样直驱（类切换走 patch 有粘滞帧）
+	// ---------- 拖动直驱 ----------
+	// 蒸汽端 :style 响应式链路逐帧更新滞后，位移经元素引用 setProperty 直驱；
+	// 色带+圆钮为一体元素（单元素单次 setProperty），transition 的摘除/恢复同样直驱
 	const powUnitEl = ref<UniElement | null>(null)
 	const dragUnitEl = ref<UniElement | null>(null)
 	const sliderEl = ref<UniElement | null>(null)
 
-	// identifier 跟踪：多指下锁定拖动起始指（hello 同款）
+	// identifier 跟踪：多指下锁定拖动起始指
 	let dragTouchId = -1
 	const findTouchByIdentifier = (touches : Touch[], identifier : number) : Touch | null => {
 		for (let i = 0; i < touches.length; i++) {
@@ -794,9 +778,8 @@
 	const refresh = (isClose : boolean) => {
 		stopJobs()
 		verifying.value = false
-		// 视觉态（结果彩带/滑块位/序号/powPhase）不清——失败红态保持滑出（红着出场），
-		// 由 getCaptcha 换码赋值段统一清，新内容滑入即默认轨道
-		// 切换动画进行中不重入；已有内容时走滑切流（含 POW/验证失败自动刷新），首开/错误重试走全卡 loading
+		// 视觉态不清：失败红态保持滑出，由 getCaptcha 换码赋值段统一清；
+		// 切换动画进行中不重入；已有内容时走滑切流，首开/错误重试走全卡 loading
 		if (!isClose && !captchaLoading.value && slidePhase.value === 'idle') {
 			getCaptcha(type.value !== undefined && !loadingError.value)
 		}
@@ -833,22 +816,17 @@
 		return '正在验证...'
 	})
 
-	// 微信端滑切位移：keyframes class 驱动（声明即播，与节点复用/绑定值过渡解耦——
-	// 同分支 :key 重建在微信 diff 不可靠，复用容器的绑定 out→in 跳变会被 transition 过渡成横穿）；
-	// idle 沿用 mp-in（forwards 终态 0 持续，换 '' 会让静态 -288 拉回）；App/Web 恒空串走 setProperty 直驱
+	// 微信端滑切位移：keyframes class 驱动（声明即播）；idle 沿用 mp-in；App/Web 恒空串走 setProperty 直驱
 	const slideStyleMp = computed(() : string => {
 		// #ifdef MP-WEIXIN
-		// out+waiting=mp-out（右滑出/waiting 停右外）；in+idle=mp-in（滑入/完成态 forwards 终态 0
-		// 持续——idle 若落 mp-out 会把滑出动画重播一遍致白屏，勿翻转语义）
+		// out+waiting=mp-out；in+idle=mp-in（idle 须沿用 mp-in，勿翻转语义）
 		if (slidePhase.value === 'out' || slidePhase.value === 'waiting') {
 			return 'lh-cap-mp-out'
 		}
 		return 'lh-cap-mp-in'
 		// #endif
 		// #ifndef MP-WEIXIN
-		// App：滑入 keyframes（from -288=静态起点一致）；动画 class 由 contentAnim 延后挂载
-		// （出生帧与数据渲染解耦防首帧拥塞吃动画）；idle/滑切全程沿用不摘（forwards 终态 0，
-		// 摘除回落静态 -288 会跳回左外）；滑出走 setProperty 直驱（复挂场景 keyframes 不可靠）
+		// App：滑入 keyframes（from -288=静态起点）；动画 class 由 contentAnim 延后挂载；idle/滑切全程沿用不摘
 		if (slidePhase.value === 'out' || slidePhase.value === 'waiting') {
 			return ''
 		}
@@ -872,7 +850,7 @@
 		}
 		// #endif
 		// #ifdef MP-WEIXIN
-		// 组件挂业务页（proxy 直渲）：缓存组件实例供量测（异步上下文 getCurrentInstance 为 null）
+		// 组件挂业务页：缓存组件实例供量测
 		ownerInstance = getCurrentInstance()?.proxy ?? null
 		// #endif
 	})
@@ -890,10 +868,10 @@
 </script>
 
 <style lang="scss">
-	/* 按压三等级统一维护点（styles/press.scss，编译期合并） */
+	/* 按压类（styles/press.scss） */
 	@import '@/styles/press.scss';
 
-	/* 遮罩：dialogPage 页面流内 100% 铺满；微信端（S6）业务页挂载需 fixed 全屏 */
+	/* 遮罩：dialogPage 页面流内 100% 铺满；微信端业务页挂载需 fixed 全屏 */
 	.lh-cap-mask {
 		width: 100%;
 		height: 100%;
@@ -919,7 +897,7 @@
 		width: 320px;
 		border-radius: var(--std-radius);
 		background-color: var(--std-emphasis-bg);
-		/* 浮层软影：单层大弥散中等透明度 */
+		/* 浮层软影 */
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 		padding: var(--std-gap-lg);
 		overflow: hidden;
@@ -943,9 +921,7 @@
 		height: 136px;
 	}
 
-	/* POW↔图形高度过渡：keyframes 显式起止（Vapor 端 transition height 三路全灭，keyframes 宽高 5.31+ 支持）；
-		a/b 双 class 交替（keyframes 内容成对重复）——常驻节点同 class 复挂不重触发动画，交替保证每次 class 值必变；
-		播完经赋值帧（静态类切目标高度=填充值同值）摘除，滑入期间卡片无活跃 animation（父动画层吞子 transition） */
+	/* POW↔图形高度过渡：keyframes 显式起止，a/b 双 class 交替保证每次必变；播完摘除 */
 	.lh-cap-h-shrink-a {
 		animation: lh-cap-h-shrink-a 100ms ease forwards;
 	}
@@ -1002,10 +978,10 @@
 		}
 	}
 
-	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点（旧版不遮操作区语义） */
+	/* 右上操作区：显式置顶（高于阻断层 z10），校验期间刷新/关闭仍可点 */
 	.lh-cap-opts {
 		position: absolute;
-		/* 36px 热区盒中心 26 与 title 行中心 26.5 对齐（top 8+36/2）；right 4+盒 margin 4+盒内边 8=icon 距卡片右缘 16px（padding 线） */
+		/* 36px 热区盒中心与 title 行中心对齐；icon 距卡片右缘 16px */
 		top: 8px;
 		right: 4px;
 		z-index: 20;
@@ -1021,8 +997,7 @@
 		pointer-events: auto;
 	}
 
-	/* App/Web 滑入：keyframes 插入即播（from 与静态 style 起点一致无闪），安卓 transition 激活窗口
-		对新建节点不可靠【诊断实证】，animation 声明路径为彩带/高度动画同款零故障先例 */
+	/* App/Web 滑入：keyframes 插入即播（from 与静态 style 起点一致） */
 	.lh-cap-slide-in {
 		animation: lh-cap-slide-in 300ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 	}
@@ -1038,7 +1013,7 @@
 	}
 
 	/* #ifdef MP-WEIXIN */
-	/* 微信端滑切位移：keyframes 声明即播（见 slideStyleMp）；from=静态起点一致无首帧闪，forwards 保终态 */
+	/* 微信端滑切位移：keyframes 声明即播（见 slideStyleMp）；from=静态起点，forwards 保终态 */
 	.lh-cap-mp-out {
 		animation: lh-cap-mp-out 300ms ease-out forwards;
 	}
@@ -1068,16 +1043,14 @@
 	}
 	/* #endif */
 
-	/* 点击热区容器（icon 本体不带事件，见 template 注释） */
+	/* 点击热区容器（icon 本体不带事件） */
 	.lh-cap-opts-btn {
 		width: 36px;
 		height: 36px;
-		/* uvue view 默认 flex-direction: column——justify 管竖轴，做水平偏移必须显式 row */
+		/* uvue view 默认 flex-direction: column，水平偏移须显式 row */
 		flex-direction: row;
 		align-items: center;
-		/* 热区紧贴零死区（相邻触区无缝分格，系统 toolbar 同款）；icon 非对称居中：
-		   刷新钮 icon 偏右 4px、关闭钮偏左 4px（--end）——视觉间距 8px（缓冲 4×2），
-		   外缘 icon 距卡片右缘=容器 right 4+右钮右侧余 12=16px（padding 线）不变 */
+		/* 热区紧贴零死区；icon 非对称居中：刷新钮偏右 4px、关闭钮偏左 4px（--end） */
 		justify-content: flex-end;
 		padding-right: var(--std-gap-xs);
 	}
@@ -1133,7 +1106,7 @@
 	}
 
 	/* POW */
-	/* 内容裁切层：padding 内缘裁切（滑动消失点）+ 层级高于切换 loading(z1) */
+	/* 内容裁切层：padding 内缘裁切，层级高于切换 loading(z1) */
 	.lh-cap-clip {
 		flex: 1;
 		position: relative;
@@ -1146,8 +1119,7 @@
 		transition: transform 300ms ease-out;
 	}
 
-	/* 轨道结果彩带：从左向右铺满（显式 px），文案铺满后淡入（自然态=动画起点防插入闪现）；
-		右端 20px 圆头=滚动推进的圆头、铺满时与轨道右端圆弧贴合（同金带端头形态） */
+	/* 轨道结果彩带：从左向右铺满，文案铺满后淡入；右端 20px 圆头与轨道右端圆弧贴合 */
 	.lh-cap-ribbon {
 		position: absolute;
 		top: 0;
@@ -1207,9 +1179,7 @@
 		transition: transform 300ms ease-out;
 	}
 
-	/* 刷新滑切：位移全程 setProperty 直驱+transition（与滑块回弹同构、两端真机过线路径）；
-		起点=容器静态 style 属性 -288（DOM 创建即生效，绕开绑定 patch——动态 class/style 绑定
-		在安卓端新节点首帧滞后必闪 0 位；class 切换驱动的 transform 过渡在 x 端不可靠，均弃用） */
+	/* 刷新滑切：位移全程 setProperty 直驱+transition；起点=容器静态 style 属性 -288 */
 
 	/* 层级（低→高）：卡片背景 < 切换 loading(z1) < 验证码内容模块(z2)——滑出/滑入的内容从 loading 上层划过 */
 	.lh-cap-switch-loading {
@@ -1229,7 +1199,7 @@
 		font-size: 15px;
 		font-weight: bold;
 		color: var(--std-secondary-color);
-		/* 上 0=与左右/图区下边距同为 padding 16；下 12=承接原 margin-top 4px 守恒内容总高（卡片高不动） */
+		/* 上与左右=padding 16，下 12（内容总高不变） */
 		margin: 0 0 var(--std-gap-md) var(--std-gap-xs);
 	}
 
@@ -1265,7 +1235,7 @@
 		overflow: hidden;
 	}
 
-	/* 平铺条：双图并排首尾相接（x 无 background-repeat），translateX(x-288) 滚动=旧版 background-position 等效 */
+	/* 平铺条：双图并排首尾相接，translateX(x-288) 滚动 */
 	.lh-cap-concat-strip {
 		flex-direction: row;
 		width: 576px;
@@ -1290,8 +1260,7 @@
 		height: 180px;
 	}
 
-	/* ROTATE 圆盘：容器铺满图片区双向居中——盘中心=图片层几何中心(144,90)，
-	   rotate 绕图自身中心即绕背景缺口中心（后端契约=缺口恒在正中心，无坐标字段） */
+	/* ROTATE 圆盘：容器铺满图片区双向居中，rotate 绕背景缺口中心 */
 	.lh-cap-rotate-box {
 		position: absolute;
 		top: 0;
@@ -1308,8 +1277,7 @@
 
 
 
-	/* 结果横条（图形类，图片区底部） */
-	/* 结果横条：层级高于点选序号/蒙层与校验阻断层（z10）；自然态=上滑动画起点（下缘外），防插入闪现 */
+	/* 结果横条（图形类，图片区底部）：层级高于点选序号/蒙层与阻断层；自然态=上滑动画起点 */
 	.lh-cap-status {
 		position: absolute;
 		left: 0;
@@ -1378,8 +1346,7 @@
 		overflow: hidden;
 	}
 
-	/* 一体拖动元素：色带（328，延伸至圆钮右缘下，初始整体藏轨道左外）+圆钮叠右端，
-	   translateX 直驱整体拖入；色带右端 20px 圆角与圆钮圆弧重合=端头胶囊 */
+	/* 一体拖动元素：色带（延伸至圆钮右缘下，初始整体藏轨道左外）+圆钮叠右端，translateX 直驱整体拖入 */
 	.lh-cap-unit {
 		position: absolute;
 		top: 0;
@@ -1457,64 +1424,11 @@
 		background-color: #7e2e2f;
 	}
 
-	/* 点选圈描边：暗色换中性灰阶且半透明（同亮色白边的半透明处理） */
+	/* 点选圈描边：暗色换中性灰阶且半透明 */
 	.lh-cap-click-dot {
 		border-color: rgba(74, 77, 82, 0.6);
 	}
 
 
 	}
-
-	/*
-	 * ============================================================
-	 * 动效实现坑档案（2026-11 真机实测结论，鸿蒙版开发前必读）
-	 * ============================================================
-	 * 当前平台终态：App(iOS/Android Vapor)=静态 style 起点 -288 + 滑入 keyframes 延后挂载 +
-	 *   滑出 setProperty 直驱；微信(VDOM)=keyframes class 三态(mp-out/mp-in)；点选量测走
-	 *   ownerPage/ownerInstance getElementById。
-	 *
-	 * 【Vapor 端（App 双端）】
-	 * 1. animation-fill-mode 的 backwards/both 不支持（仅 forwards）——animation 插入节点
-	 *    会先闪一帧自然终态。插入型动画必须「自然态=动画起点」：静态 style 起点，或 keyframes
-	 *    from 与自然态一致。
-	 * 2. class 切换驱动的 transform transition 不可靠：常驻节点同 class 复挂不重触发动画
-	 *    （解法=双 class 交替 a/b 强制值变化）；新建节点 class 变化跳变/吞动画。
-	 * 3. height/width 的 transition 三路全灭（class 挂载/:style 绑定/setProperty 直驱均不触发）；
-	 *    但 @keyframes 动画宽高 5.31+ 可行（h-shrink/h-grow 实证）。
-	 * 4. 安卓新建节点存在 transition 激活窗口：首绘后短窗内 setProperty 改值不触发过渡
-	 *    （iOS 无此窗；诊断实证 ref/起点/调用全正常仍不播）——动画一律走 keyframes class 声明，
-	 *    不走「起点态+改值触发 transition」。
-	 * 5. 动画 class 与数据赋值同帧挂载，首帧渲染拥塞（图片解码/分支切换）会吃掉动画前段
-	 *    →不连贯。动画 class 延后挂载（nextTick+32ms 两帧，contentAnim 标志）。
-	 *    勿换 requestAnimationFrame：uni.requestAnimationFrame 实测调用即炸流程（dialogPage
-	 *    透明页零内容白屏无报错，机制未明），固定 timeout 是实测可用形态。
-	 * 6. 父级活跃 animation 会吞子容器的 transition（跨高滑切时 card 高度动画期间滑入丢失）
-	 *    →高度动画与滑入串行，不在同一时间窗共存。
-	 * 7. 动态绑定（:class/:style 三元）在安卓新节点首帧应用滞后，闪一帧自然态→静态 style
-	 *    属性（DOM 创建即生效）做起点锚。注意：微信端 mp-in 的触发依赖该静态 style 属性存在
-	 *    （删除后微信动画消失，机制未明，两端模板保持共享勿拆）。
-	 * 8. transform 位移显式 px（百分比基准不可靠）；关键常量：内容区 288、滑距 288、
-	 *    卡片高 298（图形/加载）/136（POW）——图形内容实高 297，盒子小于内容会静默裁切
-	 *    （曾致轨道被裁 1px，勿改回 296）。
-	 *
-	 * 【微信小程序端（VDOM 渲染，与 Vapor 行为不同）】
-	 * 9. 同分支 :key 重建 diff 不可靠（复用容器）：绑定值 out→in 跳变被 transition 过渡成
-	 *    横穿卡片。滑切动画用 keyframes class 声明即播（mp-out/mp-in），与节点复用解耦。
-	 *    相位→class 映射语义勿翻转：idle（滑入完成态）必须沿用 mp-in——曾把映射改为
-	 *    「非 in 即 mp-out」致 idle 重播滑出动画=内容滑出后整卡白屏（小程序白屏第三案）。
-	 * 10. pointer-events 在 WXSS 不生效；uni-icons 组件的 click 转发不可靠（点击挂外层 view）。
-	 * 11. selectorQuery/uni.getElementById 在业务页可用，但本组件量测走缓存实例
-	 *    （getCurrentInstance 异步上下文返回 null，onMounted 缓存 ownerInstance/ownerPage）。
-	 * 12. height transition 在微信浏览器内核天然可用（POW↔图形高度动画白赚）。
-	 *
-	 * 【通用】
-	 * 13. 滑距 288=内容区宽，裁切层 lh-cap-clip（overflow hidden，padding 内缘）保证内容
-	 *     碰边即消失；层级（低→高）：卡片背景 < 切换 loading(z1) < 内容裁切层(z2) <
-	 *     freeze 阻断(z10) < 结果横条(z11) < 操作区(z20)。
-	 * 14. POW 挖矿中刷新保持可用：stopJobs 取消标志在挖矿片间生效，无泄漏；慢平台真解法=
-	 *     分端配置（小程序端不配 POW，3.1.0 后台已支持）。
-	 * 15. 鸿蒙（Vapor）预期缺口（未验证，届时逐条实测）：@keyframes 兼容表标 x（仅 transition
-	 *     可用）→本文 keyframes 方案若不可用，回退方案=requestAnimationFrame 全端支持，
-	 *     JS 逐帧补间 setProperty；app-harmony 插件目录留白。
-	 */
 </style>

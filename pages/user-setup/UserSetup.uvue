@@ -73,8 +73,8 @@ import { webSocket } from '@/utils/web-socket'
 		const initialized = ref<boolean>(false)
 
 	onLoad(async () => {
-		// 登录态守卫（S2-03 全局守卫前的页内兜底）：无 token 不发初始化请求直接回登录——
-		// 不走 401 拦截（其 reLaunch+清态与页面首帧渲染/原生视图构造并发会触发框架级闪退）
+		// 登录态守卫（页内兜底）：无 token 不发初始化请求直接回登录，不走 401 拦截
+		// （其 reLaunch+清态与页面首帧渲染并发会触发框架级闪退）
 		if (!getToken()) {
 			uni.reLaunch({ url: "/pages/login/Login" })
 			return
@@ -101,7 +101,7 @@ import { webSocket } from '@/utils/web-socket'
 	 * 完成与离场
 	 */
 	const initFinish = () => {
-		// 完成进入系统：清暂存+连 WS（向导期间不连，master 口径；未读数/通知字典待 S2-02 落地补齐）
+		// 完成进入系统：清暂存 + 连 WS（向导期间不连）
 		const handleFinish = () => {
 			clearData()
 			webSocket.connect()

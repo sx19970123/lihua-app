@@ -1,4 +1,4 @@
-// crypto-js 为纯 CJS 包在 x 打包器无互操作（运行时 root.CryptoJS 炸），换其 ESM 同源移植 crypto-es（扁平具名导出形态）
+// AES 加解密（crypto-es：crypto-js 的 ESM 同源移植）
 import { AES, Utf8, CBC, Pkcs7 } from 'crypto-es'
 
 // 16 字节的 Key

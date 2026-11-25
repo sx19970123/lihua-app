@@ -1,6 +1,6 @@
 ---
 name: create-component
-description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系/行高 padding 直构禁 min-height）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范。跨端坑点详规见 cross-platform-pitfalls.md。
+description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系/行高 padding 直构禁 min-height）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范、注释规范（只写用途不写背景）。跨端坑点详规见 cross-platform-pitfalls.md。
 ---
 
 # 新建/修改公共组件（uni-app x 手搓组件规范）
@@ -208,9 +208,28 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   （icon 居中留缓冲）。相邻按钮热区紧贴零死区（系统 toolbar 同款），视觉间距用盒内
   非对称偏移收窄。
 
+## 注释规范（全仓适用：组件/页面/工具/样式）
+
+注释只回答「这段代码做什么用」，一两行为上限。读者是改代码的人，不是在追溯这行代码的
+来历；来历写进注释会随设计演进烂在原地。
+
+- **写**：用途；关键参数与取值含义（单位、阈值、方向约定）；改这段代码必须知道的一句话
+  禁忌（如「内距必须挂段位，不挂轨道/组」「勿换 requestAnimationFrame」「idle 须沿用 mp-in」）。
+- **不写（背景一律不留）**：
+  - 日期、轮次、「某日用户反馈/拍板」这类经过；
+  - 真机实测数值与量法、诊断结论（「实测 52.3pt」「诊断卡实锤」）；
+  - 被否的备选方案与取舍推理（「曾用 X，因 Y 改 Z」「根因」「教训」「坑①」）；
+  - 计划阶段编号（S2-03、A2/B 阶段）；
+  - 出处与对标（Apple/HIG/iOS 对齐、sard 复刻、「对标组件库」「官方姿势」）；
+  - 会过期的数字——尺寸档位这类以代码为准的值不在注释里重复（prop 注释写「三档」不写
+    具体高度，数字只留在样式与 token 里）。
+- **去向**：设计决策链与否决理由→commit message；标准出处与演进史→本 skill 与记忆；
+  平台坑点清单→`cross-platform-pitfalls.md`，不放组件文件尾（档案式长注释不进代码）。
+- 文件头注释同样从简；模板 `<!-- -->`、script、style 三处一视同仁。组件头仍按「平台分叉
+  组件」节标明分叉级位与原因（一句话）。改写旧代码时顺手把碰到的背景注释按本规范清掉。
+
 ## 收尾自查
 
-- 标签配对校验（模板改动必做）；pages/ 零 #ifdef；注释简洁（一两行说用途，设计推理
-  放 commit/记忆不塞代码）。
+- 标签配对校验（模板改动必做）；pages/ 零 #ifdef；注释按「注释规范」节。
 - 新组件在 `pages/component/` 建独立 demo 页（@import `styles/demo.scss`），并在
   `pages/component/menu.uvue` 对应分组登记。

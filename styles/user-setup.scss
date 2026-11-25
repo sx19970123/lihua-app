@@ -1,21 +1,21 @@
-/* ========== 登录后初始设置向导（五步组件共享样式，蒸汽版：BEM 单类 + token 色/间距/圆角） ========== */
+/* 登录后初始设置向导（五步组件共享样式） */
 
-/* 页面骨架：安全区下方满高（页面 flex 容器内撑满），步进轨道占余下全部 */
+/* 页面骨架：安全区下方满高 */
 .setup-page {
 	flex: 1;
 }
 
-/* 轨道单步槽位（宽度由页面按 1/count 内联给定；页面禁滚对齐登录域：键盘覆盖不推挤布局） */
+/* 轨道单步槽位（宽度由页面按 1/count 内联给定） */
 .setup-step-slot {
 	height: 100%;
 }
 
-/* 底部安全区占位（内容底缘不贴 home 指示条） */
+/* 底部安全区占位 */
 .setup-bottom-safe {
 	height: var(--uni-safe-area-inset-bottom);
 }
 
-/* 步骤版式三段式：头部（距顶固定）+身体（弹性 scroll，矮屏才滚）+脚部（距底固定） */
+/* 步骤版式：头部 + 可滚身体 + 脚部 */
 .setup-step {
 	flex: 1;
 }
@@ -43,7 +43,7 @@
 	font-size: var(--std-text-2xl);
 	font-weight: bold;
 	line-height: var(--std-leading-2xl);
-	/* 主字体色（亮黑/暗白），与主题色图标区分 */
+	/* 主字体色 */
 	color: var(--std-emphasis-color);
 	margin-top: var(--std-gap-2xl);
 }
@@ -61,7 +61,7 @@
 	margin-top: var(--std-section-gap);
 }
 
-/* 表单项间距（对齐登录域 auth-field；std=Apple 带边框控件外距锚 12） */
+/* 表单项间距（与登录页一致） */
 .setup-field {
 	margin-top: var(--std-form-gap);
 }
@@ -70,8 +70,7 @@
 	width: 100%;
 }
 
-/* 主按钮：与登录域 auth-btn 同视觉（原生 type=primary 提供 loading/点击态）；
-   高度走 padding 直构（Apple 默认控件档 44=行盒 22+11×2） */
+/* 主按钮：与登录页 auth-btn 同视觉，高度由 padding 撑出 */
 .setup-btn {
 	width: 100%;
 	padding: var(--std-btn-pad-y) var(--std-gap-lg);
@@ -102,8 +101,7 @@
 	color: var(--std-tertiary-color);
 }
 
-/* 性别选择行：与 app-input 卡片同视觉（带边框控件 44=行盒 22+内距 10×2+边框 2 的自然高），
-   值/placeholder 居左+右箭头 */
+/* 性别选择行：与 app-input 同视觉，值/placeholder 居左 + 右箭头 */
 .setup-select-row {
 	flex-direction: row;
 	align-items: center;
@@ -139,4 +137,4 @@
 	color: var(--std-fourth-color);
 }
 
-/* 部门步容器卡片/筛选/滚动已封装进 app-tree 组件（filterable） */
+/* 部门步的卡片/筛选/树已封装进 app-tree */

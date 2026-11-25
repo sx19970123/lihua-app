@@ -31,8 +31,7 @@ class WebSocketManager {
 	private reconnectTimer?: ReturnType<typeof setTimeout>
 	// 是否开启重连
 	private enableRetry: boolean = true
-	// 连接在途标志：getOnceToken 网络往返窗口内实例闸门（this.webSocket）尚未建立，
-	// 守卫在 initUserInfo 返回前的连续导航会并发触发 connect（H5 冷启动守卫+splash 双跳双连接必现），在途直接忽略
+	// 连接在途标志：getOnceToken 往返窗口内的并发 connect 只放行首个，其余忽略
 	private connecting: boolean = false
 
 	constructor() {
@@ -89,16 +88,14 @@ class WebSocketManager {
 					this.startHeartbeat()
 				})
 
-				// 连接错误：与 onClose 走同一套清理+重连（handleAbnormalEnd 内以 task 引用去重，error+close 双触发只算一次）。
-				// 小程序 SocketTask 连接建立失败时常只触发 error 不触发 close（H5/APP 则 error 后必补 close），
-				// 只记录不清理会令僵尸 task 残留、阻塞 connect/manualReconnect，wsStatus 永停 reconnecting
+				// 连接错误：与 onClose 走同一套清理+重连；小程序连接失败常只触发 error 不触发 close
 				task.onError((err) => {
 					this.isConnected = false
 					console.error('WebSocket连接错误:', err)
 					this.handleAbnormalEnd(task)
 				})
 
-				// 连接关闭：非 1000 关闭码视为异常断开（部分平台 event 无 code 字段，undefined 按异常处理倾向重连；主动关闭由 enableRetry=false 拦截）
+				// 连接关闭：非 1000 关闭码（含无 code 字段）视为异常断开；主动关闭由 enableRetry=false 拦截
 				task.onClose((event) => {
 					console.info('WebSocket连接关闭:', event)
 					this.isConnected = false
@@ -168,8 +165,7 @@ class WebSocketManager {
 	// 手动重连：清零重试计数重启新一轮自动重连；自动重连耗尽停止后的外部恢复通道，由 UI 层显式调用
 	public manualReconnect = () => {
 		if (this.webSocket) {
-			// 僵尸 task 兜底：连接失败态的 task（小程序 error 无 close 场景）会永久占位阻塞重连，强制清理后重启；
-			// close 后补发的 onClose 经 task 引用去重跳过
+			// 僵尸 task 兜底：连接失败态的 task 会占位阻塞重连，强制清理后重启
 			this.webSocket.close({code: 1000})
 			this.webSocket = undefined
 			this.closeHeartbeat()
@@ -183,8 +179,7 @@ class WebSocketManager {
 	public closeConnect = () => {
 		console.log("WebSocket主动关闭")
 		this.enableRetry = false
-		// 主动关闭先落断链态：closeConnect 即置空 this.webSocket，补发的 onClose 会被
-		// task 引用去重跳过、不再更新状态，不在此写 wsStatus 会永停 connected
+		// 主动关闭先落断链态（补发的 onClose 会被 task 引用去重跳过，不再更新状态）
 		wsStatus.value = 'disconnected'
 		// 主动关闭后清零重试计数，下次连接从满额度开始
 		this.retryNumber = 0

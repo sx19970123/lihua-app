@@ -15,8 +15,7 @@
 		</app-list>
 		<text class="demo-value">clicked = {{ listRowClick || '（未点击）' }}</text>
 
-		<!-- icon 假设对照组（MP 行高矮排查）：同页并排无 icon 纯文字行——两端对比此组行高，
-		     一致=icon 行盒撑高差异坐实（menu 页行全带 icon） -->
+		<!-- 无 icon 纯文字行：与上方带 icon 行做高度对照 -->
 		<text class="demo-bare-label">无 icon 纯文字行（高度对照组）</text>
 		<app-list>
 			<app-list-item :divider="false" title="纯文字加箭头" arrow hover @click="onListRowClick('纯文字加箭头')" />

@@ -79,7 +79,7 @@
 		}
 	}
 
-	// 跳过确认（uni.showModal，协议弹窗同款官方形态）
+	// 跳过确认（uni.showModal）
 	const openSkipDialog = () => {
 		if (loading.value) {
 			toast("正在设置默认部门，请稍候")

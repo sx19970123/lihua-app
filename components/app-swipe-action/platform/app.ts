@@ -29,7 +29,7 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			}
 			return estimateWidth(label)
 		},
-		// app 端 stopPropagation 已实证有效，触摸兜底空实现
+		// 触摸兜底空实现
 		markConfirmBarHit : () => {},
 		takeConfirmBarHit : () : boolean => {
 			return false

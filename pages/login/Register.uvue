@@ -177,7 +177,7 @@ const { registerData, registerLoading, checkRegisterData, handleCheckUsername, h
  * 验证码相关
  */
 const initCaptcha = () => {
-	// 是否启用验证码（取自设置 store，与登录页同源，受后台开关控制）
+	// 是否启用验证码（取自设置 store）
 	const isEnableCaptcha = computed(() => settingStore.enableCaptcha)
 
 	// 打开验证码

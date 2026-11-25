@@ -1,77 +1,59 @@
-/* 新标准 token（--std-*）=全仓唯一 token 定义文件（JS 镜像 utils/tokens-std.ts 成对维护）：
-   字号/行高=值层档位（Apple HIG 数值，typography.scss 类层成对消费，勿单改一边）+
-   间距/圆角语义层（按用途命名——两个 16px 因位置不同而不同名；x 端值不可嵌套 var，
-   各带字面量=独立旋钮）+ 色板（品牌资产原值平移，暗色自动 media dark）。
-   老 tokens.scss 已于 2026-11-25 全量迁毕删除（字号/行高/圆角/间距/分段器高/色板）。
-   标准详规见 skills/create-component.md「尺度基准」；
-   keyframes/TS 算式消费的数值走 JS 镜像，交编译前一致性自查规则同见 skill */
+/* 设计 token（--std-*）：字号/行高、间距、圆角、色板。JS 侧镜像见 utils/tokens-std.ts（改值两处成对改） */
 page {
-	/* 字号（Apple 语义档；官方 11 档压缩为 7 档，跳过 Caption1 12/16、Callout 16/21、
-	   Title3 20/25——需要时按官方值补） */
-	--std-text-2xs: 11px;  /* Caption 2 = 官方 iOS 最小字号 */
-	--std-text-sm: 13px;   /* Footnote */
-	--std-text-base: 15px; /* Subhead */
-	--std-text-lg: 17px;   /* Body 正文主字号 */
-	--std-text-xl: 22px;   /* Title 2 */
-	--std-text-2xl: 28px;  /* Title 1 */
-	--std-text-3xl: 34px;  /* Large Title 页首大标题 */
+	/* 字号 */
+	--std-text-2xs: 11px;
+	--std-text-sm: 13px;
+	--std-text-base: 15px;
+	--std-text-lg: 17px;  /* 正文主字号 */
+	--std-text-xl: 22px;
+	--std-text-2xl: 28px;
+	--std-text-3xl: 34px;
 
-	/* 行高（Apple 每档绝对值） */
-	--std-leading-2xs: 13px;  /* Caption 2 行高 */
-	--std-leading-sm: 18px;   /* Footnote 行高 */
-	--std-leading-base: 20px; /* Subhead 行高 */
-	--std-leading-lg: 22px;   /* Body 行高 = 行盒锚 */
-	--std-leading-xl: 28px;   /* Title 2 行高 */
-	--std-leading-2xl: 34px;  /* Title 1 行高 */
-	--std-leading-3xl: 41px;  /* Large Title 行高 */
+	/* 行高（与同档字号配对） */
+	--std-leading-2xs: 13px;
+	--std-leading-sm: 18px;
+	--std-leading-base: 20px;
+	--std-leading-lg: 22px;
+	--std-leading-xl: 28px;
+	--std-leading-2xl: 34px;
+	--std-leading-3xl: 41px;
 
-	/* ---- 间距语义层（按用途命名，不按值命名——两个 16px 因位置不同而不同名）。
-	     x 端值不可嵌套 var→各带字面量=独立旋钮（改列表内距物理上不影响页边距）；
-	     只为跨页面复用概念建名，组件内一次性微距留组件本地 ---- */
 
-	/* 页面层 */
-	--std-page-margin-x: 16px;               /* 页面左右边距 = UIKit layoutMargins 16 */
+	/* 间距语义层：按用途命名 */
+	--std-page-margin-x: 16px;  /* 页面左右边距 */
 
-	/* 列表层 */
-	--std-row-height: 52px;                  /* 列表行/树节点显式高度（=leading-lg+list-pad-y×2 派生值的落地；消费=tree node max-height/hit/hit-first/arrow 与 JS 镜像 STD_ROW_HEIGHT；@keyframes 用不了 var 仍为字面量，由 skill 自查规则守同步） */
-	--std-list-pad-y: 15px;                  /* 列表行纵向内距：行高 52=行盒22+15×2（Apple 设置页真机实测 157px/3=52.3pt，2026-11-24；UIKit 默认 44 是旧值） */
-	--std-list-pad-x: 16px;                  /* 列表行水平内距 = Apple separatorInset/列表左缩进 16 */
-	--std-list-title-margin: 16px 16px 8px;  /* 列表组标题外距（上 | 左右 | 下），复合值 */
-	--std-list-icon-gap: 12px;               /* 列表行图标列↔文字列间距（Apple 无明文，沿用现值） */
+	--std-row-height: 52px;  /* 列表行/树节点高度 */
+	--std-list-pad-y: 15px;  /* 列表行纵向内距 */
+	--std-list-pad-x: 16px;  /* 列表行水平内距 */
+	--std-list-title-margin: 16px 16px 8px;  /* 列表组标题外距（上 | 左右 | 下） */
+	--std-list-icon-gap: 12px;  /* 列表行图标与文字间距 */
 
-	/* 卡片层 */
-	--std-card-pad-y: 12px;                  /* 卡片三区（头/体/脚）纵向内距：头 46=22+12×2 */
-	--std-card-pad-x: 16px;                  /* 卡片三区水平内距 */
+	--std-card-pad-y: 12px;  /* 卡片头/体/脚纵向内距 */
+	--std-card-pad-x: 16px;  /* 卡片头/体/脚水平内距 */
 
-	/* 表单层 */
-	--std-form-gap: 12px;                    /* 表单项纵向间距 = Apple 带边框控件外距锚 12（2026-11-24 拍板） */
+	--std-form-gap: 12px;  /* 表单项纵向间距 */
 
-	/* 控件层（Apple 真机实测阶梯：小号 32 / 默认 44 / 列表行 52，每档=行盒+对称留白） */
-	--std-control-pad-y: 10px;               /* 带边框控件（输入框/选择行）纵向内距：外高 44=行盒22+10×2+边框×2（Apple 默认控件 44pt=HIG 条文+App Store 搜索框实测 44.0pt） */
-	--std-btn-pad-y: 11px;                   /* 无边框按钮纵向内距：高 44=行盒22+11×2（同上 Apple 默认控件档） */
+	--std-control-pad-y: 10px;  /* 带边框控件（输入框/选择行）纵向内距 */
+	--std-btn-pad-y: 11px;  /* 无边框按钮纵向内距 */
 
-	/* 圆角层（HIG 无官方条文；Apple 设置卡片真机拟合 ≈13pt，现值 12 同级暂不改，要贴 Apple 改这一行即可） */
-	--std-radius: 12px;                      /* 主圆角：卡片/按钮/输入框/列表/树面板/分段器轨道 */
-	--std-radius-full: 9999px;               /* 胶囊：固定全圆（Apple 胶囊控件均为高/2 全圆，App Store 搜索框实测验证） */
+	--std-radius: 12px;  /* 主圆角 */
+	--std-radius-full: 9999px;  /* 胶囊圆角 */
 
-	/* 区块层 */
-	--std-section-gap: 32px;                 /* 区块间强分隔（登录按钮上方这类） */
+	--std-section-gap: 32px;  /* 区块间距 */
 
-	/* 间距值层（通用无概念小间隙；语义概念走上方语义层。与老刻度同值迁移 2026-11-25） */
-	--std-gap-xs: 4px;    /* 微间距（图标↔文字、贴片间隙） */
-	--std-gap-sm: 8px;    /* 行内元素间隙；高度公式紧凑档留白 */
-	--std-gap-md: 12px;   /* 组件内边距；高度公式邻档 */
-	--std-gap-lg: 16px;   /* 通用间隔（卡片间、页内块距） */
-	--std-gap-xl: 20px;   /* 中间隔（一次性布局值） */
-	--std-gap-2xl: 24px;  /* 大间隔（一次性布局值） */
-	--std-gap-3xl: 32px;  /* 大留白（页尾/贴底） */
+	/* 间距值层：通用小间隙 */
+	--std-gap-xs: 4px;
+	--std-gap-sm: 8px;
+	--std-gap-md: 12px;
+	--std-gap-lg: 16px;
+	--std-gap-xl: 20px;
+	--std-gap-2xl: 24px;
+	--std-gap-3xl: 32px;
 }
 
-/* ---- 色板（品牌资产，2026-11-25 自 tokens.scss 原值平移；语义命名与暗色机制=Apple
-     label/secondaryLabel 同构。danger 无暗色档=恒值，要不要跟 Apple 暗色提亮（systemRed
-     #FF453A 式）待拍板；gray 灰度未迁：唯一消费点 app-input 强度条已摊平字面量 ---- */
+/* 色板：暗色由下方 media dark 覆盖 */
 page {
-	/* 主题/语义色（亮） */
+	/* 亮色 */
 	--std-primary: #3b82f6;
 	--std-danger: #ef4444;
 	--std-secondary-color: #505457;
@@ -82,19 +64,17 @@ page {
 	--std-emphasis-bg: #fff;
 	--std-border-color: #e2e3e4;
 	--std-active-bg: #ecedee;
-	--std-active-opacity: 0.5;             /* 非色，亮暗同值 */
+	--std-active-opacity: 0.5;  /* 亮暗同值 */
 	--std-disabled-color: #b5b9bd;
 	--std-disabled-border-color: #d1d4d6;
 	--std-disabled-shallow-bg: #ecedee;
-	--std-input-bg: #ffffff;               /* 输入框底色（亮=白面） */
+	--std-input-bg: #ffffff;  /* 输入框底色 */
 }
 
 @media (prefers-color-scheme: dark) {
 	page {
-		/* 主色暗色档：提亮一档适配深底（产品决策双档化） */
+		/* 暗色 */
 		--std-primary: #60a5fa;
-
-		/* 语义色暗色档 */
 		--std-secondary-color: #e2e3e4;
 		--std-secondary-bg: #505457;
 		--std-tertiary-color: #b5b9bd;
@@ -106,6 +86,6 @@ page {
 		--std-disabled-color: #74787c;
 		--std-disabled-border-color: #74787c;
 		--std-disabled-shallow-bg: #505457;
-		--std-input-bg: #242628;
+		--std-input-bg: #242628;  /* 输入框底色 */
 	}
 }

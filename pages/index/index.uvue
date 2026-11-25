@@ -57,7 +57,7 @@ const goLogin = () => {
 	uni.navigateTo({ url: '/pages/login/Login' })
 }
 
-// ---------- WS 连接测试（S1-08 尖峰）----------
+// ---------- WS 连接测试 ----------
 const wsNotice = ref('—')
 webSocket.addEventListener('WS_NOTICE', (data: any) => {
 	wsNotice.value = JSON.stringify(data).slice(0, 60)
@@ -78,7 +78,7 @@ const goUserSetupTest = () => {
 	goUserSetup()
 }
 
-// ---------- POW 端到端（④ 尖峰）----------
+// ---------- POW 端到端 ----------
 const powState = ref('未执行')
 const powProgress = ref('—')
 const powTiming = ref('—')
