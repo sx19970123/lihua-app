@@ -43,6 +43,8 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   图形列（icon/arrow）容器钉 `height: 22px + overflow: visible`，防 uni-icons 默认
   行盒撑高；tree 式 max-height 钳制法（内容自然高+max 单属性）为同哲学替代。
 - 条件编译铁律：业务页面禁 #ifdef；平台分叉收敛在工具类/组件内。
+- **层序只在同父兄弟间排**：需要互相压盖的层做成同一父级的直接子元素并各给显式
+  z-index；跨层级（孙辈压叔辈）iOS 蒸汽端不生效（cross-platform-pitfalls 坑⑧）。
 
 ## 尺度基准（2026-11-24 定，iOS 式：高度不进全局 token）
 
@@ -63,7 +65,7 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   组件，press.scss 同款纪律）。
 - **间距语义层**（tokens-std.scss）：边距按**用途**挂 `--std-*` 语义 token——page-margin-x 16/
   list-pad-y 15·x 16/list-title-margin 16·16·8/list-icon-gap 12/card-pad-y 12·x 16/
-  form-gap 12/control-pad-y 10/btn-pad-y 11/section-gap 32——同名值不同位置=不同 token，一眼可读用途；x 端值不可嵌套
+  form-gap 12/control-pad-y-sm 6·control-pad-y 10·control-pad-y-lg 14/btn-pad-y 11/section-gap 32——同名值不同位置=不同 token，一眼可读用途；x 端值不可嵌套
   var→各带字面量=独立旋钮。**建名纪律**：只为跨页面复用概念建名（≥2 消费点），组件内
   一次性微距留组件本地；通用无概念小间隙用 `--std-gap-*` 值层（xs4/sm8/md12/lg16/xl20/
   2xl24/3xl32，与语义层同文件）。
@@ -74,9 +76,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   **控件档 44**（App Store 搜索框 44.0pt=HIG 默认控件 44×44；按钮 22+11×2、带边框 input/
   选择行 22+10×2+边框2；内距走 --std-btn-pad-y / --std-control-pad-y）；
   **列表行 52**（设置页实测 52.3pt=22+15×2；list-item/tree 节点/swipe 收起首档；
-  input large 同高 22+14×2+边框2）。**分段器三档 32/40/44=行盒 20(base 文本)+留白 6/10/12×2**
-  （内距挂段位不挂轨道/组——挂轨道滑块内嵌塌缩、挂组段位触区塌半；md=--std-control-pad-y，
-  sm/lg 为单组件尺寸档本地字面量，同 app-input 惯例；真机手感值 2026-11-21 经公式反推恰好还原）。
+  input large 同高 22+14×2+边框2）。**分段器三档 32/44/52=外高同 app-input**（文本档同输入框：
+  small 行盒 18+留白 6×2、default/large 行盒 22+留白 10×2/14×2，无边框；留白三档走
+  --std-control-pad-y-sm/-y/-lg，输入框与分段器共用；内距挂段位不挂根/组——挂根滑块内缩塌缩、
+  挂组段位触区塌半；2026-11-25 拍板对齐输入框，玻璃滑块同日退役）。
   **行≠控件**：早先按 UIKit 默认行高 44 推的
   「行=控件 46」已作废。按钮/列表行=padding 直构不设 height；档位内距是语义 token 自带值
   （Apple 实测，不要求落在 4pt 刻度上）。卡片头暂留 46（card-pad-y 12，不在三档上，待定）。
@@ -101,9 +104,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   `{}`/`()`/`[]` 计数相等）零差；⑤ 老 token（--lh-text-/--lh-leading-/--lh-button-height）
   消费零。历史上两次跑偏（行 46 应 52、控件 46 应 44）均属此范围，机器查代替靠记忆。
 - 存量已统一（2026-11-24 统一轮）：全局正文 17px、list/tree 行 52、input 44（small 32/
-  large 52）、按钮 44、
+  large 52）、分段器 32/44/52（2026-11-25 对齐输入框）、按钮 44、
   卡片头 46、表单间距 12、手写 45/38/13px 清零；老 `--lh-text-*/leading-*/button-height/
-  segmented-height*` 已退役删除（分段器 2026-11-25 公式化还原手感值）。残留暂不动：index
+  segmented-height*` 已退役删除。残留暂不动：index
   尖峰页（S2-09 重做时按 std 写）、页面级锚（auth 80px/向导 48·24px）。
 
 ## 暗色模式
@@ -132,6 +135,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   走类的 @media 暗色段自动亮暗，与按压色同一定义（按压时线画在灰上同色隐形，物理上
   不可能不同色）；线自身类只管几何（position/端点/高度），双类叠加。
   **组件禁止自定线色**；调按压色/线色只改 press.scss 一个文件。
+- **例外：高亮须与另一个元素同形同位、且层序在它之下**——hover-class 只能给被触元素
+  自身上底色，做不到；改 JS 态驱动「影子层」：触摸落在哪段哪段现，位移 >5px 或松手
+  即收，底色仍挂同一套按压类。开关用 `hover` prop（默认开，经 withDefaults）。
+  先例=app-segmented。
 
 ## 动画
 
@@ -158,6 +165,11 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - 容器高度显式静态可算（不靠内容自然撑——测量链在后台恢复会陈旧）。
 - v-if 无法过渡→常驻+opacity/pointer-events；同 class 复挂 animation 不重触发→双 class
   交替或 :key 重建。
+- **滑块类到头不越界=自身压缩**：弹簧照常过冲（不给弹簧设墙），渲染时把越界量转成自身
+  压缩——外缘钉在端点，宽度按「越界量×比例」变窄（封顶段宽 1/4）：
+  `translateX(端点+压缩量/2) scaleX(剩余宽/段宽)`（缩放原点取默认居中），随弹簧恢复；
+  拖过尽头同理（越界量先按阻尼计入）。先例=app-segmented。**「轨道整体位移的弹簧垫」
+  「撞墙反弹」两个方案都试过被否**（2026-11-25 用户：外轨道动画去掉、撞墙生硬），勿重提。
 
 ## 结构与响应性
 
@@ -166,6 +178,15 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - **烘焙字段+纯属性读**：class/显隐逻辑在 watchEffect 里写进 state 字段，模板只读属性；
   `:class="fn()"` 函数调用形态不追踪依赖（死路）。
 - import 统一写 script 顶部。
+- **可选布尔属性不传即 `false`**（Vue 的布尔转换；编译产物是 `{ type: Boolean, required:
+  false }`，可在 `unpackage/dist/dev/app-ios/app-service.js` 里核对）。默认开的开关必须
+  `withDefaults(defineProps<{…}>(), { xxx: true })`，**不能写 `props.xxx !== false`**——
+  看着像默认开，实际默认关。先例教训=app-segmented 的 `block`（整页实例变成「宽度随
+  内容」，用户反馈两轮「没占满一行」才定位，2026-11-26）。同日用户拍板「全都默认开，可关闭」：
+  app-list-item 的 `divider`/`hover`、app-swipe-action 的 `divider` 一并改经 withDefaults
+  默认开（原 `!== false` 写法=实际默认关）；**消费方约定不变**：首行或组内单行显式
+  `:divider="false"`，不可点的行显式 `:hover="false"`。**脚本抽取模拟的桩必须复现这条
+  转换**（没传的可选布尔先置 false、再套 withDefaults 默认值），否则测不出。
 
 ## 平台分叉组件（多端策略五级阶梯——自上而下尝试，降级须拍板）
 
@@ -207,6 +228,26 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   28×28**——常规按 44 设计、紧凑件下限 28（旧口径 ≥32 作废）；**热区可大于视觉**
   （icon 居中留缓冲）。相邻按钮热区紧贴零死区（系统 toolbar 同款），视觉间距用盒内
   非对称偏移收窄。
+- 触感反馈：统一走 `utils/haptic.ts`（`haptic(type, onText?)`，type=light/medium/heavy；
+  try/catch 包住、接口缺失不抛出；安卓/iOS/鸿蒙与微信支持，Web 无此 API 已在工具内挡）。
+  **排查「不震」用 demo 页触感自检，按显示分三种**：①「调用异常」=运行时里没有这个接口
+  （`vibrate` 是 HBuilderX 5.14 才加的 API，iOS 基座比它旧就没有）→用当前 HBuilderX 重打
+  基座；②「失败 system not support」=原生判定设备/系统不支持；③「成功」却没震=系统设置
+  （iOS 静音模式需开「静音时播放触感」、低电量）。iOS 原生实现=先判 `supportsHaptics`
+  再调系统 `impactOccurred`，**成功失败都会回调**——「回调没来」只可能是调用没到原生，
+  不能归因为系统设置（2026-11-25 我先误判，被用户「两个按钮都显示未测试」纠正；次日
+  自检显示调用异常、重打基座后正常，①已被证实）。定位手法可复用：蒸汽模式 `uni.*` 的原生实现在
+  `HBuilderX.app/Contents/HBuilderX/plugins/uts-development-ios/.../DCloudUTSExtAPI.framework`
+  （Swift 接口），JS 侧代理在同目录 `DCloudUniappRuntime.bundle/uni-app-x-framework-vapor.js`；
+  二进制用 `strings` 看返回文案。先例=app-segmented 拖动到位轻震。
+- **按下不冻结在途动画**：要支持「抓住飞行中的元素」的组件，冻结放在方向判定成立
+  （确认横滑）那一刻，冻结位即起拖点；轻点/纵滚让位时动画照常走完。否则按下即冻结，
+  一旦那次触摸走不到松手复位（手势被页面抢走等），元素就停在半路（app-segmented 先例，
+  待真机验）。震动等附属调用排在手势主流程之后。
+- **只允许从滑块上起拖**（用户 2026-11-25 定：拖动整个轨道不应带动滑块）：按下时判触点
+  是否落在滑块范围（组左缘 + 滑块位置，`Touch.clientX` 与矩形 `left` 同为「页面可显示
+  区域」口径，左右各放宽 4px），是才允许接管横滑；其余位置只响应点选。位置未知时不
+  限制。先例=app-segmented（待真机验）。
 
 ## 注释规范（全仓适用：组件/页面/工具/样式）
 

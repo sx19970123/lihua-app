@@ -12,7 +12,7 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
 ## 统一标准（写码前先背）
 
 1. **行高=padding 直构**：上下 padding×2 + 文字行高，两端恒等一种账。禁 min-height
-   抬行（语义分叉见坑①），min-height 仅限无 padding 元素（segmented track 先例）。
+   抬行（语义分叉见坑①），min-height 仅限无 padding 元素。
 2. **量测一律 `getBoundingClientRectAsync()`**：同步版 MP 不存在（坑③）；App 端同步
    版另有布局屏障问题（坑④）。动态文案宽度优先字符估算，静止期量测才用真量。
 3. **不依赖 flush 结果的逻辑不塞 nextTick**（坑⑤）：动画/补间启动放事件 handler 内
@@ -81,6 +81,14 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
   链，App 端看到滑出动画、MP 端元素直接消失。
 - **统一写法**：凡「先挂过渡写值、后又立刻由 JS 补间接管」的动画，过渡期的帧驱动
   一律并入补间回调（同帧同曲线），不把任何一段视觉托付给「即将被摘的 CSS 过渡」。
+
+### ⑧ 跨层级 z-index 在 iOS 蒸汽端不生效（2026-11-25 用户真机反馈）
+
+- 官方 z-index 文档写明「父级未建层叠上下文时，子元素可与叔辈比层序」，iOS 蒸汽端
+  实测不成立：段位（static）内的内容层 `position: relative; z-index: 3` 仍被叔辈滑块
+  （absolute，z-index 2）盖住——父级子树被当作整体按自身层序绘制。
+- **统一写法**：需要互相压盖的层做成**同一个父级的直接子元素**，各自显式 z-index
+  （先例=captcha 层级链；app-segmented=按压高亮 0 < 滑块 1 < 内容 2）。
 
 ## 动效实现坑档案（Vapor / 微信 VDOM，captcha 2026-11 真机实测；鸿蒙版开发前必读）
 
