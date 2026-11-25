@@ -33,6 +33,6 @@ provide('app-checkbox-group', {
 .app-checkbox-group {
 	flex-direction: column;
 	/* 组首呼吸边距（与组尾子项 margin-bottom 对称），防与上方内容贴合 */
-	padding-top: var(--lh-gap-sm);
+	padding-top: var(--std-gap-sm);
 }
 </style>

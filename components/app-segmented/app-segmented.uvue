@@ -5,7 +5,7 @@
 		@touchcancel="onTouchEnd">
 		<view :class="trackCls">
 			<view ref="groupEl" class="app-segmented-group">
-				<view v-for="(opt, i) in items" :key="opt.value" class="app-segmented-item"
+				<view v-for="(opt, i) in items" :key="opt.value" class="app-segmented-item" :class="itemCls"
 					:hover-class="hoverCls[i]" :hover-stay-time="100" @click="onItemTap(i)">
 					<text class="app-segmented-label" :class="labelCls[i]">{{ opt.label }}</text>
 				</view>
@@ -94,8 +94,10 @@
 	const isRound = computed<boolean>(() => props.shape === 'round')
 	const isDisabledAll = computed<boolean>(() => props.disabled === true)
 
-	const trackCls = computed<string>(() => 'app-segmented-track app-segmented-track--' + (props.size ?? 'middle')
+	const trackCls = computed<string>(() => 'app-segmented-track'
 		+ (isRound.value ? ' app-segmented-track--round' : ''))
+	// 尺寸档落段位（内距直构尺寸，见样式层账）；轨道只管底色圆角
+	const itemCls = computed<string>(() => 'app-segmented-item app-segmented-item--' + (props.size ?? 'middle'))
 	const pointerCls = computed<string>(() => 'app-segmented-pointer' + (isRound.value ? ' app-segmented-pointer--round' : ''))
 	const glassRoundCls = computed<string>(() => (isRound.value ? 'app-segmented-glass--round' : ''))
 	// 滑块位移（纯响应式单通道）：拖动 dragX 1:1 跟手 / 弹簧 animX 逐帧 / 稳态=index×segW；
@@ -361,25 +363,17 @@
 		overflow: visible;
 	}
 
-	/* 真轨道：视觉不变（灰底/圆角/尺寸档全在此），滑块外探与形变越轨放行 */
+	/* 真轨道：视觉（灰底/圆角）在此；高度不设于此——由段位内距直构（行盒 20+留白×2），
+	   滑块外探与形变越轨放行 */
 	.app-segmented-track {
 		flex-direction: column;
-		min-height: var(--lh-segmented-height-md);
-		border-radius: var(--lh-radius);
-		background-color: var(--lh-secondary-bg);
+		border-radius: var(--std-radius);
+		background-color: var(--std-secondary-bg);
 		overflow: visible;
 	}
 
-	.app-segmented-track--small {
-		min-height: var(--lh-segmented-height-sm);
-	}
-
-	.app-segmented-track--large {
-		min-height: var(--lh-segmented-height-lg);
-	}
-
 	.app-segmented-track--round {
-		border-radius: var(--lh-radius-full);
+		border-radius: var(--std-radius-full);
 	}
 
 	/* 组：显式层序=组 1<滑块 2（滑块带 transform，层序不赌 DOM 序） */
@@ -392,27 +386,42 @@
 		overflow: visible;
 	}
 
+	/* 段位=高度权威源（std 控件档公式：行盒 base 20+留白×2）——
+	   middle 44→40=20+10×2(--std-control-pad-y)；留白必须挂段位不挂轨道/组：
+	   挂轨道=组塌到内容高、滑块(top/bottom 4 内嵌)缩成 12；挂组=段位触区从整段高塌到 20 */
 	.app-segmented-item {
 		flex: 1;
 		flex-direction: row;
 		justify-content: center;
 		align-items: center;
 		min-width: 0;
+		padding: var(--std-control-pad-y) 0;
+	}
+
+	/* 尺寸档（sm/lg 内距为单组件尺寸档本地字面量，同 app-input sm/lg 惯例）：32 / 44 */
+	.app-segmented-item--small {
+		padding-top: 6px;
+		padding-bottom: 6px;
+	}
+
+	.app-segmented-item--large {
+		padding-top: 12px;
+		padding-bottom: 12px;
 	}
 
 	.app-segmented-label {
 		font-size: var(--std-text-base);
 		line-height: var(--std-leading-base);
-		color: var(--lh-secondary-color);
+		color: var(--std-secondary-color);
 	}
 
 	/* 选中段文字强调色（选中态表达；拖动中不变色，落下后才高亮） */
 	.app-segmented-label-selected {
-		color: var(--lh-emphasis-color);
+		color: var(--std-emphasis-color);
 	}
 
 	.app-segmented-label-disabled {
-		color: var(--lh-disabled-color);
+		color: var(--std-disabled-color);
 	}
 
 	/* 滑块（非 iOS 端实色 pill）：内嵌槽内（上下各让 4=缩小一号），水平贴段位；
@@ -428,12 +437,12 @@
 
 	/* #ifndef APP-IOS */
 	.app-segmented-pointer {
-		background-color: var(--lh-emphasis-bg);
+		background-color: var(--std-emphasis-bg);
 	}
 	/* #endif */
 
 	.app-segmented-pointer--round {
-		border-radius: var(--lh-radius-full);
+		border-radius: var(--std-radius-full);
 	}
 
 	/* iOS 滑块本体=液态玻璃（26+ 液态/15-25 毛玻璃降级）：几何与非 iOS 滑块同构（内嵌小一号）；
@@ -448,6 +457,6 @@
 	}
 
 	.app-segmented-glass--round {
-		border-radius: var(--lh-radius-full);
+		border-radius: var(--std-radius-full);
 	}
 </style>

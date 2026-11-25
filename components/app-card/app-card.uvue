@@ -69,8 +69,8 @@
 	/* 根：底色/圆角全走 token（亮白·暗 #242628 自动）；overflow hidden 完成圆角裁切 */
 	.app-card {
 		flex-direction: column;
-		background-color: var(--lh-emphasis-bg);
-		border-radius: var(--lh-radius);
+		background-color: var(--std-emphasis-bg);
+		border-radius: var(--std-radius);
 		overflow: hidden;
 	}
 
@@ -89,7 +89,7 @@
 	.app-card-title-text {
 		font-size: var(--std-text-lg);
 		line-height: var(--std-leading-lg);
-		color: var(--lh-emphasis-color);
+		color: var(--std-emphasis-color);
 	}
 
 	.app-card-extra {
@@ -100,7 +100,7 @@
 	.app-card-extra-text {
 		font-size: var(--std-text-sm);
 		line-height: var(--std-leading-sm);
-		color: var(--lh-tertiary-color);
+		color: var(--std-tertiary-color);
 	}
 
 	/* 区间分隔线（sard 伪元素 border 换独立 1px view）；色挂同名按压类 app-pressed-block
@@ -120,6 +120,6 @@
 	.app-card-footer-text {
 		font-size: var(--std-text-base);
 		line-height: var(--std-leading-base);
-		color: var(--lh-tertiary-color);
+		color: var(--std-tertiary-color);
 	}
 </style>

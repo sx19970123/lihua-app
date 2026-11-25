@@ -10,12 +10,12 @@
 .app-t-2xl  { font-size: var(--std-text-2xl);  line-height: var(--std-leading-2xl);  }  /* Title1 28/34 */
 .app-t-3xl  { font-size: var(--std-text-3xl);  line-height: var(--std-leading-3xl);  }  /* LargeTitle 34/41 */
 
-.app-c-emphasis  { color: var(--lh-emphasis-color); }
-.app-c-secondary { color: var(--lh-secondary-color); }
-.app-c-tertiary  { color: var(--lh-tertiary-color); }
-.app-c-fourth    { color: var(--lh-fourth-color); }
-.app-c-primary   { color: var(--lh-primary); }
-.app-c-danger    { color: var(--lh-danger); }
-.app-c-disabled  { color: var(--lh-disabled-color); }
+.app-c-emphasis  { color: var(--std-emphasis-color); }
+.app-c-secondary { color: var(--std-secondary-color); }
+.app-c-tertiary  { color: var(--std-tertiary-color); }
+.app-c-fourth    { color: var(--std-fourth-color); }
+.app-c-primary   { color: var(--std-primary); }
+.app-c-danger    { color: var(--std-danger); }
+.app-c-disabled  { color: var(--std-disabled-color); }
 
 .app-w-bold { font-weight: 700; }

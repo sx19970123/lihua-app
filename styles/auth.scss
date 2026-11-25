@@ -1,6 +1,6 @@
 /* 登录|注册页样式（蒸汽版：BEM 单类，后代/连写选择器不赌）。
    页面背景统一由 pages.json backgroundColorContent（theme.json @bgColor）管理，页面级不重复声明。
-   间距一律引 tokens 刻度（--lh-gap-*），禁裸魔法数 */
+   间距一律引 std token（--std-gap 刻度族 / --std 语义层），禁裸魔法数 */
 .auth-body {
 	/* 左右边距由全局工具类 .page-padding 提供（模板并列挂）；
 	   顶部间距=状态栏（外层 .safe-top）之下的净距，40% 按页宽解析在横屏/分屏暴涨故弃用 */
@@ -21,8 +21,8 @@
 	font-size: var(--std-text-2xl);
 	font-weight: bold;
 	line-height: var(--std-leading-2xl);
-	color: var(--lh-emphasis-color);
-	margin-bottom: var(--lh-gap-lg);
+	color: var(--std-emphasis-color);
+	margin-bottom: var(--std-gap-lg);
 }
 
 /* 断连提示与注册入口互斥单槽（防跳动）：外层定高等于按钮行（Apple 默认控件档 44），状态切换零位移 */
@@ -30,7 +30,7 @@
 	height: 44px;
 	justify-content: center;
 	align-items: flex-start;
-	margin-bottom: var(--lh-gap-sm);
+	margin-bottom: var(--std-gap-sm);
 }
 
 /* 表单项与登录按钮的间距包裹（间距属页面布局，组件根隔离不承接页面类内部样式）；
@@ -42,7 +42,7 @@
 /* 前置图标（uni-icons 单 text 根落 class）：tertiary 色自适应暗色 */
 .auth-icon {
 	font-size: 18px;
-	color: var(--lh-tertiary-color);
+	color: var(--std-tertiary-color);
 }
 
 .login-btn-wrap {
@@ -53,16 +53,16 @@
    高度走 padding 直构（Apple 默认控件档 44=行盒 22+11×2，不设 height） */
 .auth-btn {
 	width: 100%;
-	padding: var(--std-btn-pad-y) var(--lh-gap-lg);
-	border-radius: var(--lh-radius-full);
-	background-color: var(--lh-primary);
+	padding: var(--std-btn-pad-y) var(--std-gap-lg);
+	border-radius: var(--std-radius-full);
+	background-color: var(--std-primary);
 	font-size: var(--std-text-lg);
 	line-height: var(--std-leading-lg);
 	color: #ffffff;
 }
 
 .remember-row {
-	margin-top: var(--lh-gap-xl);
+	margin-top: var(--std-gap-xl);
 	flex-direction: row;
 	align-items: center;
 }
@@ -75,24 +75,24 @@
 .text-font {
 	font-size: var(--std-text-base);
 	line-height: var(--std-leading-base);
-	color: var(--lh-emphasis-color);
+	color: var(--std-emphasis-color);
 }
 
 .text-btn {
 	font-size: var(--std-text-base);
 	line-height: var(--std-leading-base);
-	color: var(--lh-primary);
-	margin-left: var(--lh-gap-xs);
+	color: var(--std-primary);
+	margin-left: var(--std-gap-xs);
 }
 
 .err-msg {
-	color: var(--lh-danger);
+	color: var(--std-danger);
 }
 
 /* 协议行常驻底部（x 端键盘覆盖不推挤布局，无需键盘联动显隐） */
 .auth-protocol {
 	position: fixed;
-	bottom: var(--lh-gap-3xl);
+	bottom: var(--std-gap-3xl);
 	left: 0;
 	right: 0;
 	flex-direction: row;
@@ -106,8 +106,8 @@
 }
 
 .protocol-text {
-	margin-left: var(--lh-gap-xs);
-	color: var(--lh-tertiary-color);
+	margin-left: var(--std-gap-xs);
+	color: var(--std-tertiary-color);
 	font-size: var(--std-text-base);
 	line-height: var(--std-leading-base);
 }

@@ -149,7 +149,7 @@
 
 	const props = defineProps<{
 		mode ?: 'proxy' | 'active'
-		// 主题色覆盖双值（css color）：亮色态/暗色态各一，缺省该态回落全局 token var(--lh-primary)
+		// 主题色覆盖双值（css color）：亮色态/暗色态各一，缺省该态回落全局 token var(--std-primary)
 		themeLight ?: string
 		themeDark ?: string
 	}>()
@@ -917,11 +917,11 @@
 	.lh-cap-card {
 		position: relative;
 		width: 320px;
-		border-radius: var(--lh-radius, 12px);
-		background-color: var(--lh-emphasis-bg, #ffffff);
+		border-radius: var(--std-radius);
+		background-color: var(--std-emphasis-bg);
 		/* 浮层软影：单层大弥散中等透明度 */
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-		padding: var(--lh-gap-lg);
+		padding: var(--std-gap-lg);
 		overflow: hidden;
 		transform: scale(0.92);
 		transition: height 300ms ease, transform 250ms ease-out;
@@ -1079,18 +1079,18 @@
 		   刷新钮 icon 偏右 4px、关闭钮偏左 4px（--end）——视觉间距 8px（缓冲 4×2），
 		   外缘 icon 距卡片右缘=容器 right 4+右钮右侧余 12=16px（padding 线）不变 */
 		justify-content: flex-end;
-		padding-right: var(--lh-gap-xs);
+		padding-right: var(--std-gap-xs);
 	}
 
 	.lh-cap-opts-btn--end {
 		justify-content: flex-start;
-		padding-left: var(--lh-gap-xs);
+		padding-left: var(--std-gap-xs);
 		padding-right: 0;
 	}
 
 	.lh-cap-opts-icon {
 		font-size: 20px;
-		color: var(--lh-fourth-color, #b5b9bd);
+		color: var(--std-fourth-color);
 	}
 
 	/* 中央区（loading / POW 结果） */
@@ -1101,9 +1101,9 @@
 	}
 
 	.lh-cap-zone-text {
-		margin-top: var(--lh-gap-sm);
+		margin-top: var(--std-gap-sm);
 		font-size: 14px;
-		color: var(--lh-secondary-color, #1f2329);
+		color: var(--std-secondary-color);
 	}
 
 	.lh-cap-error {
@@ -1120,8 +1120,8 @@
 	.lh-cap-spinner {
 		width: 24px;
 		height: 24px;
-		border: 2px solid var(--lh-active-bg, #f0f0f0);
-		border-top-color: var(--lh-primary, #3b82f6);
+		border: 2px solid var(--std-active-bg);
+		border-top-color: var(--std-primary);
 		border-radius: 50%;
 		animation: lh-cap-rotate 0.8s linear infinite;
 	}
@@ -1228,15 +1228,15 @@
 	.lh-cap-tip {
 		font-size: 15px;
 		font-weight: bold;
-		color: var(--lh-secondary-color, #1f2329);
+		color: var(--std-secondary-color);
 		/* 上 0=与左右/图区下边距同为 padding 16；下 12=承接原 margin-top 4px 守恒内容总高（卡片高不动） */
-		margin: 0 0 var(--lh-gap-md) var(--lh-gap-xs);
+		margin: 0 0 var(--std-gap-md) var(--std-gap-xs);
 	}
 
 	.lh-cap-click-tips {
 		flex-direction: row;
 		align-items: center;
-		margin-bottom: var(--lh-gap-sm);
+		margin-bottom: var(--std-gap-sm);
 	}
 
 	.lh-cap-click-hint {
@@ -1356,7 +1356,7 @@
 		width: 26px;
 		height: 26px;
 		border-radius: 50%;
-		background-color: var(--lh-primary, #3b82f6);
+		background-color: var(--std-primary);
 		border: 2px solid rgba(255, 255, 255, 0.6);
 		justify-content: center;
 		align-items: center;
@@ -1371,9 +1371,9 @@
 	.lh-cap-track {
 		width: 288px;
 		height: 40px;
-		margin-top: var(--lh-gap-md);
-		border-radius: var(--lh-radius-full, 9999px);
-		background-color: var(--lh-active-bg, #f0f0f0);
+		margin-top: var(--std-gap-md);
+		border-radius: var(--std-radius-full);
+		background-color: var(--std-active-bg);
 		position: relative;
 		overflow: hidden;
 	}
@@ -1395,7 +1395,7 @@
 		left: 0;
 		width: 328px;
 		height: 40px;
-		background-color: var(--lh-primary, #3b82f6);
+		background-color: var(--std-primary);
 		opacity: 0.5;
 		border-radius: 0 20px 20px 0;
 	}
@@ -1406,8 +1406,8 @@
 		left: 288px;
 		width: 40px;
 		height: 40px;
-		border-radius: var(--lh-radius-full, 9999px);
-		background-color: var(--lh-primary, #3b82f6);
+		border-radius: var(--std-radius-full);
+		background-color: var(--std-primary);
 		justify-content: center;
 		align-items: center;
 	}
@@ -1426,7 +1426,7 @@
 		line-height: 40px;
 		text-align: center;
 		font-size: var(--std-text-sm);
-		color: var(--lh-fourth-color, #b5b9bd);
+		color: var(--std-fourth-color);
 	}
 
 	/* 校验阻断层 */

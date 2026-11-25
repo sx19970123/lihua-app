@@ -170,20 +170,20 @@ defineExpose({ remeasure: measureStrength })
 	align-items: center;
 	width: 100%;
 	/* 卡片底色（token 亮暗双态） */
-	background-color: var(--lh-input-bg);
-	padding: var(--std-control-pad-y) var(--lh-gap-md);
-	border: 1px solid var(--lh-border-color);
-	border-radius: var(--lh-radius);
+	background-color: var(--std-input-bg);
+	padding: var(--std-control-pad-y) var(--std-gap-md);
+	border: 1px solid var(--std-border-color);
+	border-radius: var(--std-radius);
 }
 
 @media (prefers-color-scheme: dark) {
 	.app-input-card {
-		background-color: var(--lh-input-bg);
+		background-color: var(--std-input-bg);
 	}
 }
 
 .app-input-round {
-	border-radius: var(--lh-radius-full);
+	border-radius: var(--std-radius-full);
 }
 
 /* size 档内距（单组件尺寸档，本地字面量）：sm 6→外高 32、lg 14→外高 52 */
@@ -198,12 +198,12 @@ defineExpose({ remeasure: measureStrength })
 }
 
 .app-input-disabled {
-	background-color: var(--lh-disabled-shallow-bg, #ecedee);
+	background-color: var(--std-disabled-shallow-bg);
 }
 
 @media (prefers-color-scheme: dark) {
 	.app-input-disabled {
-		background-color: var(--lh-disabled-shallow-bg, #505457);
+		background-color: var(--std-disabled-shallow-bg);
 	}
 }
 
@@ -218,14 +218,14 @@ defineExpose({ remeasure: measureStrength })
 	height: 22px;
 	font-size: var(--std-text-lg);
 	line-height: var(--std-leading-lg);
-	color: var(--lh-emphasis-color);
+	color: var(--std-emphasis-color);
 	background-color: transparent;
 	padding: 0;
 }
 
 /* placeholder 走 fourth token（亮 gray-500/暗 gray-600），placeholder-class App 端原生支持（Web/小程序 x，S6 再议） */
 .app-input-placeholder {
-	color: var(--lh-fourth-color);
+	color: var(--std-fourth-color);
 }
 
 /* size 三档=完整视觉档位（control 行盒+字号，根高由 padding+control+边框自然撑）；
@@ -248,7 +248,7 @@ defineExpose({ remeasure: measureStrength })
 }
 
 .app-input-control-disabled {
-	color: var(--lh-disabled-color, #b5b9bd);
+	color: var(--std-disabled-color);
 }
 
 .app-input-tool {
@@ -258,17 +258,17 @@ defineExpose({ remeasure: measureStrength })
 /* 图标色走语义 token（uni-icons 单 text 根，外部 class 落根）：clear 更醒目用 tertiary、eye 次要语义用 fourth */
 .app-input-tool-clear {
 	font-size: 18px;
-	color: var(--lh-tertiary-color, #74787c);
+	color: var(--std-tertiary-color);
 }
 
 .app-input-tool-eye {
 	font-size: 18px;
-	color: var(--lh-fourth-color, #b5b9bd);
+	color: var(--std-fourth-color);
 }
 
 .app-input-count {
 	font-size: 12px;
-	color: var(--lh-tertiary-color, #74787c);
+	color: var(--std-tertiary-color);
 	margin-left: 6px;
 }
 
@@ -296,19 +296,20 @@ defineExpose({ remeasure: measureStrength })
 	transform: translateY(0);
 }
 
-/* 轨道层：未点亮底色，亮 gray-200 / 暗 gray-700 */
+/* 轨道层：未点亮底色，亮 gray-200 / 暗 gray-700（单点显式亮暗配对，精调例外摊平字面量，
+   不立 token——password+showStrength 专用） */
 .app-input-strength-seg {
 	flex: 1;
 	height: 3px;
 	border-radius: 2px;
 	margin-left: 2px;
 	margin-right: 2px;
-	background-color: var(--lh-gray-200);
+	background-color: #ecedee;
 }
 
 @media (prefers-color-scheme: dark) {
 	.app-input-strength-seg {
-		background-color: var(--lh-gray-700);
+		background-color: #505457;
 	}
 }
 

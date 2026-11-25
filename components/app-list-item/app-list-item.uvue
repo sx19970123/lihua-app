@@ -137,7 +137,7 @@
 
 	.app-list-item-icon-glyph {
 		font-size: 24px;
-		color: var(--lh-emphasis-color);
+		color: var(--std-emphasis-color);
 	}
 
 	/* 标题列：占满主轴，超长换行（value 是关键信息不压缩） */
@@ -154,26 +154,26 @@
 		font-size: var(--std-text-lg);
 		/* std leading 为绝对值 px token（两端安全）；行高配对改两处单点=tokens-std */
 		line-height: var(--std-leading-lg);
-		color: var(--lh-emphasis-color);
+		color: var(--std-emphasis-color);
 	}
 
 	/* 右侧值槽：自然宽贴右 */
 	.app-list-item-value {
 		flex-direction: row;
 		align-items: center;
-		margin-left: var(--lh-gap-sm);
+		margin-left: var(--std-gap-sm);
 		line-height: var(--std-leading-lg);
 	}
 
 	.app-list-item-value-text {
 		font-size: var(--std-text-lg);
 		line-height: var(--std-leading-lg);
-		color: var(--lh-tertiary-color);
+		color: var(--std-tertiary-color);
 	}
 
 	/* 右侧箭头 */
 	.app-list-item-arrow {
-		margin-left: var(--lh-gap-sm);
+		margin-left: var(--std-gap-sm);
 		flex-direction: row;
 		align-items: center;
 		/* 同 icon：行盒钉死 22，防 uni-icons 默认行盒撑高行 */
@@ -183,6 +183,6 @@
 
 	.app-list-item-arrow-glyph {
 		font-size: 16px;
-		color: var(--lh-tertiary-color);
+		color: var(--std-tertiary-color);
 	}
 </style>

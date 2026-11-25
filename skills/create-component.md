@@ -23,10 +23,11 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - 无伪类（:first-child/:not）、无伪元素（::before）——分隔线用独立 1px view，首末行
   特殊化用烘焙字段。
 - **rpx 归零**，全 px（官方推荐；rpx 仅随屏宽的 width 合法，本项目无此场景）。
-- 色板/gap/圆角走 `styles/tokens.scss`（老标准，冻结——无新旧值之分）；新标准字号/行高=
-  `tokens-std.scss`（`--std-*` Apple 值）经标准类 `app-t-*`/`app-c-*` 消费
-  （styles/typography.scss，详规见「尺度基准」节）；存量组件的 `--lh-text-*`/`leading-*`
-  用法冻结不新增，统一轮迁 std。
+- 颜色/间距值层/圆角/字号/行高全走 `styles/tokens-std.scss`（`--std-*` 唯一 token 文件——
+  色板 2026-11-25 平移并入，暗色自动 media dark；老 `styles/tokens.scss` 已删除，
+  `--lh-*` 全族勿再引用）；字号行高经标准类 `app-t-*`/`app-c-*` 消费
+  （styles/typography.scss，详规见「尺度基准」节）。
+  JS/keyframes 里的行高数值走 `utils/tokens-std.ts` 镜像常量（与 scss 成对改）。
 - **text 样式不继承**：每段 text 显式 color/font-size/line-height（行高用 leading 比例
   token，固定 px 行高+token 字号混用会裁字）。
 - 横向 flex 布局必须显式 `flex-direction: row`——**uvue view 默认 column**，
@@ -45,9 +46,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 ## 尺度基准（2026-11-24 定，iOS 式：高度不进全局 token）
 
-- 标准三层：`styles/tokens-std.scss`（新标准变量 `--std-*`，Apple 数值+间距语义层）+
-  `styles/typography.scss`（文本标准类，消费 std）+ `styles/tokens.scss`（老标准 `--lh-*`
-  残留=色板/gap 刻度/圆角/分段器高/input-bg，字号行高档已于 2026-11-24 统一轮退役删除）。
+- 标准两层：`styles/tokens-std.scss`（唯一 token 文件 `--std-*`：Apple 数值+间距/圆角/
+  色板语义层）+ `styles/typography.scss`（文本标准类，消费 std）；JS 侧镜像
+  `utils/tokens-std.ts`（keyframes/算式消费的数值）。老 `styles/tokens.scss` 已于
+  2026-11-25 全量迁毕删除。
   文本标准=CSS 工具类形态（2026-11-24 拍板，组件形态否决：MP 每文本节点一个组件实例的
   热路径成本；旧版 sard 工具类 sar-text-* 同构先例）。
 - **独立文本节点默认挂标准类**：`app-t-2xs|sm|base|lg|xl|2xl|3xl`（字号+行高配对原子，
@@ -63,7 +65,8 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   list-pad-y 15·x 16/list-title-margin 16·16·8/list-icon-gap 12/card-pad-y 12·x 16/
   form-gap 12/control-pad-y 10/btn-pad-y 11/section-gap 32——同名值不同位置=不同 token，一眼可读用途；x 端值不可嵌套
   var→各带字面量=独立旋钮。**建名纪律**：只为跨页面复用概念建名（≥2 消费点），组件内
-  一次性微距留组件本地；通用无概念小间隙仍用 `--lh-gap-*` 值层。
+  一次性微距留组件本地；通用无概念小间隙用 `--std-gap-*` 值层（xs4/sm8/md12/lg16/xl20/
+  2xl24/3xl32，与语义层同文件）。
 - **高度档位表（2026-11-24 统一轮落地，同日两次按 Apple 真机截图实测修正）**：
   高度 = 行盒 + 纵向留白×2（带边框件再+边框×2）。Apple 实测三档（iPhone 402pt 机型，
   原生截图 px/3）：**小号 32 / 默认 44 / 列表行 52**，每档=行盒+对称留白——
@@ -71,7 +74,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   **控件档 44**（App Store 搜索框 44.0pt=HIG 默认控件 44×44；按钮 22+11×2、带边框 input/
   选择行 22+10×2+边框2；内距走 --std-btn-pad-y / --std-control-pad-y）；
   **列表行 52**（设置页实测 52.3pt=22+15×2；list-item/tree 节点/swipe 收起首档；
-  input large 同高 22+14×2+边框2）。**行≠控件**：早先按 UIKit 默认行高 44 推的
+  input large 同高 22+14×2+边框2）。**分段器三档 32/40/44=行盒 20(base 文本)+留白 6/10/12×2**
+  （内距挂段位不挂轨道/组——挂轨道滑块内嵌塌缩、挂组段位触区塌半；md=--std-control-pad-y，
+  sm/lg 为单组件尺寸档本地字面量，同 app-input 惯例；真机手感值 2026-11-21 经公式反推恰好还原）。
+  **行≠控件**：早先按 UIKit 默认行高 44 推的
   「行=控件 46」已作废。按钮/列表行=padding 直构不设 height；档位内距是语义 token 自带值
   （Apple 实测，不要求落在 4pt 刻度上）。卡片头暂留 46（card-pad-y 12，不在三档上，待定）。
 - 档位做在组件 size prop（small/default/large ↔ 留白 8/12/16），高度数字由公式长出
@@ -96,9 +102,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   消费零。历史上两次跑偏（行 46 应 52、控件 46 应 44）均属此范围，机器查代替靠记忆。
 - 存量已统一（2026-11-24 统一轮）：全局正文 17px、list/tree 行 52、input 44（small 32/
   large 52）、按钮 44、
-  卡片头 46、表单间距 12、手写 45/38/13px 清零；老 `--lh-text-*/leading-*/button-height`
-  已退役删除。残留暂不动：分段器三档高（真机手感定档）、index 尖峰页（S2-09 重做时按
-  std 写）、页面级锚（auth 80px/向导 48·24px）。
+  卡片头 46、表单间距 12、手写 45/38/13px 清零；老 `--lh-text-*/leading-*/button-height/
+  segmented-height*` 已退役删除（分段器 2026-11-25 公式化还原手感值）。残留暂不动：index
+  尖峰页（S2-09 重做时按 std 写）、页面级锚（auth 80px/向导 48·24px）。
 
 ## 暗色模式
 

@@ -1,49 +1,49 @@
 /* 协议内容页共用（用户协议/隐私政策）：纯静态内容，颜色全走 token 亮暗自动 */
 .proto-body {
-	padding-top: var(--lh-gap-lg);
-	padding-bottom: var(--lh-gap-3xl);
+	padding-top: var(--std-gap-lg);
+	padding-bottom: var(--std-gap-3xl);
 }
 
 .proto-title {
 	font-size: var(--std-text-2xl);
 	font-weight: bold;
 	line-height: var(--std-leading-2xl);
-	color: var(--lh-emphasis-color);
+	color: var(--std-emphasis-color);
 	text-align: center;
-	margin-bottom: var(--lh-gap-xl);
+	margin-bottom: var(--std-gap-xl);
 }
 
 .proto-h3 {
 	font-size: var(--std-text-lg);
 	font-weight: bold;
 	line-height: var(--std-leading-lg);
-	color: var(--lh-emphasis-color);
-	margin-top: var(--lh-gap-xl);
+	color: var(--std-emphasis-color);
+	margin-top: var(--std-gap-xl);
 }
 
 .proto-p {
 	font-size: var(--std-text-lg);
 	line-height: var(--std-leading-lg);
-	color: var(--lh-emphasis-color);
-	margin-top: var(--lh-gap-sm);
+	color: var(--std-emphasis-color);
+	margin-top: var(--std-gap-sm);
 }
 
 .proto-li {
 	flex-direction: row;
-	margin-top: var(--lh-gap-xs);
-	padding-left: var(--lh-gap-lg);
+	margin-top: var(--std-gap-xs);
+	padding-left: var(--std-gap-lg);
 }
 
 .proto-bullet {
 	font-size: var(--std-text-lg);
 	line-height: var(--std-leading-lg);
-	color: var(--lh-tertiary-color);
-	margin-right: var(--lh-gap-xs);
+	color: var(--std-tertiary-color);
+	margin-right: var(--std-gap-xs);
 }
 
 .proto-li-text {
 	flex: 1;
 	font-size: var(--std-text-lg);
 	line-height: var(--std-leading-lg);
-	color: var(--lh-emphasis-color);
+	color: var(--std-emphasis-color);
 }

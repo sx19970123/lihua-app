@@ -35,14 +35,14 @@
 		font-size: var(--std-text-sm);
 		/* 行高配对走 std 绝对值 token（两端安全，口径同 list-item） */
 		line-height: var(--std-leading-sm);
-		color: var(--lh-tertiary-color);
+		color: var(--std-tertiary-color);
 	}
 
 	/* 内容区=卡片形态：白/暗底 token+圆角+overflow hidden 裁子项（首末行圆角继承的 x 替代） */
 	.app-list-content {
 		flex-direction: column;
-		background-color: var(--lh-emphasis-bg);
-		border-radius: var(--lh-radius);
+		background-color: var(--std-emphasis-bg);
+		border-radius: var(--std-radius);
 		overflow: hidden;
 	}
 </style>

@@ -40,7 +40,6 @@
 </script>
 
 <style lang="scss">
-	@import '@/styles/tokens.scss';
 	@import '@/styles/tokens-std.scss';
 	@import '@/styles/typography.scss';
 	@import '@/styles/common.scss';

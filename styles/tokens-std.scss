@@ -1,10 +1,10 @@
-/* 新标准 token（--std-*）：字号/行高=值层档位（Apple HIG 数值，typography.scss 类层成对消费，
-   勿单改一边）+ 间距语义层（按用途命名——两个 16px 因位置不同而不同名；x 端值不可嵌套 var，
-   各带字面量=独立旋钮）。
-   与老标准关系：tokens.scss（--lh-*，sard 值）冻结供存量组件，统一轮迁毕退役；
-   色板/gap 刻度/圆角无新旧值之分长期留此（std 色类经 --lh-* 语义色引用）。
-   标准详规见 skills/create-component.md「尺度基准」；JS 侧镜像=utils/tokens-std.ts
-   （keyframes/TS 算式消费，改值两处成对改），交编译前一致性自查规则同见 skill */
+/* 新标准 token（--std-*）=全仓唯一 token 定义文件（JS 镜像 utils/tokens-std.ts 成对维护）：
+   字号/行高=值层档位（Apple HIG 数值，typography.scss 类层成对消费，勿单改一边）+
+   间距/圆角语义层（按用途命名——两个 16px 因位置不同而不同名；x 端值不可嵌套 var，
+   各带字面量=独立旋钮）+ 色板（品牌资产原值平移，暗色自动 media dark）。
+   老 tokens.scss 已于 2026-11-25 全量迁毕删除（字号/行高/圆角/间距/分段器高/色板）。
+   标准详规见 skills/create-component.md「尺度基准」；
+   keyframes/TS 算式消费的数值走 JS 镜像，交编译前一致性自查规则同见 skill */
 page {
 	/* 字号（Apple 语义档；官方 11 档压缩为 7 档，跳过 Caption1 12/16、Callout 16/21、
 	   Title3 20/25——需要时按官方值补） */
@@ -50,6 +50,62 @@ page {
 	--std-control-pad-y: 10px;               /* 带边框控件（输入框/选择行）纵向内距：外高 44=行盒22+10×2+边框×2（Apple 默认控件 44pt=HIG 条文+App Store 搜索框实测 44.0pt） */
 	--std-btn-pad-y: 11px;                   /* 无边框按钮纵向内距：高 44=行盒22+11×2（同上 Apple 默认控件档） */
 
+	/* 圆角层（HIG 无官方条文；Apple 设置卡片真机拟合 ≈13pt，现值 12 同级暂不改，要贴 Apple 改这一行即可） */
+	--std-radius: 12px;                      /* 主圆角：卡片/按钮/输入框/列表/树面板/分段器轨道 */
+	--std-radius-full: 9999px;               /* 胶囊：固定全圆（Apple 胶囊控件均为高/2 全圆，App Store 搜索框实测验证） */
+
 	/* 区块层 */
 	--std-section-gap: 32px;                 /* 区块间强分隔（登录按钮上方这类） */
+
+	/* 间距值层（通用无概念小间隙；语义概念走上方语义层。与老刻度同值迁移 2026-11-25） */
+	--std-gap-xs: 4px;    /* 微间距（图标↔文字、贴片间隙） */
+	--std-gap-sm: 8px;    /* 行内元素间隙；高度公式紧凑档留白 */
+	--std-gap-md: 12px;   /* 组件内边距；高度公式邻档 */
+	--std-gap-lg: 16px;   /* 通用间隔（卡片间、页内块距） */
+	--std-gap-xl: 20px;   /* 中间隔（一次性布局值） */
+	--std-gap-2xl: 24px;  /* 大间隔（一次性布局值） */
+	--std-gap-3xl: 32px;  /* 大留白（页尾/贴底） */
+}
+
+/* ---- 色板（品牌资产，2026-11-25 自 tokens.scss 原值平移；语义命名与暗色机制=Apple
+     label/secondaryLabel 同构。danger 无暗色档=恒值，要不要跟 Apple 暗色提亮（systemRed
+     #FF453A 式）待拍板；gray 灰度未迁：唯一消费点 app-input 强度条已摊平字面量 ---- */
+page {
+	/* 主题/语义色（亮） */
+	--std-primary: #3b82f6;
+	--std-danger: #ef4444;
+	--std-secondary-color: #505457;
+	--std-secondary-bg: #ecedee;
+	--std-tertiary-color: #74787c;
+	--std-fourth-color: #b5b9bd;
+	--std-emphasis-color: #000;
+	--std-emphasis-bg: #fff;
+	--std-border-color: #e2e3e4;
+	--std-active-bg: #ecedee;
+	--std-active-opacity: 0.5;             /* 非色，亮暗同值 */
+	--std-disabled-color: #b5b9bd;
+	--std-disabled-border-color: #d1d4d6;
+	--std-disabled-shallow-bg: #ecedee;
+	--std-input-bg: #ffffff;               /* 输入框底色（亮=白面） */
+}
+
+@media (prefers-color-scheme: dark) {
+	page {
+		/* 主色暗色档：提亮一档适配深底（产品决策双档化） */
+		--std-primary: #60a5fa;
+
+		/* 语义色暗色档 */
+		--std-secondary-color: #e2e3e4;
+		--std-secondary-bg: #505457;
+		--std-tertiary-color: #b5b9bd;
+		--std-fourth-color: #74787c;
+		--std-emphasis-color: #fff;
+		--std-emphasis-bg: #242628;
+		--std-border-color: #505457;
+		--std-active-bg: #505457;
+		--std-disabled-color: #74787c;
+		--std-disabled-border-color: #74787c;
+		--std-disabled-shallow-bg: #505457;
+		--std-input-bg: #242628;
+	}
 }

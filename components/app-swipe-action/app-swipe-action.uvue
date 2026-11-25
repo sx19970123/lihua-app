@@ -1037,11 +1037,11 @@
 		right: 0;
 		flex-direction: row;
 		align-items: center;
-		background-color: var(--lh-primary);
+		background-color: var(--std-primary);
 	}
 
 	.app-swipe-btn-danger {
-		background-color: var(--lh-danger);
+		background-color: var(--std-danger);
 	}
 
 	/* 左向模式：锚行左缘（藏行左外，方向镜像） */

@@ -50,18 +50,18 @@
 	}
 
 	.steps-card {
-		margin: var(--lh-gap-lg) var(--lh-gap-lg) 0;
+		margin: var(--std-gap-lg) var(--std-gap-lg) 0;
 	}
 
 	/* 步进容器占满剩余高，此处限高让页面整体可滚（容器 min 高由内容撑） */
 	.steps-safe {
-		height: var(--lh-gap-lg);
+		height: var(--std-gap-lg);
 	}
 
 	.steps-btns {
 		flex-direction: row;
 		justify-content: space-between;
-		padding: 0 var(--lh-gap-lg);
+		padding: 0 var(--std-gap-lg);
 	}
 
 	.steps-btn {
@@ -70,6 +70,6 @@
 
 	/* x 端无相邻选择器，第二颗钮独立单类拉开间距 */
 	.steps-btn--gap {
-		margin-left: var(--lh-gap-md);
+		margin-left: var(--std-gap-md);
 	}
 </style>

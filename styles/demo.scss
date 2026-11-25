@@ -5,37 +5,37 @@
 
 /* 外部 class 落 app-card 根（隔离 2.0 单根组件），间距归消费方 */
 .demo-card {
-	margin-top: var(--lh-gap-lg);
+	margin-top: var(--std-gap-lg);
 }
 
 .demo-body-text {
 	font-size: var(--std-text-base);
 	line-height: var(--std-leading-base);
-	color: var(--lh-emphasis-color);
+	color: var(--std-emphasis-color);
 }
 
 .demo-label {
 	font-size: var(--std-text-sm);
 	line-height: var(--std-leading-sm);
-	color: var(--lh-tertiary-color);
+	color: var(--std-tertiary-color);
 }
 
 .demo-row {
-	margin-top: var(--lh-gap-md);
+	margin-top: var(--std-gap-md);
 }
 
 .demo-value {
-	margin-top: var(--lh-gap-sm);
+	margin-top: var(--std-gap-sm);
 	font-size: var(--std-text-base);
 	line-height: var(--std-leading-base);
-	color: var(--lh-emphasis-color);
+	color: var(--std-emphasis-color);
 }
 
 /* 自带卡片壳的组件（tree/list）不套外卡，标签直接落页面：与上方卡片的间距+与组件的间距 */
 .demo-bare-label {
-	margin-top: var(--lh-gap-lg);
-	margin-bottom: var(--lh-gap-md);
+	margin-top: var(--std-gap-lg);
+	margin-bottom: var(--std-gap-md);
 	font-size: var(--std-text-sm);
 	line-height: var(--std-leading-sm);
-	color: var(--lh-tertiary-color);
+	color: var(--std-tertiary-color);
 }
