@@ -1,7 +1,7 @@
 <template>
 	<view class="page-padding">
 		<app-list>
-			<app-list-item icon="tune" title="组件" arrow hover @click="goComponents" />
+			<app-list-item :divider="false" icon="tune" title="组件" arrow hover @click="goComponents" />
 		</app-list>
 	</view>
 </template>

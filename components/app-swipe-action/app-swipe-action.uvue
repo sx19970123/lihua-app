@@ -2,7 +2,7 @@
 		<view class="app-swipe-action" :class="removing ? 'app-swipe-action-removing' : ''"
 			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
 		<!-- 行底分隔线（消费方内层行须 :divider="false"） -->
-		<view v-if="divider !== false" class="app-swipe-line app-pressed-row" />
+		<view v-if="divider" class="app-swipe-line app-pressed-row" />
 		<!-- 裁切层（上探 1px 的按钮容器）：裁掉初始藏行外的按钮组，并盖住上一行底线 -->
 		<view class="app-swipe-clip">
 			<!-- 色块（恒宽叠塔）：宽=自身+靠内容侧全部，初始整体藏行外；DOM 顺序=层序 -->
@@ -101,17 +101,20 @@
 		data ?: any
 	}
 
-	const props = defineProps<{
+	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
+	const props = withDefaults(defineProps<{
 		// 侧滑按钮组（组件自渲染，宽度自适应文案）
 		actions : SwipeAction[]
 		// 禁用手势（按钮不可滑出）
 		disabled ?: boolean
-		// 行底分隔线（默认开；末行或组内单行显式 :divider="false"）
+		// 行底分隔线；末行或组内单行显式 :divider="false"
 		divider ?: boolean
 		// 行级加载态（两级通用）：确认链冻结二次确认现场（彩带不收回）、直点钮冻结
 		// 展开档；被点钮文字前 spinner；期间全操作拒绝；撤离自动收起（删除走 remove()）
 		loading ?: boolean
-	}>()
+	}>(), {
+		divider : true
+	})
 
 	const emit = defineEmits<{
 		// 按钮最终确认（唯一业务回调）：非 confirm 型点击即回传；confirm 型在行消失动画
