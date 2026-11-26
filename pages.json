@@ -107,6 +107,12 @@
 			}
 		},
 		{
+			"path": "pages/component/sheet",
+			"style": {
+				"navigationBarTitleText": "app-sheet"
+			}
+		},
+		{
 			"path": "pages/protocol/UserAgreement",
 			"style": {
 				"navigationBarTitleText": "用户协议"

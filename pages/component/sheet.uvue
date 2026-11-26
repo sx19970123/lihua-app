@@ -1,0 +1,116 @@
+<template>
+	<view class="page-padding">
+		<app-card title="内置滚动（默认插槽）">
+			<text class="demo-label">验证：头部下拉关闭；内容在顶部时下拉关闭、不在顶部时滚内容；内容滚到头部下方时标题变毛玻璃</text>
+			<view class="demo-row">
+				<button type="primary" @click="basicVisible = true">打开抽屉</button>
+			</view>
+			<text class="demo-value">visible = {{ basicVisible }} · open × {{ openCount }} · close × {{ closeCount }}</text>
+		</app-card>
+
+		<app-card class="demo-card" title="行为开关（作用于第一个抽屉）">
+			<view class="demo-row">
+				<app-checkbox v-model:checked="closable" label="closable（可关闭）" />
+			</view>
+			<view class="demo-row">
+				<app-checkbox v-model:checked="draggable" label="draggable（可拖动）" />
+			</view>
+			<view class="demo-row">
+				<app-checkbox v-model:checked="closeOnContentDrag" label="closeOnContentDrag（内容在顶部时下拉关闭）" />
+			</view>
+		</app-card>
+
+		<app-card class="demo-card" title="头部插槽">
+			<text class="demo-label">#title 换成自定义标题；#right 换成「确定」，调作用域里的 close 关闭</text>
+			<view class="demo-row">
+				<button @click="slotVisible = true">打开抽屉</button>
+			</view>
+			<text class="demo-value">确定 × {{ confirmCount }}</text>
+		</app-card>
+
+		<app-card class="demo-card" title="裸内容（#body）+ scrolled">
+			<text class="demo-label">内容区自带 scroll-view，抽屉不监听滚动：只能拖头部关闭；标题毛玻璃由页面算出的 scrolled 驱动</text>
+			<view class="demo-row">
+				<button @click="bareVisible = true">打开抽屉</button>
+			</view>
+			<text class="demo-value">scrolled = {{ bareScrolled }}</text>
+		</app-card>
+
+		<!-- 抽屉一：内置滚动 -->
+		<app-sheet v-model:visible="basicVisible" title="筛选" :closable="closable" :draggable="draggable"
+			:close-on-content-drag="closeOnContentDrag" @open="openCount++" @close="closeCount++">
+			<app-list-item v-for="i in 60" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+		</app-sheet>
+
+		<!-- 抽屉二：头部插槽 -->
+		<app-sheet v-model:visible="slotVisible">
+			<template #title>
+				<text class="app-t-lg app-c-emphasis app-w-bold">自定义标题</text>
+			</template>
+			<template #right="{ close }">
+				<view class="sheet-demo-confirm" hover-class="app-pressed-text" :hover-stay-time="100"
+					@click="confirm(close)">
+					<text class="app-t-lg app-c-primary">确定</text>
+				</view>
+			</template>
+			<app-list-item v-for="i in 30" :key="i" :divider="i > 1" :title="'选项 ' + i" />
+		</app-sheet>
+
+		<!-- 抽屉三：裸内容，顶部留白取作用域给的头部高度 -->
+		<app-sheet v-model:visible="bareVisible" title="消息" :scrolled="bareScrolled">
+			<template #body="{ topInset }">
+				<scroll-view class="sheet-demo-bare-scroll" direction="vertical" :bounces="false" @scroll="onBareScroll">
+					<view class="sheet-demo-bare-content" :style="{ paddingTop: topInset + 'px' }">
+						<app-list-item v-for="i in 40" :key="i" :divider="i > 1" :title="'消息 ' + i" />
+					</view>
+				</scroll-view>
+			</template>
+		</app-sheet>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+	import AppSheet from '@/components/app-sheet/app-sheet.uvue'
+
+	const basicVisible = ref<boolean>(false)
+	const slotVisible = ref<boolean>(false)
+	const bareVisible = ref<boolean>(false)
+	const closable = ref<boolean>(true)
+	const draggable = ref<boolean>(true)
+	const closeOnContentDrag = ref<boolean>(true)
+	const openCount = ref<number>(0)
+	const closeCount = ref<number>(0)
+	const confirmCount = ref<number>(0)
+	// 裸内容模式下由页面跟踪滚动：离开顶部即 true
+	const bareScrolled = ref<boolean>(false)
+
+	const onBareScroll = (e : UniScrollEvent) => {
+		bareScrolled.value = e.detail.scrollTop > 0
+	}
+
+	// 自定义右侧按钮：业务处理完再调作用域里的 close
+	const confirm = (close : () => void) => {
+		confirmCount.value++
+		close()
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+	/* 按压类（styles/press.scss）：自定义右侧按钮 */
+	@import '@/styles/press.scss';
+
+	/* 自定义右侧按钮：热区 44 */
+	.sheet-demo-confirm {
+		height: 44px;
+		justify-content: center;
+	}
+
+	/* 裸内容的滚动容器：在抽屉的裸内容容器里撑满 */
+	.sheet-demo-bare-scroll {
+		flex: 1;
+	}
+</style>

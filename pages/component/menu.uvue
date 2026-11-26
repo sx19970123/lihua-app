@@ -58,7 +58,8 @@
 		{
 			title: '弹层',
 			items: [
-				{ name: 'app-mask', label: '遮罩', icon: 'eye', url: '/pages/component/mask' }
+				{ name: 'app-mask', label: '遮罩', icon: 'eye', url: '/pages/component/mask' },
+				{ name: 'app-sheet', label: '抽屉', icon: 'circle', url: '/pages/component/sheet' }
 			]
 		},
 		{

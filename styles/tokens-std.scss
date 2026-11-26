@@ -72,6 +72,7 @@ page {
 	--std-disabled-shallow-bg: #ecedee;
 	--std-input-bg: #ffffff;  /* 输入框底色 */
 	--std-mask: rgba(0, 0, 0, 0.5);  /* 遮罩（亮暗同值） */
+	--std-emphasis-bg-translucent: rgba(255, 255, 255, 0.72);  /* 抬升面的半透明档（毛玻璃头部底色） */
 }
 
 @media (prefers-color-scheme: dark) {
@@ -91,5 +92,6 @@ page {
 		--std-disabled-border-color: #74787c;
 		--std-disabled-shallow-bg: #505457;
 		--std-input-bg: #242628;  /* 输入框底色 */
+		--std-emphasis-bg-translucent: rgba(36, 38, 40, 0.72);  /* 抬升面的半透明档（毛玻璃头部底色） */
 	}
 }
