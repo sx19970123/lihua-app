@@ -79,6 +79,7 @@
 	// #endif
 	import { closeOthers, markOpen, clearOpen } from './mutex'
 	import { createSpringControl } from '@/utils/spring'
+	import { rubber } from '@/utils/damping'
 	import { SIDE_L, SIDE_R, estimateWidth } from './swipe-platform'
 
 	type SwipeAction = {
@@ -340,11 +341,9 @@
 		platform.content('transform', `translateX(${x}px)`)
 	}
 
-	// 橡皮筋（分式衰减）：视觉超出 = d×(1 - 1/(k0·x/d + 1))；d=该侧组宽的 0.25（下限 32）
+	// 橡皮筋：渐近幅度 d=该侧组宽的 0.25（下限 32），见 utils/damping.ts
 	const rubberOf = (total : number, excess : number) : number => {
-		const d = total > 0 ? Math.max(32, total * 0.25) : 32
-		const k0 = 0.4
-		return d * (1 - 1 / (excess * k0 / d + 1))
+		return rubber(excess, total > 0 ? Math.max(32, total * 0.25) : 32)
 	}
 
 	// 有效位移：content 实际落点——跨域阻尼/橡皮筋饱和后的值（原始 x 可到 ±6W，不限会把 item 拖飞）

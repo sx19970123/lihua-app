@@ -31,6 +31,7 @@
 	import { useThemeStore } from '@/stores/theme'
 	import { haptic } from '@/utils/haptic'
 	import { createSpringControl } from '@/utils/spring'
+	import { damp } from '@/utils/damping'
 
 	type SegmentedOption = {
 		label : string
@@ -405,7 +406,7 @@
 		const maxX = (items.value.length - 1) * segW.value
 		const raw = baseX + (p.screenX - lockX)
 		// 拖过尽头：越界量按阻尼计入，渲染时转成滑块压缩
-		const x = raw > maxX ? maxX + (raw - maxX) * OVER_DRAG : (raw < 0 ? raw * OVER_DRAG : raw)
+		const x = raw > maxX ? maxX + damp(raw - maxX, OVER_DRAG) : (raw < 0 ? damp(raw, OVER_DRAG) : raw)
 		dragX.value = x
 		// 末速度 EMA（px/ms）
 		const now = Date.now()

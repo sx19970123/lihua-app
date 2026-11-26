@@ -1,43 +1,63 @@
 <template>
 	<view class="app-sheet">
 		<!-- 遮罩与面板同父兄弟、同为 fixed，层序靠显式 z-index（面板高于 app-mask 的 999） -->
-		<app-mask v-if="overlay" ref="maskEl" @click="onMaskClick" />
-		<view ref="panelEl" class="app-sheet-panel" :class="shown ? '' : 'app-sheet-panel-hide'" :style="panelStyle"
+		<app-mask v-if="overlay" ref="maskEl" @click="onMaskClick" @backpress="onMaskClick" />
+		<view ref="panelEl" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
 			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
-			<!-- 内容首次打开才挂载，之后常驻 -->
-			<view v-if="mounted" class="app-sheet-body">
-				<!-- 内置滚动：默认插槽 -->
-				<scroll-view v-if="!isBare" class="app-sheet-scroll" direction="vertical" :bounces="false"
-					@scroll="onBodyScroll">
-					<!-- 内距层：scroll-view 自身 padding 不生效；顶部留出头部高度，内容可滚到头部下方 -->
-					<view class="app-sheet-content">
-						<slot />
-						<view class="app-sheet-bottom-safe" />
+			<!-- 内容在露头模式或首次打开时挂载，之后常驻；头部在上，内容区在下 -->
+			<!-- 内容主体只占可见高度：底部让出面板多出的那一截 -->
+			<view v-if="mounted" class="app-sheet-body" :style="{ bottom: reserve + 'px' }">
+				<!-- 头部（整条是拖动热区）：把手行与标题行按 head 显示；标题行里左右槽等宽、标题居中 -->
+				<view class="app-sheet-header" @touchstart="onHeaderTouchStart">
+					<!-- 把手：停在关闭位时点击展开 -->
+					<view v-if="showHandle" class="app-sheet-handle" @touchstart="onHandleTouchStart">
+						<view class="app-sheet-handle-bar" />
 					</view>
-				</scroll-view>
-				<!-- 裸内容：调用方自带滚动容器 -->
-				<view v-else class="app-sheet-bare">
-					<slot name="body" :top-inset="HEADER_H" />
-				</view>
-			</view>
-			<!-- 头部：盖在滚动区上，整条是拖动热区 -->
-			<view class="app-sheet-header" :class="headerCls" @touchstart="onHeaderTouchStart">
-				<view class="app-sheet-side">
-					<slot name="left" :close="close" />
-				</view>
-				<view class="app-sheet-title">
-					<slot name="title" :close="close">
-						<text v-if="(title ?? '') !== ''" class="app-sheet-title-text">{{ title }}</text>
-					</slot>
-				</view>
-				<view class="app-sheet-side app-sheet-side--end">
-					<slot name="right" :close="close">
-						<view v-if="closable" class="app-sheet-close"
-							:hover-class="themeStore.isDark ? 'app-pressed-inset-dark' : 'app-pressed-inset'"
-							:hover-stay-time="100" @click="close">
-							<uni-icons class="app-sheet-close-icon" type="closeempty" />
+					<view v-if="showHeader" class="app-sheet-row">
+						<view class="app-sheet-side">
+							<view class="app-sheet-side-fill" :style="sideStyle">
+								<view class="app-sheet-side-inner">
+									<slot name="left" />
+								</view>
+							</view>
 						</view>
-					</slot>
+						<view class="app-sheet-title">
+							<slot name="title" :close="close">
+								<text v-if="(title ?? '') !== ''" class="app-sheet-title-text">{{ title }}</text>
+							</slot>
+						</view>
+						<view class="app-sheet-side app-sheet-side--end">
+							<view class="app-sheet-side-fill app-sheet-side-fill--end" :style="sideStyle">
+								<view class="app-sheet-side-inner">
+									<slot name="right" :close="close">
+										<view v-if="showClose" class="app-sheet-close"
+											:hover-class="themeStore.isDark ? 'app-pressed-inset-dark' : 'app-pressed-inset'"
+											:hover-stay-time="100" @click="close">
+											<uni-icons class="app-sheet-close-icon" type="closeempty" />
+										</view>
+									</slot>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+				<!-- 内容区：铺满头部下方 -->
+				<view class="app-sheet-main">
+					<!-- 内置滚动：默认插槽 -->
+					<scroll-view v-if="!isBare" class="app-sheet-scroll" direction="vertical" :bounces="false"
+						@scroll="onBodyScroll">
+						<!-- 内距层：scroll-view 自身 padding 不生效 -->
+						<view>
+							<slot />
+							<view class="app-sheet-bottom-safe" />
+						</view>
+					</scroll-view>
+					<!-- 裸内容：调用方自带滚动容器 -->
+					<view v-else class="app-sheet-bare">
+						<slot name="body" />
+					</view>
+					<!-- 内容淡入层：与面板同底色，盖在内容区上；透明度随展开进度归零，完全展开后不渲染 -->
+					<view v-if="fading" ref="fadeEl" class="app-sheet-fade" :style="fadeStyle" />
 				</view>
 			</view>
 		</view>
@@ -45,14 +65,13 @@
 </template>
 
 <script setup lang="ts">
-	// 底部抽屉：面板位移全 JS 驱动（弹簧/补间），遮罩用 app-mask；头部盖在滚动区上，内容可滚到头部下方。
-	// 手势仲裁：头部下拉带动面板；默认插槽的内容在顶部时下拉也带动面板，其余交给原生滚动；#body 模式不碰内容区手势。
+	// 底部抽屉：面板在若干悬停点之间滑动，位移全 JS 驱动（入场曲线与吸附曲线），遮罩用 app-mask；头部在内容区上方。
+	// 手势仲裁：头部（含把手）的纵向拖动带动面板；默认插槽的内容在顶部时下拉也带动面板，其余交给原生滚动；#body 模式不碰内容区手势。
 	// 平台分叉（第 3 级，因小程序端元素引用无 .style）：写层 App/Web 走 setProperty 直驱，小程序走 :style 载体。
 
 	import AppMask from '@/components/app-mask/app-mask.uvue'
 	import { useThemeStore } from '@/stores/theme'
-	import { createSpringControl } from '@/utils/spring'
-	import { haptic } from '@/utils/haptic'
+	import { rubber } from '@/utils/damping'
 
 	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
 	const props = withDefaults(defineProps<{
@@ -60,18 +79,24 @@
 		visible?: boolean
 		// 头部标题（#title 插槽的默认内容）
 		title?: string
-		// 可关闭：显示关闭钮，遮罩点击和下拉都能关；false 时只能由外部改 visible 关闭
+		// 可关闭：显示关闭钮，遮罩点击、返回键和下拉都能关；false 时只能由外部改 visible 关闭。露头模式停在关闭位时不显示关闭钮
 		closable?: boolean
-		// 可拖动：头部和内容区的下拉带动面板；closable=false 时恒不可拖
+		// 可拖动：拖头部带动面板，内容在顶部时下拉也带动；closable=false 时恒不可拖
 		draggable?: boolean
-		// 内容在顶部时下拉关抽屉；false 时只能拖头部
+		// 内容在顶部时下拉带动面板（收起方向）；false 时只能拖头部
 		closeOnContentDrag?: boolean
-		// 是否带遮罩
+		// 是否带遮罩（返回键只在带遮罩时被拦截）
 		overlay?: boolean
-		// 内容是否已离开顶部（true=标题显示毛玻璃）。仅 #body 模式生效：该模式下抽屉不监听滚动，
-		// 由页面在滚动容器的 @scroll 里算出 scrollTop > 0 传进来；传布尔值，勿传滚动位置。
-		// 默认插槽模式抽屉自己跟踪滚动，不看此值
-		scrolled?: boolean
+		// 面板高度：不传=占满页面内容区；0~1=内容区高度的比例；大于 1=像素（超过内容区高度时取内容区高度）
+		height?: number
+		// 露头：关闭位不是完全隐藏，而是露出头部和内容区顶部的一截（关闭位高度=头部高度+底部安全区）；面板与内容在挂载时就创建，吸附带回弹
+		peek?: boolean
+		// 头部形态：handle=只有把手，header=只有标题行，both=两者都有，none=都没有。不传时露头模式为 handle，否则为 header
+		head?: string
+		// 关闭位与全开之间的停靠高度，从小到大；取值同 height。不传=只有全开一档
+		anchors?: number[]
+		// 打开后停留的悬停序号（v-model:anchor）：0=关闭位，其余依次对应 anchors，最后一档为全开；缺省最高一档
+		anchor?: number
 	}>(), {
 		closable : true,
 		draggable : true,
@@ -81,51 +106,78 @@
 
 	const emit = defineEmits<{
 		(e : 'update:visible', value : boolean) : void
+		(e : 'update:anchor', value : number) : void
 		(e : 'open') : void
 		(e : 'close') : void
 	}>()
 
-	// 头部三槽作用域给 close；#body 作用域给头部高度（调用方的滚动容器自行留出）
+	// 头部三槽作用域给 close；自定义标题内容超长时的省略由调用方处理
 	defineSlots<{
 		default() : any
 		left(props : { close : () => void }) : any
 		title(props : { close : () => void }) : any
 		right(props : { close : () => void }) : any
-		body(props : { topInset : number }) : any
+		body() : any
 	}>()
 
-	// 头部高度（px，须与 .app-sheet-header / .app-sheet-content 的样式同值）
-	const HEADER_H = 44
-	// 关闭判定：位移达到面板高度的 CLOSE_RATIO，或位移超过 FLING_MIN 且松手速度超过 FLING_V（px/ms）
-	const CLOSE_RATIO = 0.3
-	const FLING_MIN = 8
-	const FLING_V = 0.5
-	// 定向阈值（px，与分段器/侧滑同值）
-	const SLOP = 5
-	// 弹簧取临界阻尼：位移不过零，面板不上探
-	const SPRING_K = 300
-	const SPRING_C = 35
-	// 退场补间时长（ms）
-	const LEAVE_MS = 300
+	// 松手后停到的悬停点：速度超过 FLING_V（px/ms）顺速度方向取下一档，否则取离得最近的一档；松手前超过 V_STALE（ms）没有移动视为停住
+	const FLING_V = 0.4
+	const V_STALE = 100
+	// 速度采样的最大间隔（ms）：与上一采样相隔更久（按住停顿）时上一采样不作数
+	const V_GAP = 40
+	// 帧间隔（ms）
+	const FRAME_MS = 16
+	// 入场时长（ms）：非露头模式从关闭位滑到最高一档，行程较短时等比缩短（下限四分之一）
+	const ENTER_MS = 360
+	// 到位判定：距目标的位移不超过该值（px）视为已到达
+	const SETTLE_X = 0.5
+	// 内容淡入：超出关闭位的露出高度到达第一档的该比例时内容完全显示
+	const FADE_AT = 0.85
+	// 头部各行高度（px，须与 .app-sheet-handle / .app-sheet-row 的样式同值）；量测后以量测值为准
+	const HANDLE_H = 48
+	const HEADER_H = 56
+	// 露头模式到头拖动的橡皮筋：越过最高档或关闭位后，视觉越界的渐近幅度（px）；上侧还受面板顶到内容区顶的距离限制。
+	// 面板底部同时多留同高度的延长段在屏幕外，面板向上越界时由它补位
+	const OVER_MAX = 40
+	// 头部带动面板的起拖阈值（px）：纵向位移超过它才算拖动
+	const CLAIM_SLOP = 3
+	// 内容区带动面板的锁定阈值（px）：内容在顶部时下拉超过它才接管，接管点之前的位移不带动面板
+	const LOCK = 8
+	// 点击容差（px）：带动面板后位移仍在容差内且不算快甩的，按点击处理
+	const TAP_SLOP = 8
+	// 吸附曲线：时长 SNAP_MS（ms）的缓出 cubic-bezier(SNAP_AX, SNAP_AY, SNAP_BX, SNAP_BY)，起步快、收尾速度为零。
+	// 松手速度朝向目标且快于曲线起步速度时，改为按起步速度等于松手速度定时长（下限 SNAP_MIN），不减速接上手指
+	const SNAP_MS = 300
+	const SNAP_MIN = 100
+	const SNAP_AX = 0.22
+	const SNAP_AY = 0.8
+	const SNAP_BX = 0.28
+	const SNAP_BY = 1
+	// 曲线起步速度（每毫秒走完行程的比例）
+	const SNAP_SLOPE = SNAP_AY / SNAP_AX
+	// 露头模式吸附的回弹：越过目标一小段再弹回，回弹段在吸附时长之外另加 BOUNCE_MS（ms）；
+	// 越过幅度=行程的 BOUNCE_RATIO 倍、不超过 BOUNCE_MAX（px），在最高档上还不超出面板顶到内容区顶的距离
+	const BOUNCE_MS = 90
+	const BOUNCE_RATIO = 0.06
+	const BOUNCE_MAX = 12
+	// 回弹从吸附时长的该比例处开始鼓起
+	const BOUNCE_AT = 0.6
 
-	// 几何（页面内容区坐标）：topInset=面板顶距页面内容区顶；H=面板高度，即关闭位的位移量
-	const win = uni.getWindowInfo()
-	let topInset = 0
-	let H = 1
-	// #ifdef WEB
-	// Web 的导航栏与 tabBar 是页内元素：面板让出导航栏，tabBar 页再让出 tabBar
-	topInset = Math.max(win.windowTop ?? 0, win.statusBarHeight ?? 0)
-	H = Math.max(1, win.windowHeight - topInset - (win.windowBottom ?? 0))
+	// #ifdef APP
+	// 宿主页：面板顶部对齐其内容区
+	const page = getCurrentInstance()?.proxy?.$page
 	// #endif
-	// #ifdef MP-WEIXIN
-	// 小程序页面内容区本就从导航栏下方起算
-	H = Math.max(1, win.windowHeight)
-	// #endif
-	// #ifndef WEB || MP-WEIXIN
-	// App：带原生导航栏的页面内容区从导航栏下方起算（windowTop 大于状态栏高），自定义导航页须让出状态栏
-	topInset = Math.max(0, (win.statusBarHeight ?? 0) - (win.windowTop ?? 0))
-	H = Math.max(1, win.windowHeight - topInset)
-	// #endif
+	// 组件实例（头部量测用）
+	const owner = getCurrentInstance()?.proxy
+	// 页面内容区的底部安全区高度（px），与样式变量 --uni-safe-area-inset-bottom 同值
+	const safeBottom = () : number => {
+		// #ifdef APP
+		return page?.safeAreaInsets.bottom ?? 0
+		// #endif
+		// #ifndef APP
+		return uni.getWindowInfo().safeAreaInsets.bottom ?? 0
+		// #endif
+	}
 
 	const themeStore = useThemeStore()
 	themeStore.init()
@@ -134,30 +186,150 @@
 	// 裸内容模式：调用方自带滚动容器
 	const isBare = computed<boolean>(() => !!slots.body)
 	const canDrag = computed<boolean>(() => props.closable === true && props.draggable === true)
+	// 露头模式：关闭位露出头部
+	const peek = computed<boolean>(() => props.peek === true)
+	// 头部形态：把手行 / 标题行是否显示
+	const showHandle = computed<boolean>(() => props.head == 'handle' || props.head == 'both' || (props.head == null && peek.value))
+	const showHeader = computed<boolean>(() => props.head == 'header' || props.head == 'both' || (props.head == null && !peek.value))
 
 	const maskEl = ref<any>(null)
 	const panelEl = ref<any>(null)
 	// 小程序端的位移载体；App/Web 载体只放几何，位移不进载体（避免重渲染贴回）
-	const carrierY = ref<number>(H)
+	const carrierY = ref<number>(0)
+	// 面板几何（页面内容区坐标）：panelTop=面板顶；panelH=面板可见高度（关闭位的位移量）。
+	// 露头模式面板实际高度多出 reserve：向上越界时面板抬起，多出的这截从屏幕底补进来，底部不留空
+	const panelTop = ref<number>(0)
+	const panelH = ref<number>(1)
+	const reserve = computed<number>(() => peek.value ? OVER_MAX : 0)
 	const panelStyle = computed<any>(() => {
-		const style : any = { top: topInset + 'px', height: H + 'px' }
+		const style : any = { top: panelTop.value + 'px', height: (panelH.value + reserve.value) + 'px' }
 		// #ifdef MP-WEIXIN
 		style.transform = `translateY(${carrierY.value}px)`
 		// #endif
 		return style
 	})
 
-	// closed 关 / enter 进场中 / open 开 / drag 拖动中 / settle 回弹中 / leave 退场中
+	// 内容淡入层：小程序走 :style 载体；App/Web 载体为空，透明度由 writeY 直驱
+	const fadeEl = ref<any>(null)
+	const fading = ref<boolean>(false)
+	const fadeOpacity = ref<number>(1)
+	const fadeStyle = computed<any>(() => {
+		// #ifdef MP-WEIXIN
+		return { opacity: fadeOpacity.value }
+		// #endif
+		// #ifndef MP-WEIXIN
+		return {}
+		// #endif
+	})
+
+	// 可用高度（px）：悬停点按比例换算时用
+	let areaH = 1
+	// 露头时关闭位的高度（px）=头部行高+底部安全区：初值按形态取样式常量，量测后更新
+	let headH = 1
+	const resetHeadH = () => {
+		const rows = (showHandle.value ? HANDLE_H : 0) + (showHeader.value ? HEADER_H : 0)
+		headH = Math.max(1, peek.value && rows > 0 ? rows + safeBottom() : rows)
+	}
+	resetHeadH()
+	// 各悬停点的露出高度（px，从小到大）：0 号=关闭位（露头时为头部高度，否则为 0），末位=全开
+	let anchorHs : number[] = [0]
+	// 当前（目标）悬停序号，0=关闭位
+	const anchorIdx = ref<number>(0)
+	// 默认关闭钮：有标题行才显示；露头且停在关闭位时不显示
+	const showClose = computed<boolean>(() => props.closable === true && showHeader.value && !(peek.value && anchorIdx.value === 0))
+
+	// 悬停点 idx 对应的面板位移；面板位移=面板高度−露出高度
+	const yOf = (idx : number) : number => panelH.value - anchorHs[idx]
+
+	// 离露出高度 h 最近的悬停序号
+	const nearestIdx = (h : number) : number => {
+		let best = 0
+		for (let i = 1; i < anchorHs.length; i++) {
+			if (Math.abs(anchorHs[i] - h) < Math.abs(anchorHs[best] - h)) {
+				best = i
+			}
+		}
+		return best
+	}
+
+	// 解析各悬停点的露出高度：关闭位、anchors（夹在关闭位与全开之间，去重升序）、全开；返回与之前相比是否有变化
+	const resolveAnchors = () : boolean => {
+		const closed = peek.value ? Math.min(headH, panelH.value - 1) : 0
+		const list : number[] = []
+		const as = props.anchors
+		if (as != null) {
+			for (let i = 0; i < as.length; i++) {
+				const a = as[i]
+				const ah = a <= 1 ? Math.round(areaH * a) : a
+				if (ah > closed && ah < panelH.value) {
+					list.push(ah)
+				}
+			}
+		}
+		list.sort((a : number, b : number) : number => a - b)
+		const next : number[] = [closed]
+		for (let i = 0; i < list.length; i++) {
+			if (list[i] - next[next.length - 1] > 1) {
+				next.push(list[i])
+			}
+		}
+		next.push(panelH.value)
+		let same = next.length == anchorHs.length
+		for (let i = 0; same && i < next.length; i++) {
+			same = next[i] == anchorHs[i]
+		}
+		anchorHs = next
+		return !same
+	}
+
+	// 量几何：top=面板顶让出的高度（导航栏或状态栏），areaH=可用高度；每次打开前调用
+	const measure = () => {
+		const win = uni.getWindowInfo()
+		let top = 0
+		areaH = 1
+		// #ifdef WEB
+		// Web 的导航栏与 tabBar 是页内元素：面板让出导航栏，tabBar 页再让出 tabBar
+		top = Math.max(win.windowTop ?? 0, win.statusBarHeight ?? 0)
+		areaH = Math.max(1, win.windowHeight - top - (win.windowBottom ?? 0))
+		// #endif
+		// #ifdef MP-WEIXIN
+		// 小程序页面内容区本就从导航栏下方起算
+		areaH = Math.max(1, win.windowHeight)
+		// #endif
+		// #ifndef WEB || MP-WEIXIN
+		// App：面板顶让出「状态栏高 − 内容区顶」；自定义导航页的内容区从屏幕顶起算
+		const body = page?.pageBody
+		const bodyTop = body == null ? 0 : body.top
+		top = Math.max(0, (win.statusBarHeight ?? 0) - bodyTop)
+		areaH = Math.max(1, win.windowHeight - top)
+		// #endif
+		const h = props.height
+		const ph = h == null || h <= 0 ? areaH : h <= 1 ? Math.round(areaH * h) : Math.min(h, areaH)
+		panelH.value = Math.max(1, ph)
+		panelTop.value = top + (areaH - panelH.value)
+		resolveAnchors()
+	}
+
+	// closed 停在关闭位 / enter 展开中（外部触发） / open 停在展开位 / drag 拖动中 / settle 吸附中 / leave 收起中
 	type Phase = 'closed' | 'enter' | 'open' | 'drag' | 'settle' | 'leave'
 	let phase : Phase = 'closed'
-	let sheetY = H
+	let sheetY = panelH.value
+	// 当前跟踪的触点标识；-1=没有
+	let dragTouchId = -1
+	// none=还没带动面板 / sheet=抽屉拖动中
+	let mode : 'none' | 'sheet' = 'none'
 	const shown = ref<boolean>(false)
 	const mounted = ref<boolean>(false)
+	// 面板修饰类：未显示时隐藏；露头模式面板浮在页面上，带顶边阴影与细线
+	const panelCls = computed<string>(() => {
+		if (!shown.value) {
+			return 'app-sheet-panel-hide'
+		}
+		return peek.value ? 'app-sheet-panel-float' : ''
+	})
 
-	// 内置滚动区是否在顶部：手势仲裁与标题毛玻璃共用
+	// 内置滚动区是否在顶部：内容区下拉能否带动面板的判定用
 	const atTop = ref<boolean>(true)
-	const scrolledNow = computed<boolean>(() => isBare.value ? props.scrolled === true : !atTop.value)
-	const headerCls = computed<string>(() => scrolledNow.value ? 'app-sheet-header-glass' : '')
 
 	const onBodyScroll = (e : UniScrollEvent) => {
 		const top = e.detail.scrollTop <= 0
@@ -166,7 +338,7 @@
 		}
 	}
 
-	// 唯一写口：面板位移与遮罩进度同帧下发（进度=已展开比例）
+	// 唯一写口：面板位移、遮罩进度（=关闭位到最高一档之间的展开比例）与内容淡入层透明度同帧下发
 	const writeY = (y : number) => {
 		sheetY = y
 		// #ifndef MP-WEIXIN
@@ -175,103 +347,312 @@
 		// #ifdef MP-WEIXIN
 		carrierY.value = y
 		// #endif
-		maskEl.value?.setProgress(Math.max(0, Math.min(1, 1 - y / H)))
+		const beyond = panelH.value - y - anchorHs[0]
+		const span = anchorHs[anchorHs.length - 1] - anchorHs[0]
+		const p = span > 0 ? Math.max(0, Math.min(1, beyond / span)) : 1
+		maskEl.value?.setProgress(p)
+		// 淡入层：超出关闭位的露出高度到达第一档的 FADE_AT 倍时透明度归零，之后不再渲染（停在任何一档内容都已完全显示）。
+		// 露头模式停在关闭位时内容区就露出一截，不盖
+		const first = anchorHs.length > 1 ? anchorHs[1] - anchorHs[0] : span
+		const cover = peek.value || first <= 0 ? 0 : 1 - Math.min(1, beyond / (first * FADE_AT))
+		fading.value = cover > 0
+		// #ifndef MP-WEIXIN
+		fadeEl.value?.style.setProperty('opacity', String(cover))
+		// #endif
+		// #ifdef MP-WEIXIN
+		fadeOpacity.value = cover
+		// #endif
 	}
 
-	const springCtl = createSpringControl(SPRING_K, SPRING_C)
-	let leaveTimer : number | null = null
+	let animTimer : number | null = null
 	const stopAnims = () => {
-		springCtl.cancel()
-		if (leaveTimer != null) {
-			clearInterval(leaveTimer)
-			leaveTimer = null
+		if (animTimer != null) {
+			clearInterval(animTimer)
+			animTimer = null
 		}
 	}
 
-	// 进场：从当前位置弹到展开位，到位即止（不过零）。弹簧收敛时会送来终值 0，收尾统一放在这里
-	const runEnter = () => {
-		phase = 'enter'
-		springCtl.run(sheetY, 0, 0, (x : number) => {
-			if (x <= 0) {
-				springCtl.cancel()
-				writeY(0)
-				phase = 'open'
-				emit('open')
+	// 帧循环：各段动画共用一个定时器，每帧送入自首帧起流逝的毫秒数（首帧记 FRAME_MS）
+	const startFrames = (frame : (ms : number) => void) => {
+		stopAnims()
+		let t0 = -1
+		animTimer = setInterval(() => {
+			const now = Date.now()
+			if (t0 < 0) {
+				t0 = now - FRAME_MS
+			}
+			frame(now - t0)
+		}, FRAME_MS)
+	}
+
+	// 缓出曲线 cubic-bezier(SNAP_AX, SNAP_AY, SNAP_BX, SNAP_BY)：入参为时间比例，返回走过的行程比例。
+	// 贝塞尔的横坐标不是时间：先用牛顿迭代由横坐标反解参数，再取纵坐标
+	const easeOut = (x : number) : number => {
+		let t = x
+		for (let i = 0; i < 4; i++) {
+			const o = 1 - t
+			const cx = 3 * o * o * t * SNAP_AX + 3 * o * t * t * SNAP_BX + t * t * t - x
+			const dx = 3 * o * o * SNAP_AX + 6 * o * t * (SNAP_BX - SNAP_AX) + 3 * t * t * (1 - SNAP_BX)
+			if (dx == 0) {
+				break
+			}
+			t = t - cx / dx
+		}
+		t = Math.max(0, Math.min(1, t))
+		const o = 1 - t
+		return 3 * o * o * t * SNAP_AY + 3 * o * t * t * SNAP_BY + t * t * t
+	}
+
+	// 是否正从关闭位展开 / 正收回关闭位（到位时发 open / close）
+	let pendingOpen = false
+	let pendingClose = false
+
+	// 到达展开位
+	const finishOpen = () => {
+		phase = 'open'
+		if (pendingOpen) {
+			pendingOpen = false
+			emit('open')
+		}
+	}
+
+	// 到达关闭位并通知外部；露头模式面板常驻
+	const finishClose = () => {
+		writeY(yOf(0))
+		pendingOpen = false
+		phase = 'closed'
+		if (!peek.value) {
+			fading.value = false
+			shown.value = false
+			// 面板已隐藏：按住未松的触摸不再带动面板
+			dragTouchId = -1
+			mode = 'none'
+		}
+		if (pendingClose) {
+			pendingClose = false
+			emit('close')
+		}
+	}
+
+	// 面板走到悬停点 idx。enter=从关闭位的入场：非露头模式走入场曲线（行程越短越快，下限 ENTER_MS/4）；
+	// 其余走吸附曲线，v=松手速度（px/ms，正值向下）只在朝向目标时用来缩短时长。已在目标则直接收尾
+	const slideTo = (idx : number, enter : boolean = false, v : number = 0) => {
+		stopAnims()
+		const to = yOf(idx)
+		const from = sheetY
+		const dist = Math.abs(from - to)
+		if (idx === 0) {
+			phase = 'leave'
+			// 已在关闭位或更靠下（拖出屏外）直接收尾
+			if (from >= to - SETTLE_X) {
+				finishClose()
 				return
 			}
-			writeY(x)
-		})
-	}
-
-	// 退场：加速下滑补间到关闭位
-	const runLeave = () => {
-		phase = 'leave'
-		const from = sheetY
-		const t0 = Date.now()
-		leaveTimer = setInterval(() => {
-			const k = Math.min(1, (Date.now() - t0) / LEAVE_MS)
-			writeY(from + (H - from) * k * k)
-			if (k >= 1) {
-				stopAnims()
-				writeY(H)
-				phase = 'closed'
-				shown.value = false
-				emit('close')
+		} else {
+			phase = enter ? 'enter' : 'settle'
+			if (dist <= SETTLE_X) {
+				writeY(to)
+				finishOpen()
+				return
 			}
-		}, 16)
-	}
-
-	const open = () => {
-		if (phase === 'closed') {
-			writeY(H)
-			mounted.value = true
-			shown.value = true
-			runEnter()
-		} else if (phase === 'leave') {
-			// 退场途中被重新打开：从当前位置折返
-			stopAnims()
-			runEnter()
 		}
-	}
-
-	const close = () => {
-		if (phase === 'closed' || phase === 'leave') {
+		if (enter && !peek.value) {
+			const ms = Math.max(ENTER_MS / 4, ENTER_MS * dist / panelH.value)
+			startFrames((t : number) => {
+				const x = Math.min(1, t / ms)
+				if (x >= 1) {
+					stopAnims()
+					writeY(to)
+					finishOpen()
+					return
+				}
+				// 曲线：速度线性升到峰值后按平方衰减；r 为剩余行程比例
+				const r = (1 - x) * (1 - x) * (1 - x) * (1 + 3 * x)
+				writeY(to + (from - to) * r)
+			})
 			return
 		}
-		stopAnims()
-		emit('update:visible', false)
-		runLeave()
-	}
-
-	// 回弹：承接松手速度弹回展开位，到位即止
-	const settleBack = (v0 : number) => {
-		phase = 'settle'
-		springCtl.run(sheetY, 0, v0 * 1000, (x : number) => {
-			if (x <= 0) {
-				springCtl.cancel()
-				writeY(0)
-				phase = 'open'
+		const toward = v * (to - from) > 0 ? Math.abs(v) : 0
+		const ms = toward > 0 ? Math.max(SNAP_MIN, Math.min(SNAP_MS, dist * SNAP_SLOPE / toward)) : SNAP_MS
+		// 露头模式带回弹：越过目标 over 再弹回，吸附总时长加长到 k 倍
+		let over = 0
+		if (peek.value) {
+			over = Math.min(BOUNCE_MAX, BOUNCE_RATIO * dist)
+			// 最高档上不超出面板顶到内容区顶的距离
+			if (idx === anchorHs.length - 1) {
+				over = Math.min(over, panelTop.value)
+			}
+		}
+		const k = over > 0 ? (SNAP_MS + BOUNCE_MS) / SNAP_MS : 1
+		const dir = to > from ? 1 : -1
+		startFrames((t : number) => {
+			const x = Math.min(1, t / (ms * k))
+			if (x >= 1) {
+				stopAnims()
+				writeY(to)
+				if (idx === 0) {
+					finishClose()
+				} else {
+					finishOpen()
+				}
 				return
 			}
-			writeY(x)
+			// 吸附行程按原时长走完；回弹从吸附时长的 BOUNCE_AT 处按正弦平方鼓起，到总时长末尾归零
+			const at = x * k
+			let step = dist * easeOut(Math.min(1, at))
+			const u = (at - BOUNCE_AT) / (k - BOUNCE_AT)
+			if (over > 0 && u > 0) {
+				const s = Math.sin(Math.PI * u)
+				step = step + over * s * s
+			}
+			writeY(from + dir * step)
 		})
+	}
+
+	// 切换目标悬停点并通知外部；返回是否有变化
+	const setAnchor = (idx : number) : boolean => {
+		if (idx === anchorIdx.value) {
+			return false
+		}
+		const wasClosed = anchorIdx.value === 0
+		anchorIdx.value = idx
+		emit('update:anchor', idx)
+		if (wasClosed) {
+			pendingOpen = true
+			if (props.visible !== true) {
+				emit('update:visible', true)
+			}
+		} else if (idx === 0) {
+			pendingClose = true
+			emit('update:visible', false)
+		}
+		return true
+	}
+
+	// ---------- 头部量测 ----------
+	// 两槽统一的最小宽度（px）：初值取标准控件宽，量测后取两槽自然宽的较宽者（不低于标准控件宽）；标题在等宽的两槽之间居中
+	const SIDE_MIN = 44
+	const sideW = ref<number>(SIDE_MIN)
+	const sideStyle = computed<any>(() => ({ minWidth: sideW.value + 'px' }))
+	// 布局未就绪时的重量次数
+	let fitRetry = 0
+
+	// 悬停点变化后重新对位：静止的直接落到当前目标，运动中的从当前位置重走
+	const realign = () => {
+		anchorIdx.value = Math.min(anchorIdx.value, anchorHs.length - 1)
+		const idx = anchorIdx.value
+		if (phase === 'closed' || phase === 'open') {
+			writeY(yOf(idx))
+		} else if (phase === 'enter' || phase === 'settle' || phase === 'leave') {
+			slideTo(idx)
+		}
+	}
+
+	// 量头部高度（露头时作为关闭位）与标题行左右槽的自然宽；force 用于刚打开或刚挂载时（此时动画可能在跑）
+	const fitHead = (force : boolean = false) : void => {
+		if (!shown.value || (!force && (animTimer != null || phase === 'drag'))) {
+			return
+		}
+		uni.createSelectorQuery().in(owner)?.select('.app-sheet-header')?.boundingClientRect()?.selectAll('.app-sheet-side-inner')?.boundingClientRect()?.exec((ret) => {
+			const head = ret[0] as { height : number } | null
+			const rects = ret[1] as Array<{ width : number }> | null
+			if (head == null || rects == null) {
+				return
+			}
+			// 没有头部可量
+			if (!showHandle.value && !showHeader.value) {
+				return
+			}
+			// 头部还没排出布局：稍后重量，最多三次
+			if (head.height <= 0) {
+				if (force && fitRetry < 3) {
+					fitRetry++
+					setTimeout(() => {
+						fitHead(true)
+					}, 32)
+				}
+				return
+			}
+			fitRetry = 0
+			let w = 0
+			for (let i = 0; i < rects.length; i++) {
+				if (rects[i].width > w) {
+					w = rects[i].width
+				}
+			}
+			sideW.value = Math.max(SIDE_MIN, Math.ceil(w))
+			// 头部实高与常量不一致时，按实高修正关闭位（露头时再加底部安全区）
+			if (peek.value) {
+				const real = Math.round(head.height) + safeBottom()
+				if (real != headH) {
+					headH = Math.max(1, real)
+					resolveAnchors()
+					realign()
+				}
+			}
+		})
+	}
+
+	// 展开到悬停点：anchor 指定的序号（v-model:anchor），缺省最高一档；从关闭位展开时按入场处理
+	const open = () => {
+		if (phase === 'drag') {
+			return
+		}
+		const enter = phase === 'closed'
+		if (enter) {
+			measure()
+			writeY(yOf(0))
+			mounted.value = true
+			shown.value = true
+			fitRetry = 0
+			nextTick(() => {
+				fitHead(true)
+			})
+		}
+		const a = props.anchor
+		const idx = a != null && a > 0 ? Math.min(Math.floor(a), anchorHs.length - 1) : anchorHs.length - 1
+		if (phase === 'open' && anchorIdx.value === idx) {
+			return
+		}
+		setAnchor(idx)
+		slideTo(idx, enter)
+	}
+
+	// 收起到关闭位
+	const close = () => {
+		if (anchorIdx.value === 0 && (phase === 'closed' || phase === 'leave')) {
+			return
+		}
+		// 拖动中被外部收起：先结束这次拖动
+		if (phase === 'drag') {
+			dragTouchId = -1
+			mode = 'none'
+		}
+		setAnchor(0)
+		slideTo(0)
 	}
 
 	// ---------- 手势 ----------
-	let dragTouchId = -1
-	let startX = 0
 	let startY = 0
 	let baseY = 0
-	// none=未定向 / sheet=抽屉拖动 / native=交给原生滚动
-	let mode : 'none' | 'sheet' | 'native' = 'none'
+	// 起拖时的露出高度：松手时据此判断这次触摸有没有真的拖动面板
+	let baseH = 0
+	// 起拖时面板是否停在关闭位
+	let fromClosed = false
 	let fromHeader = false
-	// 头部自身的 touchstart 先于面板触发，用它标记触点起点
+	let fromHandle = false
+	// 头部、把手自身的 touchstart 先于面板触发，用它们标记触点起点
 	let headerTouched = false
-	// 末速度追踪（EMA 平滑；松手前停顿超 80ms 视为停住，速度作废）
-	let velMs = 0
+	let handleTouched = false
+	// 松手速度：按下起全程统计，取最近两段位移的平均速度（px/ms，正值向下），用来选目标悬停点和吸附时长
+	let carryMs = 0
 	let trackY = 0
 	let trackT = 0
-	let ticked = false
+	let prevY = 0
+	let prevT = 0
+	// 内容在顶部时手指的位置：内容区的下拉从这里起算；-1=内容不在顶部
+	let topX = 0
+	let topY = -1
 
 	const findTouch = (e : TouchEvent, id : number) : Touch | null => {
 		for (let i = 0; i < e.changedTouches.length; i++) {
@@ -291,10 +672,60 @@
 		headerTouched = true
 	}
 
+	const onHandleTouchStart = () => {
+		handleTouched = true
+	}
+
+	// 松手后停在哪个悬停点。v=松手速度（px/ms，正值向下）
+	const pickAnchor = (v : number) : number => {
+		const last = anchorHs.length - 1
+		// 到头拖动的越界段：回到被越过的那一档
+		if (sheetY <= yOf(last)) {
+			return last
+		}
+		if (sheetY >= yOf(0)) {
+			return 0
+		}
+		const h = panelH.value - sheetY
+		// 快甩：顺速度方向取越过当前位置的第一档
+		if (Math.abs(v) > FLING_V) {
+			if (v < 0) {
+				for (let i = 0; i <= last; i++) {
+					if (anchorHs[i] > h) {
+						return i
+					}
+				}
+			} else {
+				for (let i = last; i >= 0; i--) {
+					if (anchorHs[i] < h) {
+						return i
+					}
+				}
+			}
+		}
+		// 其余：离得最近的一档
+		return nearestIdx(h)
+	}
+
+	// 带动面板：冻结在途动画，冻结位即起拖基准，此后面板位移=手指相对 originY 的位移
+	const claim = (originY : number) => {
+		stopAnims()
+		baseY = sheetY
+		baseH = panelH.value - baseY
+		fromClosed = phase === 'closed'
+		startY = originY
+		prevT = 0
+		phase = 'drag'
+		mode = 'sheet'
+	}
+
 	const onTouchStart = (e : TouchEvent) => {
 		fromHeader = headerTouched
+		fromHandle = handleTouched
 		headerTouched = false
-		if (dragTouchId >= 0 || phase === 'closed' || phase === 'leave') {
+		handleTouched = false
+		// 露头模式面板常驻，收起过程中也能接住；其余情况的关闭位与收起过程中不接触摸
+		if (dragTouchId >= 0 || (phase === 'leave' && !peek.value) || (phase === 'closed' && !peek.value)) {
 			return
 		}
 		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
@@ -302,10 +733,15 @@
 			return
 		}
 		dragTouchId = t.identifier
-		startX = t.screenX
 		startY = t.screenY
+		fromClosed = phase === 'closed'
+		topX = t.screenX
+		topY = atTop.value ? t.screenY : -1
+		trackY = t.screenY
+		trackT = Date.now()
+		carryMs = 0
+		prevT = 0
 		mode = 'none'
-		ticked = false
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
@@ -316,83 +752,108 @@
 		if (p == null) {
 			return
 		}
-		const dx = p.screenX - startX
-		const dy = p.screenY - startY
 		if (mode === 'none') {
-			if (Math.abs(dx) <= SLOP && Math.abs(dy) <= SLOP) {
+			if (!canDrag.value) {
 				return
 			}
-			// 向下且纵向为主才可能带动面板：头部恒可拖；内容区须为内置滚动、允许内容下拉关闭、且内容在顶部
-			const fromContent = !fromHeader && !isBare.value && props.closeOnContentDrag === true && atTop.value
-			const claim = dy > 0 && Math.abs(dy) > Math.abs(dx) && canDrag.value && (fromHeader || fromContent)
-			mode = claim ? 'sheet' : 'native'
-			if (!claim) {
-				return
+			if (fromHeader) {
+				// 头部：纵向位移超过起拖阈值就带动，位移从按下点起算
+				if (Math.abs(p.screenY - startY) < CLAIM_SLOP) {
+					return
+				}
+				claim(startY)
+			} else {
+				// 内容区：须为内置滚动、允许内容带动，且内容在顶部（不在顶部时交给原生滚动）。
+				// 以内容在顶部时的手指位置为基准，下拉超过锁定阈值且纵向为主才接管；接管点之前的位移不带动面板
+				if (isBare.value || props.closeOnContentDrag !== true || !atTop.value) {
+					topY = -1
+					return
+				}
+				if (topY < 0) {
+					topX = p.screenX
+					topY = p.screenY
+				}
+				const pull = p.screenY - topY
+				if (pull < LOCK || pull <= Math.abs(p.screenX - topX)) {
+					return
+				}
+				claim(topY + LOCK)
 			}
-			e.preventDefault()
-			// 定向成立才冻结在途动画，冻结位即起拖基准；位移从按下点起算，面板与手指 1:1
-			stopAnims()
-			baseY = sheetY
-			trackY = baseY
-			trackT = Date.now()
-			velMs = 0
-			phase = 'drag'
-			return
-		}
-		if (mode !== 'sheet') {
-			return
 		}
 		// 抽屉拖动全程拦截默认行为：内容滚动区不参与这次手势
 		e.preventDefault()
-		const y = Math.max(0, baseY + (p.screenY - startY))
+		const top = yOf(anchorHs.length - 1)
+		const bottom = yOf(0)
+		const raw = baseY + (p.screenY - startY)
+		let y = raw
+		if (!peek.value) {
+			y = Math.max(top, Math.min(bottom, raw))
+		} else if (raw < top) {
+			y = top - rubber(top - raw, Math.min(OVER_MAX, panelTop.value))
+		} else if (raw > bottom) {
+			y = bottom + rubber(raw - bottom, OVER_MAX)
+		}
 		writeY(y)
+		// 速度采样：同一毫秒内的多次移动并作一次
 		const now = Date.now()
+		if (now == trackT) {
+			trackY = p.screenY
+			return
+		}
 		const dt = now - trackT
-		if (dt > 0) {
-			velMs = velMs * 0.7 + ((y - trackY) / dt) * 0.3
-		}
-		trackY = y
+		const inst = dt <= V_GAP ? (p.screenY - trackY) / dt : 0
+		carryMs = prevT > 0 && now - prevT <= V_GAP ? (p.screenY - prevY) / (now - prevT) : inst
+		prevY = trackY
+		prevT = trackT
+		trackY = p.screenY
 		trackT = now
-		// 拖过关闭阈值轻震一次
-		if (!ticked && y >= H * CLOSE_RATIO) {
-			ticked = true
-			haptic('light')
-		}
 	}
 
 	const onTouchEnd = () => {
 		headerTouched = false
+		handleTouched = false
 		if (dragTouchId < 0) {
 			return
 		}
 		dragTouchId = -1
 		const wasSheet = mode === 'sheet'
 		mode = 'none'
+		const v = (Date.now() - trackT < V_STALE) ? carryMs : 0
+		// 没带动面板，或带动后位移仍在点击容差内且不算快甩：这次触摸是点击
+		const still = !wasSheet || (Math.abs(panelH.value - sheetY - baseH) < TAP_SLOP && Math.abs(v) <= FLING_V)
+		// 停在关闭位时点击把手展开（没有把手时点标题行）
+		if (still && fromClosed && (fromHandle || (!showHandle.value && fromHeader))) {
+			if (wasSheet) {
+				writeY(yOf(0))
+				phase = 'closed'
+			}
+			open()
+			return
+		}
 		if (!wasSheet) {
 			return
 		}
-		const v = (Date.now() - trackT < 80) ? velMs : 0
-		if (sheetY >= H * CLOSE_RATIO || (sheetY > FLING_MIN && v > FLING_V)) {
-			close()
-		} else {
-			settleBack(v)
-		}
+		// 点击：回当前目标悬停点；拖动：按松手位置与速度选悬停点
+		setAnchor(still ? anchorIdx.value : pickAnchor(v))
+		slideTo(anchorIdx.value, false, still ? 0 : v)
 	}
 
-	// 系统打断（来电等）：纯回弹，不触发关闭
+	// 系统打断（来电等）：回到当前目标悬停点
 	const onTouchCancel = () => {
 		headerTouched = false
+		handleTouched = false
 		if (dragTouchId < 0) {
 			return
 		}
 		dragTouchId = -1
-		const wasSheet = mode === 'sheet'
-		mode = 'none'
-		if (wasSheet) {
-			settleBack(0)
+		if (mode === 'sheet') {
+			mode = 'none'
+			slideTo(anchorIdx.value)
 		}
+		mode = 'none'
 	}
 
+	// 遮罩点击与返回键：可关闭则关闭
 	const onMaskClick = () => {
 		if (props.closable === true) {
 			close()
@@ -407,22 +868,53 @@
 		}
 	})
 
-	// 返回键：抽屉开着就拦下，可关闭则顺手关掉，不透传给页面
-	onBackPress(() : boolean => {
-		if (phase === 'closed') {
-			return false
-		}
-		if (props.closable === true) {
+	watch(() => props.anchor, (v : number) => {
+		if (v <= 0) {
 			close()
+		} else if (v != anchorIdx.value) {
+			open()
 		}
-		return true
+	})
+
+	// 头部形态变化：关闭位高度随之变化，重新解析并对位，再量头部
+	watch(() => props.head, () => {
+		resetHeadH()
+		if (resolveAnchors()) {
+			realign()
+		}
+		fitRetry = 0
+		nextTick(() => {
+			fitHead(true)
+		})
+	})
+
+	// 悬停点配置变化：重新解析并对位
+	watch(() => props.anchors, () => {
+		if (resolveAnchors()) {
+			realign()
+		}
 	})
 
 	onMounted(() => {
-		writeY(H)
+		measure()
+		// 露头模式：面板与内容随挂载创建，停在关闭位
+		if (peek.value) {
+			mounted.value = true
+			shown.value = true
+			fitRetry = 0
+			nextTick(() => {
+				fitHead(true)
+			})
+		}
+		writeY(yOf(0))
 		if (props.visible === true) {
 			open()
 		}
+	})
+
+	// 插槽内容变化后重量头部
+	onUpdated(() => {
+		fitHead()
 	})
 
 	onUnmounted(() => {
@@ -451,7 +943,13 @@
 		display: none;
 	}
 
-	/* 内容区：铺满面板，含头部下方 */
+	/* 露头模式：面板浮在页面内容上，顶边向上投影；细线用于底色相近或暗色时勾出边界 */
+	.app-sheet-panel-float {
+		border-top: 1px solid var(--std-border-color);
+		box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+	}
+
+	/* 主体：铺满面板，头部在上、内容区在下 */
 	.app-sheet-body {
 		position: absolute;
 		top: 0;
@@ -460,13 +958,14 @@
 		bottom: 0;
 	}
 
-	.app-sheet-scroll {
+	/* 内容区：铺满头部下方 */
+	.app-sheet-main {
 		flex: 1;
+		position: relative;
 	}
 
-	/* 内距层：顶部留出头部高度（须与 HEADER_H 同值） */
-	.app-sheet-content {
-		padding-top: 44px;
+	.app-sheet-scroll {
+		flex: 1;
 	}
 
 	.app-sheet-bottom-safe {
@@ -478,29 +977,48 @@
 		flex: 1;
 	}
 
-	/* 头部：盖在滚动区上；高度须与 HEADER_H 同值。常态透明，内容滚动后挂玻璃类 */
-	.app-sheet-header {
+	/* 内容淡入层：铺满内容区、与面板同底色，压在内容之上 */
+	.app-sheet-fade {
 		position: absolute;
 		top: 0;
 		left: 0;
 		right: 0;
+		bottom: 0;
 		z-index: 1;
-		height: 44px;
+		background-color: var(--std-emphasis-bg);
+	}
+
+	/* 头部：把手行、标题行按 head 显示 */
+	.app-sheet-header {
+		flex-direction: column;
+	}
+
+	/* 把手行 */
+	.app-sheet-handle {
+		height: 48px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.app-sheet-handle-bar {
+		width: 36px;
+		height: 4px;
+		border-radius: 2px;
+		background-color: var(--std-fourth-color);
+	}
+
+	/* 标题行 */
+	.app-sheet-row {
+		height: 56px;
 		flex-direction: row;
 		align-items: center;
 	}
 
-	/* 毛玻璃：底色取抬升面的半透明档，模糊其后方内容 */
-	.app-sheet-header-glass {
-		background-color: var(--std-emphasis-bg-translucent);
-		backdrop-filter: blur(20px);
-	}
-
-	/* 左右槽：最小触区 44，宽度随插槽内容 */
+	/* 左右槽：内距取页面边距，不参与压缩；两槽等宽（宽度由 fitHead 量得），标题因此居中 */
 	.app-sheet-side {
-		min-width: 44px;
+		flex-shrink: 0;
 		height: 44px;
-		padding: 0 var(--std-gap-sm);
+		padding: 0 var(--std-page-margin-x);
 		flex-direction: row;
 		align-items: center;
 	}
@@ -509,13 +1027,39 @@
 		justify-content: flex-end;
 	}
 
-	.app-sheet-title {
-		flex: 1;
-		justify-content: center;
+	/* 占位层：最小宽度=两槽统一宽度；内层包插槽内容，保持自然宽供量测 */
+	.app-sheet-side-fill {
+		flex-direction: row;
 		align-items: center;
 	}
 
+	.app-sheet-side-fill--end {
+		justify-content: flex-end;
+	}
+
+	.app-sheet-side-inner {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	/* 标题：占满两槽之间，内容居中，超出裁剪 */
+	.app-sheet-title {
+		flex: 1;
+		min-width: 0;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		overflow: hidden;
+	}
+
+	/* 标题文字：超长时收缩到可用宽度，尾部省略 */
 	.app-sheet-title-text {
+		flex-shrink: 1;
+		min-width: 0px;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		font-weight: 600;
 		font-size: var(--std-text-lg);
 		line-height: var(--std-leading-lg);
 		color: var(--std-emphasis-color);

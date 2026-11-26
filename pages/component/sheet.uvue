@@ -1,11 +1,21 @@
 <template>
-	<view class="page-padding">
-		<app-card title="内置滚动（默认插槽）">
-			<text class="demo-label">验证：头部下拉关闭；内容在顶部时下拉关闭、不在顶部时滚内容；内容滚到头部下方时标题变毛玻璃</text>
+	<view class="page-padding sheet-demo-page">
+		<app-card title="露头版（peek + 多段悬停）">
+			<text class="demo-label">底部的抽屉关闭时露出头部，不收起。展开后依次停在 50%、80%，松手带回弹：停到最近的一档，快甩顺方向再走一档；往下拖逐档收回。内容在顶部时下拉带动面板，不在顶部时滚内容</text>
+			<text class="demo-label">头部形态 head：把手 / 标题行 / 两者 / 无（切换后关闭位高度跟着变）</text>
 			<view class="demo-row">
-				<button type="primary" @click="basicVisible = true">打开抽屉</button>
+				<app-segmented v-model="headMode" :options="HEAD_MODES" size="small" />
 			</view>
-			<text class="demo-value">visible = {{ basicVisible }} · open × {{ openCount }} · close × {{ closeCount }}</text>
+			<view class="demo-row">
+				<button type="primary" @click="openAt(1)">展开到 50%</button>
+			</view>
+			<view class="demo-row">
+				<button @click="openAt(2)">展开到 80%</button>
+			</view>
+			<view class="demo-row">
+				<button @click="basicVisible = false">收起</button>
+			</view>
+			<text class="demo-value">visible = {{ basicVisible }} · anchor = {{ basicAnchor }} · open × {{ openCount }} · close × {{ closeCount }}</text>
 		</app-card>
 
 		<app-card class="demo-card" title="行为开关（作用于第一个抽屉）">
@@ -16,7 +26,7 @@
 				<app-checkbox v-model:checked="draggable" label="draggable（可拖动）" />
 			</view>
 			<view class="demo-row">
-				<app-checkbox v-model:checked="closeOnContentDrag" label="closeOnContentDrag（内容在顶部时下拉关闭）" />
+				<app-checkbox v-model:checked="closeOnContentDrag" label="closeOnContentDrag（内容在顶部时下拉带动面板）" />
 			</view>
 		</app-card>
 
@@ -28,17 +38,46 @@
 			<text class="demo-value">确定 × {{ confirmCount }}</text>
 		</app-card>
 
-		<app-card class="demo-card" title="裸内容（#body）+ scrolled">
-			<text class="demo-label">内容区自带 scroll-view，抽屉不监听滚动：只能拖头部关闭；标题毛玻璃由页面算出的 scrolled 驱动</text>
+		<app-card class="demo-card" title="标题居中与超长">
+			<text class="demo-label">左槽空、右槽放一个很宽的按钮，标题仍居中；标题过长时尾部省略</text>
+			<view class="demo-row">
+				<button @click="wideVisible = true">右槽很宽</button>
+			</view>
+			<view class="demo-row">
+				<button @click="longVisible = true">标题超长</button>
+			</view>
+		</app-card>
+
+		<app-card class="demo-card" title="裸内容（#body）">
+			<text class="demo-label">内容区自带 scroll-view，铺在头部下方；抽屉不监听它的滚动，只能拖头部关闭</text>
 			<view class="demo-row">
 				<button @click="bareVisible = true">打开抽屉</button>
 			</view>
-			<text class="demo-value">scrolled = {{ bareScrolled }}</text>
 		</app-card>
 
-		<!-- 抽屉一：内置滚动 -->
-		<app-sheet v-model:visible="basicVisible" title="筛选" :closable="closable" :draggable="draggable"
-			:close-on-content-drag="closeOnContentDrag" @open="openCount++" @close="closeCount++">
+		<app-card class="demo-card" title="面板高度（height）">
+			<text class="demo-label">不传=占满页面内容区（上面的抽屉都是）；0~1=内容区高度的比例；大于 1=像素</text>
+			<view class="demo-row">
+				<button @click="ratioVisible = true">60%</button>
+			</view>
+			<view class="demo-row">
+				<button @click="pixelVisible = true">400px</button>
+			</view>
+		</app-card>
+
+		<app-card class="demo-card" title="带输入框">
+			<text class="demo-label">输入框一个在内容顶部、一个在列表末尾：看键盘弹出后输入框是否被挡、列表能否滚到末尾的输入框</text>
+			<view class="demo-row">
+				<button @click="inputVisible = true">打开抽屉</button>
+			</view>
+			<text class="demo-value">顶部 = {{ topText }} · 末尾 = {{ bottomText }}</text>
+		</app-card>
+
+		<!-- 抽屉一：露头版，内置滚动，三档：头部 / 50% / 80%（面板最高到 80%） -->
+		<app-sheet v-model:visible="basicVisible" v-model:anchor="basicAnchor" peek :head="headMode" title="筛选"
+			:height="0.8" :anchors="STOPS" :closable="closable" :draggable="draggable"
+			:close-on-content-drag="closeOnContentDrag"
+			@open="openCount++" @close="closeCount++">
 			<app-list-item v-for="i in 60" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
 		</app-sheet>
 
@@ -56,15 +95,49 @@
 			<app-list-item v-for="i in 30" :key="i" :divider="i > 1" :title="'选项 ' + i" />
 		</app-sheet>
 
-		<!-- 抽屉三：裸内容，顶部留白取作用域给的头部高度 -->
-		<app-sheet v-model:visible="bareVisible" title="消息" :scrolled="bareScrolled">
-			<template #body="{ topInset }">
-				<scroll-view class="sheet-demo-bare-scroll" direction="vertical" :bounces="false" @scroll="onBareScroll">
-					<view class="sheet-demo-bare-content" :style="{ paddingTop: topInset + 'px' }">
-						<app-list-item v-for="i in 40" :key="i" :divider="i > 1" :title="'消息 ' + i" />
-					</view>
+		<!-- 抽屉三：裸内容 -->
+		<app-sheet v-model:visible="bareVisible" title="消息">
+			<template #body>
+				<scroll-view class="sheet-demo-bare-scroll" direction="vertical" :bounces="false">
+					<app-list-item v-for="i in 40" :key="i" :divider="i > 1" :title="'消息 ' + i" />
 				</scroll-view>
 			</template>
+		</app-sheet>
+
+		<!-- 抽屉四：按比例定高 -->
+		<app-sheet v-model:visible="ratioVisible" title="60%" :height="0.6">
+			<app-list-item v-for="i in 8" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+		</app-sheet>
+
+		<!-- 抽屉五：按像素定高 -->
+		<app-sheet v-model:visible="pixelVisible" title="400px" :height="400">
+			<app-list-item v-for="i in 8" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+		</app-sheet>
+
+		<!-- 抽屉六：带输入框 -->
+		<app-sheet v-model:visible="inputVisible" title="备注">
+			<view class="sheet-demo-field">
+				<app-input v-model="topText" placeholder="内容顶部的输入框" />
+			</view>
+			<app-list-item v-for="i in 20" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+			<view class="sheet-demo-field">
+				<app-input v-model="bottomText" placeholder="列表末尾的输入框" />
+			</view>
+		</app-sheet>
+
+		<!-- 抽屉七：右槽很宽，标题仍居中 -->
+		<app-sheet v-model:visible="wideVisible" title="标题居中">
+			<template #right>
+				<view class="sheet-demo-confirm" hover-class="app-pressed-text" :hover-stay-time="100">
+					<text class="app-t-lg app-c-primary">全部清空筛选条件</text>
+				</view>
+			</template>
+			<app-list-item v-for="i in 8" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+		</app-sheet>
+
+		<!-- 抽屉八：标题超长，尾部省略 -->
+		<app-sheet v-model:visible="longVisible" title="这是一个特别特别长的标题用来验证超长时尾部省略并且始终居中">
+			<app-list-item v-for="i in 8" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
 		</app-sheet>
 	</view>
 </template>
@@ -72,23 +145,44 @@
 <script setup lang="ts">
 	import AppCard from '@/components/app-card/app-card.uvue'
 	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+	import AppInput from '@/components/app-input/app-input.uvue'
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+	import AppSegmented from '@/components/app-segmented/app-segmented.uvue'
 	import AppSheet from '@/components/app-sheet/app-sheet.uvue'
 
 	const basicVisible = ref<boolean>(false)
+	// 当前停留的悬停序号：0=只露头，1=50%，2=80%
+	const basicAnchor = ref<number>(0)
+	// 露头版在关闭位与最高档之间的停靠高度
+	const STOPS : number[] = [0.5]
+	// 露头版头部形态
+	const headMode = ref<string>('handle')
+	const HEAD_MODES : { label : string, value : string }[] = [
+		{ label: '把手', value: 'handle' },
+		{ label: '标题行', value: 'header' },
+		{ label: '两者', value: 'both' },
+		{ label: '无', value: 'none' },
+	]
 	const slotVisible = ref<boolean>(false)
 	const bareVisible = ref<boolean>(false)
+	const ratioVisible = ref<boolean>(false)
+	const pixelVisible = ref<boolean>(false)
+	const inputVisible = ref<boolean>(false)
+	const wideVisible = ref<boolean>(false)
+	const longVisible = ref<boolean>(false)
 	const closable = ref<boolean>(true)
 	const draggable = ref<boolean>(true)
 	const closeOnContentDrag = ref<boolean>(true)
 	const openCount = ref<number>(0)
 	const closeCount = ref<number>(0)
 	const confirmCount = ref<number>(0)
-	// 裸内容模式下由页面跟踪滚动：离开顶部即 true
-	const bareScrolled = ref<boolean>(false)
+	const topText = ref<string>('')
+	const bottomText = ref<string>('')
 
-	const onBareScroll = (e : UniScrollEvent) => {
-		bareScrolled.value = e.detail.scrollTop > 0
+	// 展开到指定的一档
+	const openAt = (idx : number) => {
+		basicAnchor.value = idx
+		basicVisible.value = true
 	}
 
 	// 自定义右侧按钮：业务处理完再调作用域里的 close
@@ -112,5 +206,15 @@
 	/* 裸内容的滚动容器：在抽屉的裸内容容器里撑满 */
 	.sheet-demo-bare-scroll {
 		flex: 1;
+	}
+
+	/* 露头抽屉常驻底部：页面底部留出它的头部高度 */
+	.sheet-demo-page {
+		padding-bottom: 160px;
+	}
+
+	/* 抽屉内输入框的四周留白 */
+	.sheet-demo-field {
+		padding: var(--std-gap-md) var(--std-page-margin-x);
 	}
 </style>
