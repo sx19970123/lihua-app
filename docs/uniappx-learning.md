@@ -394,3 +394,19 @@ Login.uvue 按"顶层零散装"重构，六工厂+声明顺序（依赖决定）
 **验证**：调度器是纯 TS，用 Node 做了逻辑模拟——后台回调与回退同步两条路径解出的 nonce 完全一致，并用真 SHA-256 逐个核对；两路径中途取消均以空串收场，取消后不再续片；严格类型检查 0 报错。原生代码（Swift、Kotlin、uts 胶水）本地编译不了，**待重打两端基座后真机验证**：转圈是否连贯、挖矿时长是否与以前相当、挖矿中刷新或关闭有无迟到结果、首页 POW 自检卡是否照常。
 
 **可选下一步**：`num` 个挑战互相独立，可并行跑多核进一步压缩慢机时长（本次未做）。
+
+### 补记 27：遮罩显示期间锁住返回（返回键、返回手势、iOS 侧滑）——用户提出「遮罩上半截不随转场动画，会露馅」
+
+**现象**：遮罩打开时侧滑返回或按返回，页面被转场动画带走，挂在窗口上的原生条带留在原地。
+
+**原因**：两条返回路径不同。返回键、安卓返回手势、导航栏返回、`navigateBack` 都走 `onBackPress`，返回 true 即拦；iOS 侧滑返回是 `UniAppRootView` 上一个屏幕边缘手势驱动的交互式转场，官方文档明写「iOS 端侧滑返回不会触发 onBackPress」，手势一开始页面就跟手走。此前只有验证码、抽屉各自监听了 `onBackPress`，app-mask 自己没有；iOS 侧滑在补记 25 里记为「默认不拦」。
+
+**实现**（只改 app-mask.uvue，不动原生插件）：
+- `onBackPress`（APP || WEB）：显示期间返回 true 并发 `backpress` 事件。拦截只在遮罩这一处，关不关归调用方——验证码写 `<app-mask :visible @backpress="close()">`，自己不注册 onBackPress；抽屉仍保留自己的监听。两者不冲突：框架对 onBackPress 是把页面上的监听器全部执行一遍、结果取 `.some(o => o === true)`，不短路。
+- iOS 侧滑：原生层挂上时 `page.setPageStyle({ disableSwipeBack: true })`，摘掉时还原原值（第一次锁时从 `getPageStyle().getBoolean('disableSwipeBack')` 读）。三处摘层（进度归零、被别的页面盖住、卸载）收口为 `detachNative()`。
+
+**依据（拆 22:03 的 iOS 调试包）**：①手势开始时 `UniAppRootView.resolveSwipeBackContext` 解析目标页并检查 `disableSwipeBack(for:)`，为真则不响应，即每次手势实时读取，运行中改了立刻生效；②`-[UniPageImpl setPageStyle:]` 的调用序是先 `mergeResolvedPageStyle:`（合并进页面现有样式，不把其他样式重置成默认），再 `setDisableSwipeBack:`、`syncPageSystemUI:`；③框架内置的一键登录页（uni-verify）自己就在 onShow 里调 `setPageStyle({navigationBarTextStyle, disableSwipeBack: true})`。文档的 PageStyle 兼容表把蒸汽端的动态 `disableSwipeBack` 标成不支持，但运行时与框架自身代码都在用。
+
+**顺带修正检查脚本**：本地类型自查脚本此前没处理行首缩进，条件编译块其实没被裁掉，等于四端代码合在一起查；修好后重查，结论不变。另外 `setPageStyle({ … })` 字面量传参在标准 TS 下报「不可赋给 UTSJSONObject」（接口上声明了方法成员），这是 TS 与 UTS 的规则差异，UTS 按文档写法接受。
+
+**待真机验证（用户执行）**：iOS 遮罩显示期间侧滑无反应、收起后恢复跟手；安卓返回键与返回手势只拦不退页（含安卓 14+ 的预测性返回动画是否先于 onBackPress 播放）；验证码、抽屉打开时按返回仍能关掉自己且页面不动。

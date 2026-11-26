@@ -5,7 +5,7 @@
 <script setup lang="ts">
 	// 全窗口遮罩：页面内容区由本组件的页面内层压暗。内容区之外在 App 上由原生条带压暗（lihua-mask 插件），两层同值同帧；
 	// Web 的导航栏与 tabBar 是页内元素，本层以层序直接盖过；小程序两者皆原生，覆盖不到。
-	// 对外只有进度（0~1）和点击；要浮在遮罩上的内容须与其做同父兄弟、同为 fixed、层序大于 999。
+	// 对外只有进度（0~1）、点击和返回键（显示期间拦下不透传，并以 backpress 通知调用方）；要浮在遮罩上的内容须与其做同父兄弟、同为 fixed、层序大于 999。
 	// 平台分叉（第 3 级，因小程序端元素引用无 .style）：写层 App/Web 走 setProperty 直驱，小程序走 :style 载体。
 
 	import { hasNativeMask, showMask, setMaskAlpha, hideMask } from '@/uni_modules/lihua-mask'
@@ -27,6 +27,7 @@
 
 	const emit = defineEmits<{
 		(e : 'click') : void
+		(e : 'backpress') : void
 	}>()
 
 	const nativeReady = hasNativeMask()
@@ -44,6 +45,8 @@
 	let nativePaused = false
 	let tweenTimer : number | null = null
 	let hideTimer : number | null = null
+	// 原生层挂着期间宿主页「禁用侧滑返回」的原值：null=未锁
+	let swipeBackPrev : boolean | null = null
 
 	// 进度大于 0 才创建页面内层，归零即销毁（不显示时不占元素、不拦触摸）
 	const shown = ref<boolean>(props.visible === true)
@@ -116,10 +119,35 @@
 		emit('click')
 	}
 
+	// iOS 侧滑返回不经过 onBackPress：原生层挂着期间禁掉宿主页的侧滑返回，摘掉时还原
+	const lockSwipeBack = () => {
+		// #ifdef APP-IOS
+		if (swipeBackPrev == null) {
+			swipeBackPrev = page?.getPageStyle()?.getBoolean('disableSwipeBack') ?? false
+		}
+		page?.setPageStyle({ disableSwipeBack: true })
+		// #endif
+	}
+	const unlockSwipeBack = () => {
+		// #ifdef APP-IOS
+		if (swipeBackPrev != null) {
+			page?.setPageStyle({ disableSwipeBack: swipeBackPrev })
+			swipeBackPrev = null
+		}
+		// #endif
+	}
+
 	// 挂原生层：两层接缝取同一时刻的避让距离（页面内层底边=底部条带顶）
 	const attachNative = () => {
 		syncBottom()
+		lockSwipeBack()
 		showMask(buildStrips(), progress * STD_MASK_ALPHA, onMaskTap)
+	}
+
+	// 摘原生层：宿主页恢复可侧滑返回
+	const detachNative = () => {
+		hideMask()
+		unlockSwipeBack()
 	}
 
 	// 唯一写口：进度离开 0 即显示并挂原生层，归零即收起并摘原生层（keepOn：进度为 0 时也保持挂上）
@@ -140,7 +168,7 @@
 			if (nativeOn) {
 				attachNative()
 			} else {
-				hideMask()
+				detachNative()
 			}
 		} else if (nativeOn) {
 			setMaskAlpha(v * STD_MASK_ALPHA)
@@ -237,7 +265,7 @@
 			if (nativeOn && isCovered()) {
 				nativePaused = true
 				nativeOn = false
-				hideMask()
+				detachNative()
 			}
 		}, 0)
 	})
@@ -267,9 +295,19 @@
 			hideTimer = null
 		}
 		if (nativeReady) {
-			hideMask()
+			detachNative()
 		}
 	})
+
+	// 返回键、返回手势、导航栏返回：显示期间拦下并以 backpress 通知调用方，不透传给页面
+	// #ifdef APP || WEB
+	onBackPress(() : boolean => {
+		if (shown.value) {
+			emit('backpress')
+		}
+		return shown.value
+	})
+	// #endif
 
 	defineExpose({ setProgress })
 </script>

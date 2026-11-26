@@ -1,7 +1,7 @@
 <template>
 	<view class="lh-cap">
 		<!-- 遮罩与浮层同父兄弟、同为 fixed，层序靠显式 z-index（浮层高于 app-mask 的 999） -->
-		<app-mask :visible="visible" />
+		<app-mask :visible="visible" @backpress="close()" />
 		<view v-if="visible" class="lh-cap-mask" :class="{ 'lh-cap-mask--in': entered }" @touchmove="onMaskTouchMove">
 			<view class="lh-cap-card" :class="sizeClass">
 				<!-- 右上操作区：App/Web 常驻节点 opacity 过渡淡入淡出；微信端 v-if 挂卸 -->
@@ -824,17 +824,6 @@
 	})
 
 	// ---------- 生命周期 ----------
-
-	// 返回键：验证码开着就走本体关闭流程（清理挖矿与延时任务），不透传给页面
-	// #ifdef APP || WEB
-	onBackPress(() : boolean => {
-		if (!visible.value) {
-			return false
-		}
-		close()
-		return true
-	})
-	// #endif
 
 	onMounted(() => {
 		// #ifdef APP || WEB

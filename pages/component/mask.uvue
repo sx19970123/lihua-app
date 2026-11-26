@@ -1,7 +1,7 @@
 <template>
 	<view class="page-padding">
 		<app-card title="声明式（visible 淡入淡出）">
-			<text class="demo-label">本页带原生导航栏：遮罩应同时压暗导航栏；浮层须在遮罩之上、可点、不被压暗</text>
+			<text class="demo-label">本页带原生导航栏：遮罩应同时压暗导航栏；浮层须在遮罩之上、可点、不被压暗；显示期间返回键与侧滑返回被拦下，页面不会被切走</text>
 			<view class="demo-row">
 				<button type="primary" @click="toggle">{{ shown ? '关闭遮罩' : '打开遮罩' }}</button>
 			</view>
