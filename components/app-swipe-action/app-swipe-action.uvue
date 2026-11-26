@@ -315,6 +315,8 @@
 	let startY = 0
 	let baseX = 0
 	let horizontal : boolean | null = null
+	// 跨域阻尼侧：开态域起拖时记对侧（SIDE_L/SIDE_R），该侧域自中线起整段受阻尼；-1=无，仅拖拽期间有效
+	let crossDamp = -1
 	// 末速度追踪（EMA 平滑；松手前停顿>80ms 视为停住，速度作废）
 	let velMs = 0
 	let trackX = 0
@@ -350,6 +352,26 @@
 		const d = total > 0 ? Math.max(32, total * 0.25) : 32
 		const k0 = 0.4
 		return d * (1 - 1 / (excess * k0 / d + 1))
+	}
+
+	// 有效位移：content 实际落点——跨域阻尼/橡皮筋饱和后的值（原始 x 可到 ±6W，不限会把 item 拖飞）
+	const effOf = (x : number) : number => {
+		const wr = sides[SIDE_R].g.total
+		const wl = sides[SIDE_L].g.total
+		if (crossDamp === SIDE_L && x > 0 && wl > 0) {
+			// 跨域阻尼：开态起拖压向对侧，对侧域自中线起整段衰减
+			return rubberOf(wl, x)
+		}
+		if (crossDamp === SIDE_R && x < 0 && wr > 0) {
+			return -rubberOf(wr, -x)
+		}
+		if (x < 0 && wr > 0 && -x > wr) {
+			return -(wr + rubberOf(wr, -x - wr))
+		}
+		if (x > 0 && wl > 0 && x > wl) {
+			return wl + rubberOf(wl, x - wl)
+		}
+		return x
 	}
 
 	// 补间引擎：300ms easeOutQuad setTimeout 链（代际 token，cancel 后已入队帧不执行）
@@ -494,17 +516,11 @@
 		})
 	}
 
-	// 总驱动：content 直 x；两侧进度各自换算，x<0 只驱动右组、x>0 只驱动左组
+	// 总驱动：content 落有效位移；两侧进度各自换算，x<0 只驱动右组、x>0 只驱动左组
 	const drive = (x : number) => {
-		// content 位移=橡皮筋饱和后的有效值（原始 x 可到 ±6W——不限会把 item 拖飞）
-		let effX = x
+		const effX = effOf(x)
 		const wr = sides[SIDE_R].g.total
 		const wl = sides[SIDE_L].g.total
-		if (x < 0 && wr > 0 && -x > wr) {
-			effX = -(wr + rubberOf(wr, -x - wr))
-		} else if (x > 0 && wl > 0 && x > wl) {
-			effX = wl + rubberOf(wl, x - wl)
-		}
 		driveContent(effX)
 		// p 只设下限 0；按钮延展与 content 超出走同一曲线
 		if (wr > 0) {
@@ -549,6 +565,7 @@
 
 	const onTouchStart = (e : TouchEvent) => {
 		dragCancelled = false
+		crossDamp = -1
 		lastDriveT = 0
 		// 点中确认条的那次触摸不归根级（MP 兜底标记，见 onBtnTouchStart）
 		if (platform.takeConfirmBarHit()) {
@@ -600,6 +617,9 @@
 					confirmIndex.value = -1
 					// 认领互斥（markOpen 会收起持有者，含拖拽中的行→其 dragCancelled 冻结让位）
 					markOpen(closeSelf)
+					// 起拖域门禁：开态域起拖不接盘对侧——对侧域整段阻尼
+					const from = startDomain()
+					crossDamp = from < 0 ? -1 : (from === SIDE_R ? SIDE_L : SIDE_R)
 				}
 			}
 			return
@@ -626,12 +646,29 @@
 		trackT = now
 	}
 
+	// 起拖域：baseX 落在哪一侧的开态域（过该侧组宽之半）；-1=收起域（total>0 守卫单侧行）
+	const startDomain = () : number => {
+		if (sides[SIDE_R].g.total > 0 && baseX <= -sides[SIDE_R].g.total / 2) {
+			return SIDE_R
+		}
+		if (sides[SIDE_L].g.total > 0 && baseX >= sides[SIDE_L].g.total / 2) {
+			return SIDE_L
+		}
+		return -1
+	}
+
 	const onTouchEnd = () => {
 		platform.clearConfirmBarHit()
 		if (dragTouchId < 0) {
 			return
 		}
 		dragTouchId = -1
+		// 跨域受阻位：压进对侧的有效位移（须在清标记前折算），0=不在受阻位
+		let crossX = 0
+		if ((crossDamp === SIDE_L && currentX > 0) || (crossDamp === SIDE_R && currentX < 0)) {
+			crossX = effOf(currentX)
+		}
+		crossDamp = -1
 		// 被互斥打断的轮次：静默终结（不复位 horizontal 之外的任何手势态）
 		if (dragCancelled) {
 			dragCancelled = false
@@ -651,30 +688,31 @@
 			return
 		}
 		horizontal = null
-		// 起拖域门禁：开态域起拖=只可回开本侧或收起，不接盘对侧（total>0 守卫单侧行）
-		const fromL = sides[SIDE_L].g.total > 0 && baseX >= sides[SIDE_L].g.total / 2
-		const fromR = sides[SIDE_R].g.total > 0 && baseX <= -sides[SIDE_R].g.total / 2
+		// 起拖域：开态域起拖只可回开本侧或收起（压向对侧的位移整段受阻尼）
+		const from = startDomain()
+		const fromL = from === SIDE_L
+		const fromR = from === SIDE_R
+		// 跨域受阻松手：自受阻位复原到收起
+		if (crossX !== 0) {
+			currentX = crossX
+			closeSelf()
+			return
+		}
 		if (sides[SIDE_L].isSpringDirty() || sides[SIDE_R].isSpringDirty()) {
-			// 弹簧回位：四元素同帧补间。
-			// 跨域橡皮筋例外（开态起拖压进对侧橡皮筋区）：改走收起档回弹，永不落开态
-			if ((currentX < 0 && fromL) || (currentX > 0 && fromR)) {
-				closeWithInertia(baseX < 0 ? sides[SIDE_R] : sides[SIDE_L], (Date.now() - trackT < 80) ? velMs : 0)
-				return
-			}
+			// 弹簧回位：内容位移与彩带宽度同帧补间
 			springReturn()
 			return
 		}
 		// 分侧分向阈值：收起域起拖 5px 轻扫即开（灵敏）；开态域起拖回拖过半保持本侧开
-		if (!fromL && -currentX > (fromR ? sides[SIDE_R].g.total / 2 : 5)) {
+		if (-currentX > (fromR ? sides[SIDE_R].g.total / 2 : 5)) {
 			openAt(sides[SIDE_R])
-		} else if (!fromR && currentX > (fromL ? sides[SIDE_L].g.total / 2 : 5)) {
+		} else if (currentX > (fromL ? sides[SIDE_L].g.total / 2 : 5)) {
 			openAt(sides[SIDE_L])
 		} else {
-			// 收起档：EMA 末速；选侧=起拖域（baseX）
+			// 收起档：EMA 末速承接（松手前停顿则作废）
 			const velocity = (Date.now() - trackT < 80) ? velMs : 0
-			const closeSide = baseX < 0 ? sides[SIDE_R] : sides[SIDE_L]
 			if (Math.abs(velocity) > 0.3) {
-				closeWithInertia(closeSide, velocity)
+				closeWithInertia(velocity)
 			} else {
 				closeSelf()
 			}
@@ -686,7 +724,7 @@
 	const inertiaSpring = createSpringControl()
 	const cancelInertia = () => { inertiaSpring.cancel() }
 
-	const closeWithInertia = (s : ReturnType<typeof makeSide>, velocity : number) => {
+	const closeWithInertia = (velocity : number) => {
 		cancelInertia()
 		cancelSpringTween()
 		if (Math.abs(velocity) < 0.3) {
@@ -710,6 +748,9 @@
 		if (props.loading === true) {
 			return
 		}
+		// 起点归一：拖拽中的原始位移（跨域阻尼/橡皮筋段）折回有效位移，补间不从原始值起跳
+		currentX = effOf(currentX)
+		crossDamp = -1
 		// 确认形态滑出后的残留清算（此时行必为关态，彩带宽 0 不可见；含确认文案驻留）
 		if (confirmResidueSide >= 0) {
 			sides[confirmResidueSide].resetStatic()
@@ -725,6 +766,9 @@
 		if (props.loading === true) {
 			return
 		}
+		// 起点归一：拖拽中的原始位移（跨域阻尼/橡皮筋段）折回有效位移，补间不从原始值起跳
+		currentX = effOf(currentX)
+		crossDamp = -1
 		// 拖拽中被外部（互斥）收起=打断本轮拖拽
 		if (dragTouchId >= 0) {
 			dragCancelled = true
