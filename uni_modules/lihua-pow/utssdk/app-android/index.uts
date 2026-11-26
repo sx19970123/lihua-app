@@ -1,4 +1,4 @@
-import { MineSlice, PrepareEngine, EngineName } from '../interface.uts'
+import { MineSlice, MineSliceAsync, PrepareEngine, EngineName } from '../interface.uts'
 import { PowMiner } from 'uts.sdk.modules.lihuaPow'
 
 /**
@@ -11,6 +11,19 @@ export const mineSlice : MineSlice = function (saltHex : string, targetHex : str
         return -2
     }
     return PowMiner.mineSliceKotlin(saltHex, targetHex, start, maxTries)
+}
+
+/**
+ * 后台分片挖矿：后台线程计算，结果回主线程回调
+ */
+export const mineSliceAsync : MineSliceAsync = function (saltHex : string, targetHex : string, start : number, maxTries : number, onDone : (found : number) => void) : boolean {
+    if (targetHex.length * 4 > 32) {
+        // 超范围交同步路径按 -2 哨兵处理
+        console.error("POW 难度超出支持范围")
+        return false
+    }
+    PowMiner.mineSliceAsyncKotlin(saltHex, targetHex, start, maxTries, onDone)
+    return true
 }
 
 /**

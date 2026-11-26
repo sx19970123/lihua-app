@@ -1,11 +1,16 @@
 package uts.sdk.modules.lihuaPow
 
+import android.os.Handler
+import android.os.Looper
 import java.security.MessageDigest
 
 /**
  * POW 工作量证明原生挖矿（SHA-256 MessageDigest 实现）
  */
 object PowMiner {
+
+    // 挖矿结果回主线程用的 handler
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     /**
      * 分片挖矿：从 start 起最多尝试 maxTries 个 nonce，命中返回 nonce，未命中返回 -1
@@ -43,5 +48,17 @@ object PowMiner {
             }
         }
         return -1
+    }
+
+    /**
+     * 后台分片挖矿：计算同 mineSliceKotlin，在后台线程执行，结果回主线程回调
+     */
+    fun mineSliceAsyncKotlin(saltHex : String, targetHex : String, start : Number, maxTries : Number, onDone : (Number) -> Unit) {
+        Thread {
+            val found = PowMiner.mineSliceKotlin(saltHex, targetHex, start, maxTries)
+            mainHandler.post {
+                onDone(found)
+            }
+        }.start()
     }
 }

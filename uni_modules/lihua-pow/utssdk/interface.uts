@@ -6,6 +6,12 @@
 export type MineSlice = (saltHex : string, targetHex : string, start : number, maxTries : number) => number
 
 /**
+ * POW 后台分片挖矿函数类型：计算同 MineSlice，但在后台线程执行，结束后在调用线程回调结果
+ * （命中=该 nonce，未命中=-1）；返回 false=当前平台不支持，调用方改走 MineSlice
+ */
+export type MineSliceAsync = (saltHex : string, targetHex : string, start : number, maxTries : number, onDone : (found : number) => void) => boolean
+
+/**
  * 引擎准备：初始化加速引擎（wasm）；返回 false=环境不支持，已回退纯 JS
  */
 export type PrepareEngine = () => Promise<boolean>

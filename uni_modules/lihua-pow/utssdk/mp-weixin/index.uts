@@ -1,4 +1,4 @@
-import { MineSlice, PrepareEngine, EngineName } from '../interface.uts'
+import { MineSlice, MineSliceAsync, PrepareEngine, EngineName } from '../interface.uts'
 
 // 微信小程序实现：逻辑层无 WebAssembly（2026-11 实锤，iOS/Android/开发者工具一致），恒纯 JS
 // 算法与 utils/pow/sha256.ts 同源（单块 SHA-256）；挖矿提速由端配置解决（后台分端配置：小程序端不配 POW）
@@ -9,6 +9,11 @@ export const prepareEngine : PrepareEngine = function () : Promise<boolean> {
 
 export const engineName : EngineName = function () : string {
 	return "js"
+}
+
+// 微信无原生线程：不支持后台挖矿，调用方改走 mineSlice
+export const mineSliceAsync : MineSliceAsync = function (_saltHex : string, _targetHex : string, _start : number, _maxTries : number, _onDone : (found : number) => void) : boolean {
+	return false
 }
 
 const K = new Uint32Array([

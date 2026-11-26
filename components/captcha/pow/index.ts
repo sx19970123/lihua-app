@@ -2,7 +2,7 @@
  * POW 工作量证明求解调度：分片挖矿走 lihua-pow 插件（App 原生 / Web wasm / 微信纯 JS，插件内部自决）
  * 返回带 cancel 的句柄：取消后引擎立即停止，result 以空串收场
  */
-import { mineSlice, prepareEngine } from '@/uni_modules/lihua-pow'
+import { mineSlice, mineSliceAsync, prepareEngine } from '@/uni_modules/lihua-pow'
 import { prngHex } from './sha256'
 
 // 挖矿进度回调
@@ -52,7 +52,8 @@ export const solvePow = (token : string, powParam : number[], onProgress ?: PowP
 		// 引擎准备：App=原生恒就绪；Web/微信=插件内部回退纯 JS
 		await prepareEngine()
 
-		// 主线程分片挖矿：每片限量让出主线程，进度实时可见；调度优先 MessageChannel（iOS 对 setTimeout 有节流）
+		// 分片挖矿：App 走后台线程，片完回调续下一片，主线程不被占（转圈动画流畅）；
+		// Web/微信在主线程分片，每片先让出再算（调度优先 MessageChannel，iOS 对 setTimeout 有节流）
 		await new Promise<void>(resolveItem => {
 			let cursor = 0
 			let nonce = 0
@@ -60,17 +61,16 @@ export const solvePow = (token : string, powParam : number[], onProgress ?: PowP
 			const channel = typeof MessageChannel !== 'undefined' ? new MessageChannel() : undefined
 			let schedule : () => void
 			if (channel) {
-				channel.port1.onmessage = () => slice()
+				channel.port1.onmessage = () => sliceSync()
 				schedule = () => channel.port2.postMessage(0)
 			} else {
-				schedule = () => setTimeout(slice, 0)
+				schedule = () => setTimeout(sliceSync, 0)
 			}
-			const slice = () => {
+			// 一片的结果：命中记解并换下一题，未命中续下一片
+			const onSliced = (found : number) => {
 				if (cancelled) {
 					return
 				}
-				const challenge = challenges[cursor]
-				const found = mineSlice(challenge.saltHex, challenge.targetHex, nonce, SLICE_TRIES)
 				if (found >= 0) {
 					solutions[cursor] = found
 					solved++
@@ -84,9 +84,23 @@ export const solvePow = (token : string, powParam : number[], onProgress ?: PowP
 				} else {
 					nonce += SLICE_TRIES
 				}
-				schedule()
+				step()
 			}
-			slice()
+			const step = () => {
+				const challenge = challenges[cursor]
+				// 平台不支持后台挖矿：让出主线程后同步算一片
+				if (!mineSliceAsync(challenge.saltHex, challenge.targetHex, nonce, SLICE_TRIES, onSliced)) {
+					schedule()
+				}
+			}
+			const sliceSync = () => {
+				if (cancelled) {
+					return
+				}
+				const challenge = challenges[cursor]
+				onSliced(mineSlice(challenge.saltHex, challenge.targetHex, nonce, SLICE_TRIES))
+			}
+			step()
 		})
 		if (!cancelled) {
 			finish(solutions.join('-'))

@@ -49,6 +49,18 @@ public class PowMiner {
     }
 
     /**
+     * 后台分片挖矿：计算同 mineSliceSwift，在后台队列执行，结果回主线程回调
+     */
+    static func mineSliceAsyncSwift(saltHex : String, targetHex : String, start : NSNumber, maxTries : NSNumber, onDone : @escaping (NSNumber) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let found = PowMiner.mineSliceSwift(saltHex: saltHex, targetHex: targetHex, start: start, maxTries: maxTries)
+            DispatchQueue.main.async {
+                onDone(found)
+            }
+        }
+    }
+
+    /**
      * 单个 hex 字符转半字节（输入恒为后端派生的小写 hex）
      */
     static private func hexNibble(_ c : Character) -> UInt8 {

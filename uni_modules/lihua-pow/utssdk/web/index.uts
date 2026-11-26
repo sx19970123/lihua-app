@@ -1,4 +1,4 @@
-import { MineSlice, PrepareEngine, EngineName } from '../interface.uts'
+import { MineSlice, MineSliceAsync, PrepareEngine, EngineName } from '../interface.uts'
 import { createSHA256, type IHasher } from 'hash-wasm'
 
 // Web 端实现（浏览器恒有 WebAssembly）
@@ -21,6 +21,11 @@ export const prepareEngine : PrepareEngine = async function () : Promise<boolean
 
 export const engineName : EngineName = function () : string {
 	return hasher != null ? "wasm" : "js"
+}
+
+// Web 无原生线程：不支持后台挖矿，调用方改走 mineSlice（wasm 单片耗时可忽略）
+export const mineSliceAsync : MineSliceAsync = function (_saltHex : string, _targetHex : string, _start : number, _maxTries : number, _onDone : (found : number) => void) : boolean {
+	return false
 }
 
 // ---------- wasm 挖矿（复用旧仓 wasm-miner.ts 生产形态：BUF 复用 + subarray 免字符串分配） ----------
