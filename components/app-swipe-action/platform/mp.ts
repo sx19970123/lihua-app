@@ -11,8 +11,8 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			st.transform = val
 		}
 	}
-	// 显式属性赋值（不走动态键）；彩带与文字容器写入键相同（width/transform）
-	const writeBox = (st : any, prop : string, val : string) => {
+	// 显式属性赋值（不走动态键）
+	const writeBtn = (st : any, prop : string, val : string) => {
 		if (prop === 'width') {
 			st.width = val
 		} else if (prop === 'transform') {
@@ -27,26 +27,18 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			const els = side === SIDE_L ? h.btnStyleL.value : h.btnStyleR.value
 			const st = els[index]
 			if (st != null) {
-				writeBox(st, prop, val)
+				writeBtn(st, prop, val)
 			}
 		},
 		text : (side : number, index : number, prop : string, val : string) => {
 			const els = side === SIDE_L ? h.textStyleL.value : h.textStyleR.value
 			const st = els[index]
-			if (st != null) {
-				writeBox(st, prop, val)
+			if (st != null && prop === 'margin-left') {
+				st.marginLeft = val
 			}
 		},
 		textWidth : (_side : number, _index : number, label : string) : number => {
 			return estimateWidth(label)
-		},
-		// 载体即样式源：置 none 即常驻
-		settle : (side : number, index : number) => {
-			const els = side === SIDE_L ? h.btnStyleL.value : h.btnStyleR.value
-			const st = els[index]
-			if (st != null) {
-				writeBox(st, 'transform', 'none')
-			}
 		},
 		markConfirmBarHit : () => {
 			confirmBarHit = true
@@ -61,7 +53,7 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 		clearConfirmBarHit : () => {
 			confirmBarHit = false
 		},
-		// 载体须预置全部写入键（width/transform），首帧即藏外待量测
+		// 载体须预置全部写入键（width/transform），首帧即藏外
 		initBtnStyle : (color : string, sign : number) : any => {
 			const st : any = { width: '', transform: `translateX(${sign * 999}px)` }
 			if (color !== '') {
@@ -69,9 +61,8 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			}
 			return st
 		},
-		// 载体须预置全部写入键（width/transform）
 		initTextStyle : () : any => {
-			return { width: '', transform: '' }
+			return { marginLeft: '' }
 		},
 		initContentStyle : () : any => {
 			return { transform: '' }

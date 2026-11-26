@@ -3,60 +3,51 @@
 			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
 		<!-- 行底分隔线（消费方内层行须 :divider="false"） -->
 		<view v-if="divider" class="app-swipe-line app-pressed-row" />
-		<!-- 裁切层（上探 1px 的按钮容器）：裁掉首帧藏行外的按钮组，展开后盖住上一行底线 -->
+		<!-- 裁切层（上探 1px 的按钮容器）：裁掉初始藏行外的按钮组，并盖住上一行底线 -->
 		<view class="app-swipe-clip">
-			<!-- 色块（叠塔，恒贴行缘）：收起宽 0，展开按进度长出，满展开宽=自身+靠内容侧全部；DOM 顺序=层序 -->
+			<!-- 色块（恒宽叠塔）：宽=自身+靠内容侧全部，初始整体藏行外；DOM 顺序=层序 -->
 			<!-- 左组：锚行左缘，数组序=远端→贴内容 -->
 			<!-- 元素 ref 仅 app/鸿蒙/H5 使用；属性级无条件编译，按钮组按平台分两份（只差 ref） -->
-			<!-- 按序号 key：节点原地更新不搬运，元素引用数组序恒等 DOM 序（量测/写层按序号取元素） -->
 			<!-- #ifndef MP-WEIXIN -->
-			<view v-for="(action, index) in leftList" :key="index" ref="btnElsL" class="app-swipe-btn app-swipe-btn--left"
+			<view v-for="(action, index) in leftList" :key="action.event" ref="btnElsL" class="app-swipe-btn app-swipe-btn--left"
 					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
 					:style="btnStyleL[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
-				<view class="app-swipe-btn-spinner app-swipe-btn-spinner--left" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyleL">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<view ref="labelElsL" class="app-swipe-btn-label app-swipe-btn-label--left" :style="textStyleL[index]">
-					<text ref="textElsL" class="app-swipe-btn-text">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
-				</view>
+				<text ref="textElsL" class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
-			<!-- 右组（叠塔，恒贴行缘）：锚行右缘 -->
-			<view v-for="(action, index) in rightList" :key="index" ref="btnElsR" class="app-swipe-btn"
+			<!-- 右组（恒宽叠塔）：锚行右缘藏行右外 -->
+			<view v-for="(action, index) in rightList" :key="action.event" ref="btnElsR" class="app-swipe-btn"
 					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
 					:style="btnStyleR[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
-				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyleR">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<view ref="labelElsR" class="app-swipe-btn-label" :style="textStyleR[index]">
-					<text ref="textElsR" class="app-swipe-btn-text">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
-				</view>
+				<text ref="textElsR" class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
 			<!-- #endif -->
 			<!-- #ifdef MP-WEIXIN -->
-			<view v-for="(action, index) in leftList" :key="index" class="app-swipe-btn app-swipe-btn--left"
+			<view v-for="(action, index) in leftList" :key="action.event" class="app-swipe-btn app-swipe-btn--left"
 					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
 					:style="btnStyleL[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
-				<view class="app-swipe-btn-spinner app-swipe-btn-spinner--left" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyleL">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<view class="app-swipe-btn-label app-swipe-btn-label--left" :style="textStyleL[index]">
-					<text class="app-swipe-btn-text">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
-				</view>
+				<text class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
-			<!-- 右组（叠塔，恒贴行缘）：锚行右缘 -->
-			<view v-for="(action, index) in rightList" :key="index" class="app-swipe-btn"
+			<!-- 右组（恒宽叠塔）：锚行右缘藏行右外 -->
+			<view v-for="(action, index) in rightList" :key="action.event" class="app-swipe-btn"
 					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
 					:style="btnStyleR[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
-				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyleR">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
 					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
 				</view>
-				<view class="app-swipe-btn-label" :style="textStyleR[index]">
-					<text class="app-swipe-btn-text">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
-				</view>
+				<text class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
 			<!-- #endif -->
 		</view>
@@ -75,8 +66,8 @@
 </template>
 
 <script setup lang="ts">
-	// 侧滑操作（双侧叠塔）：actions 按 side 分左右组；彩带恒贴行缘，收起宽 0、展开按进度长出
-	// （满展开宽=自身+靠内容侧全部）；松手弹簧/惯性落位；confirm 型点击先进确认态再点执行；loading 冻结现场并在钮上转圈。
+	// 侧滑操作（双侧恒宽叠塔）：actions 按 side 分左右组，彩带宽=自身+靠内容侧全部，初始藏行外；
+	// 展开做进入位移，松手弹簧/惯性落位；confirm 型点击先进确认态再点执行；loading 冻结现场并在钮上转圈。
 	// 平台分叉（第 3 级，因 MP 端 v-for 元素 ref 无 .style、无同步量测）：状态机单份，模板按钮组/内容层按平台各一份（只差元素 ref），
 	// 写层/量测经 platform/ 适配器（契约见 swipe-platform.ts）；动画全部 JS 驱动。
 
@@ -140,14 +131,12 @@
 	const leftList = computed<SwipeAction[]>(() => sideListOf('left').slice().reverse())
 	const rightList = computed<SwipeAction[]>(() => sideListOf('right'))
 
-	// 元素引用（app/鸿蒙/H5 写层与量测用；MP 端不读）：textEls=文字（量测），labelEls=文字容器（写层）
+	// 元素引用（app/鸿蒙/H5 写层与量测用；MP 端不读）
 	const contentEl = ref<any>(null)
 	const btnElsL = ref<any[]>([])
 	const textElsL = ref<any[]>([])
-	const labelElsL = ref<any[]>([])
 	const btnElsR = ref<any[]>([])
 	const textElsR = ref<any[]>([])
-	const labelElsR = ref<any[]>([])
 	// 响应式 style 载体（:style 绑定）：MP 的写通道；app 只取首帧初值
 	const btnStyleL = ref<any[]>([])
 	const btnStyleR = ref<any[]>([])
@@ -155,8 +144,8 @@
 	const textStyleR = ref<any[]>([])
 	const contentStyle = ref<any>({})
 
-	const platform = createPlatform({ contentEl, btnElsL, btnElsR, textElsL, textElsR, labelElsL, labelElsR, btnStyleL, btnStyleR, textStyleL, textStyleR, contentStyle })
-	// 载体构建（声明期即建，首帧按钮即带藏外位移）；actions 变化时重建
+	const platform = createPlatform({ contentEl, btnElsL, btnElsR, textElsL, textElsR, btnStyleL, btnStyleR, textStyleL, textStyleR, contentStyle })
+	// 载体构建（声明期即建）；actions 变化时重建
 	const syncCarriers = () => {
 		btnStyleL.value = leftList.value.map((a : SwipeAction) : any => platform.initBtnStyle(a.color ?? '', -1))
 		btnStyleR.value = rightList.value.map((a : SwipeAction) : any => platform.initBtnStyle(a.color ?? '', 1))
@@ -170,7 +159,7 @@
 	const confirmIndex = ref<number>(-1)
 	const confirmSide = ref<number>(SIDE_R)
 
-	// loading spinner（常驻零销毁，显隐烘焙类）：absolute 不入流，贴被点钮文字的前缘侧
+	// loading spinner（常驻零销毁，显隐烘焙类）：absolute 不入流，贴被点钮文字左侧
 	const SPIN_PAD = 22
 	const directBusy = ref<boolean>(false)
 	const directSide = ref<number>(SIDE_R)
@@ -190,106 +179,110 @@
 	}
 	const spinnerAtL = computed<number>(() => spinnerTarget(SIDE_L))
 	const spinnerAtR = computed<number>(() => spinnerTarget(SIDE_R))
-	// spinner 近端到彩带前缘的距离；左组右锚、右组左锚（镜像）
-	const spinnerLead = ref<number>(0)
-	const spinnerStyleL = computed<any>(() => {
+	const spinnerLeft = ref<number>(0)
+	const spinnerStyle = computed<any>(() => {
 		return {
-			right: `${spinnerLead.value}px`
-		}
-	})
-	const spinnerStyleR = computed<any>(() => {
-		return {
-			left: `${spinnerLead.value}px`
+			left: `${spinnerLeft.value}px`
 		}
 	})
 
-	// 彩带内距：文字两侧各留 16，彩带自身宽=文字宽+2×内距（样式 .app-swipe-btn-label 钉位同值）
-	const BTN_PAD = 16
-
-	// 侧几何（量测）：Wi=各按钮自身宽、Wi'=叠塔宽（自身+靠内容侧全部）、W=组宽
-	type SideGeom = { widths : number[], fan : number[], total : number }
+	// 侧几何（量测）：Wi'=叠塔宽（自身+右侧全部）、W=组宽；margins=各彩带文字左边距
+	type SideGeom = { fan : number[], margins : number[], total : number }
 
 	// 侧实体：封装一侧的几何与驱动方法，主状态机按侧调用
 	const makeSide = (fixedSign : number) => {
-		const g : SideGeom = { widths: [], fan: [], total: 0 }
-		// 该侧拖进过橡皮筋段的标记（松手走弹簧回位）
+		const g : SideGeom = { fan: [], margins: [], total: 0 }
+		// 该侧进过弹簧段才需在回程复位宽度
 		let springDirty = false
 		// 侧标识（适配器寻址）
 		const side = fixedSign < 0 ? SIDE_L : SIDE_R
-		// 各彩带上次写入的宽度串（同值免写：静止侧不逐帧重写）
-		const lastW : string[] = []
 
 		// 写层：经平台适配器（app/鸿蒙/H5=元素 setProperty，MP=style 载体）
 		const wBtn = (i : number, prop : string, val : string) => {
-			if (prop === 'width') {
-				if (lastW[i] === val) {
-					return
-				}
-				lastW[i] = val
-			}
 			platform.btn(side, i, prop, val)
 		}
-		const wLabel = (i : number, prop : string, val : string) => {
+		const wText = (i : number, prop : string, val : string) => {
 			platform.text(side, i, prop, val)
 		}
-		// 文字钉位：lead=文字前缘到彩带前缘的距离（静态=内距，余量以位移表达，左组镜像取负）
-		const wText = (i : number, lead : number) => {
-			wLabel(i, 'transform', `translateX(${fixedSign * (lead - BTN_PAD)}px)`)
-		}
 
-		// 彩带驱动：恒贴行缘，p∈[0,1] 宽度按进度长出；p>1 橡皮筋平分阻尼（超出量按 (n-i)/n 加宽）
+		// 彩带驱动：p∈[0,1] 线性跟手；p>1 弹簧平分阻尼
 		const driveAt = (p : number) => {
 			const n = g.fan.length
 			for (let i = 0; i < n; i++) {
-				let w = g.fan[i] * p
+				let d = 0
 				if (p > 1) {
-					w = g.fan[i] + (p - 1) * g.total * (n - i) / n
+					const over = (p - 1) * g.total
+					const add = over * (n - i) / n
+					wBtn(i, 'width', `${g.fan[i] + add}px`)
+					if (fixedSign < 0) {
+						// 左组橡皮筋：右缘延展，文字须随右缘同步右移
+						wText(i, 'margin-left', `${(g.margins[i] ?? 0) + add}px`)
+					}
 					springDirty = true
+				} else {
+					d = g.fan[i] * (1 - p)
+					if (springDirty) {
+						wBtn(i, 'width', `${g.fan[i]}px`)
+						if (fixedSign < 0) {
+							wText(i, 'margin-left', `${g.margins[i] ?? 0}px`)
+						}
+					}
 				}
-				wBtn(i, 'width', `${w}px`)
+				wBtn(i, 'transform', `translateX(${fixedSign * d}px)`)
 			}
 			if (p <= 1) {
 				springDirty = false
 			}
 		}
 
-		// 文字钉位瞬回静态内距（彩带宽度随进度驱动，不在此复位）
+		// 宽度/文字位瞬回静态常量
 		const resetStatic = () => {
 			for (let i = 0; i < g.fan.length; i++) {
-				wText(i, BTN_PAD)
+				wBtn(i, 'width', `${g.fan[i]}px`)
+				wText(i, 'margin-left', `${g.margins[i] ?? 0}px`)
 			}
 		}
 
-		// 量测（可重入，actions 变化时重量测；量测经适配器：app 真量测，MP 估算）
+		// 量测+静态锁定（可重入，actions 变化时重量测；量测经适配器：app 真量测，MP 估算）
 		const measure = (labels : string[]) => {
-			g.widths.splice(0, g.widths.length)
 			g.fan.splice(0, g.fan.length)
+			g.margins.splice(0, g.margins.length)
 			g.total = 0
 			const widths : number[] = []
+			const textWidths : number[] = []
 			let acc = 0
 			for (let i = 0; i < labels.length; i++) {
 				const tw = platform.textWidth(side, i, labels[i] ?? '')
-				const w = tw + BTN_PAD * 2
+				textWidths.push(tw)
+				// 彩带宽向上取整为整数像素：收起藏外时被绘制边与裁切边重合
+				const w = Math.ceil(tw) + 32
 				widths.push(w)
 				acc += w
-				// 文字容器宽=文字宽（显式定宽，不依赖收缩适配）
-				wLabel(i, 'width', `${tw}px`)
 			}
 			g.total = acc
 			// 叠塔宽 fan[i]=wi+Σ(j>i)（左组已反转渲染序，同公式成立）
 			for (let i = 0; i < widths.length; i++) {
-				g.widths.push(widths[i])
 				let sum = widths[i]
 				for (let j = i + 1; j < widths.length; j++) {
 					sum += widths[j]
 				}
 				g.fan.push(sum)
 			}
-			// 首帧藏外位移经载体退场、宽度写缓存重建：此后彩带恒在行内，宽度由 driveAt 按进度驱动
-			lastW.splice(0, lastW.length)
 			for (let i = 0; i < widths.length; i++) {
-				lastW.push('')
-				platform.settle(side, i)
+				wBtn(i, 'width', `${g.fan[i]}px`)
+				// 文字钉位=自身可见段中心（左组可见段起点=上层总宽，须镜像偏移）
+				let ml : number
+				if (fixedSign > 0) {
+					ml = Math.max(0, (widths[i] - textWidths[i]) / 2)
+				} else {
+					let above = 0
+					for (let j = i + 1; j < widths.length; j++) {
+						above += widths[j]
+					}
+					ml = above + Math.max(0, (widths[i] - textWidths[i]) / 2)
+				}
+				g.margins.push(ml)
+				wText(i, 'margin-left', `${ml}px`)
 			}
 		}
 
@@ -298,7 +291,7 @@
 
 		return { g, fixedSign, driveAt, resetStatic, measure, isSpringDirty, clearSpringDirty, wBtn, wText }
 	}
-	// 双实例：左实体 fixedSign=-1（前缘=行左缘）/右实体 +1（前缘=行右缘）
+	// 双实例：左实体 fixedSign=-1（藏左外）/右实体 +1（藏右外）
 	const sides = [makeSide(-1), makeSide(1)]
 	// 状态：当前内容位移档（0 收起 / -W 展开）
 	let currentX = 0
@@ -385,18 +378,17 @@
 				timer = null
 			}
 		}
-		// step 收缓动比例 e∈[0,1]；done=终帧回调（被 cancel 不触发）；duration/easeIn 可选
-		const run = (step : (e : number) => void, done ?: () => void, duration ?: number, easeIn ?: boolean) => {
+		// step 收缓动比例 e∈[0,1]；done=终帧回调（被 cancel 不触发）
+		const run = (step : (e : number) => void, done ?: () => void) => {
 			cancel()
 			const t0 = Date.now()
-			const D = duration ?? 300
 			const myGen = gen
 			const tick = () => {
 				if (myGen !== gen) {
 					return
 				}
-				const k = clamp((Date.now() - t0) / D, 0, 1)
-				const e = easeIn === true ? k * k : 1 - (1 - k) * (1 - k)
+				const k = clamp((Date.now() - t0) / 300, 0, 1)
+				const e = 1 - (1 - k) * (1 - k)
 				step(e)
 				if (k < 1) {
 					timer = setTimeout(tick, 16)
@@ -425,7 +417,7 @@
 	let confirmM = 0
 	// 进确认时的 item 顶开量
 	let confirmExtra = 0
-	// 确认形态滑出后的钉位残留侧（-1=无），下次交互前复位
+	// 确认形态滑出后的宽度残留侧（-1=无），下次交互前复位
 	let confirmResidueSide = -1
 
 	const cancelConfirmTween = () => {
@@ -436,8 +428,8 @@
 		confirmW = -1
 	}
 
-	// toX 传 null = 不驱动 content（item 冻结）；slideOut=进确认时 j>idx 按钮（在被点钮上层）的收拢插值（宽 fan[j]→0）
-	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number, onDone ?: () => void, slideOut ?: boolean) => {
+	// toX 传 null = 不驱动 content（item 冻结）；j>idx 按钮（在被点钮上层）随进度滑出藏外
+	const confirmTweenDrive = (s : ReturnType<typeof makeSide>, index : number, toW : number, toX : number | null, toM : number) => {
 		// 只清旧动画不清算（纯停表）——起步前的清旧 ≠ 打断清算（见 cancelConfirmTween 注释）
 		cancelConfirmAnim()
 		const fromW = confirmW >= 0 ? confirmW : s.g.fan[index]
@@ -447,7 +439,6 @@
 		const settled = Math.abs(toW - fromW) < 0.5 && Math.abs(toM - fromM) < 0.5
 			&& (toX == null || Math.abs(toX - fromX) < 0.5)
 		if (settled) {
-			onDone?.()
 			return
 		}
 			// 过冲幅度归一（每钮阻尼比）：目标 6px÷行程，封顶 12%
@@ -463,13 +454,12 @@
 					currentX = safe(fromX + (toX - fromX) * e, toX)
 					driveContent(currentX)
 				}
-				s.wText(index, confirmM)
-				if (slideOut === true) {
-					for (let j = index + 1; j < n; j++) {
-						s.wBtn(j, 'width', `${safe(s.g.fan[j] * (1 - e), 0)}px`)
-					}
+				s.wText(index, 'margin-left', `${confirmM}px`)
+				for (let j = index + 1; j < n; j++) {
+					const d = safe(s.g.fan[j] * e, s.g.fan[j])
+					s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
 				}
-			}, onDone, cRun)
+			}, null, cRun)
 	}
 
 	// 进确认：从按钮态延长到对接 item（extra=装不下时 item 顶开量）；入口把 currentX 归一 -W
@@ -478,7 +468,7 @@
 		cancelSpringTween()
 		s.clearSpringDirty()
 		confirmW = s.g.fan[index]
-		confirmM = BTN_PAD
+		confirmM = s.g.margins[index] ?? 0
 		const toW = s.g.total + extra
 		const openX = -s.fixedSign * s.g.total
 		if (currentX !== openX) {
@@ -486,7 +476,7 @@
 			driveContent(currentX)
 		}
 		confirmExtra = extra
-		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2), null, true)
+		confirmTweenDrive(s, index, toW, extra > 0 ? -s.fixedSign * toW : null, Math.max(0, (toW - tw) / 2))
 	}
 
 	// 弹簧回位补间（引擎驱动）：内容+彩带 width 同帧，终态移交 openAt 就位
@@ -504,10 +494,18 @@
 			openAt(s)
 			return
 		}
+		const n = g.fan.length
+		const leftSide = s.fixedSign < 0
 		springCtl.run((e : number) => {
 			const over = safe(startOver * (1 - e), 0)
-			// 超出量折回进度 p=1+over/W：彩带加宽走 driveAt 橡皮筋段同式
-			s.driveAt(g.total > 0 ? 1 + over / g.total : 1)
+			for (let i = 0; i < n; i++) {
+				const add = over * (n - i) / n
+				s.wBtn(i, 'width', `${safe(g.fan[i] + add, g.fan[i])}px`)
+				if (leftSide) {
+					// 左组：文字随右缘延展同步平移（driveAt 弹簧分支同款——右组锚右缘天然跟移免补）
+					s.wText(i, 'margin-left', `${safe((g.margins[i] ?? 0) + add, g.margins[i] ?? 0)}px`)
+				}
+			}
 			currentX = safe(-s.fixedSign * (g.total + over), -s.fixedSign * g.total)
 			driveContent(currentX)
 		}, () => {
@@ -699,7 +697,7 @@
 			return
 		}
 		if (sides[SIDE_L].isSpringDirty() || sides[SIDE_R].isSpringDirty()) {
-			// 弹簧回位：内容位移与彩带宽度同帧补间
+			// 弹簧回位：四元素同帧补间。
 			springReturn()
 			return
 		}
@@ -751,7 +749,7 @@
 		// 起点归一：拖拽中的原始位移（跨域阻尼/橡皮筋段）折回有效位移，补间不从原始值起跳
 		currentX = effOf(currentX)
 		crossDamp = -1
-		// 确认形态滑出后的残留清算（此时行必为关态，彩带宽 0 不可见；含确认文案驻留）
+		// 确认形态滑出后的残留清算（此时行必为关态，界外复位不可见；含确认文案驻留）
 		if (confirmResidueSide >= 0) {
 			sides[confirmResidueSide].resetStatic()
 			confirmResidueSide = -1
@@ -776,14 +774,14 @@
 		cancelSpringTween()
 		cancelInertia()
 		if (confirming.value) {
-			// 确认态收起=保持确认形态整体滑出（不走 cancelConfirmTween）；钉位残留挂标记，下次交互前复位
+			// 确认态收起=保持确认形态整体滑出（不走 cancelConfirmTween）；延展宽残留挂标记，下次交互前复位
 			const idx = confirmIndex.value
 			const cs = sides[confirmSide.value]
 			const toW = cs.g.total + confirmExtra
 			cancelConfirmAnim()
 			confirming.value = false
 			// confirmIndex 不清：滑出期间文字保持确认文案（以二次确认形态收起），
-			// 下次按钮可复见前再清（拖拽横滑判定/open 时，彩带宽 0 不可见）
+			// 下次按钮可复见前再清（拖拽横滑判定/open 时，界外不可见）
 			confirmW = -1
 			confirmResidueSide = confirmSide.value
 			directBusy.value = false
@@ -792,12 +790,12 @@
 			springCtl.run((e : number) => {
 				currentX = fromX * (1 - e)
 				driveContent(currentX)
-				// 逐钮直写收拢宽度，勿走 drive（会触发橡皮筋宽度写，毁确认形态）
+				// 逐钮直写出界位，勿走 drive（会触发橡皮筋宽度写，毁确认形态）
 				for (let j = 0; j < cs.g.fan.length; j++) {
-					const wj = j > idx ? 0 : cs.g.fan[j] * (1 - e)
-					cs.wBtn(j, 'width', `${safe(wj, 0)}px`)
+					const dj = j > idx ? cs.g.fan[j] : cs.g.fan[j] * e
+					cs.wBtn(j, 'transform', `translateX(${cs.fixedSign * dj}px)`)
 				}
-				cs.wBtn(idx, 'width', `${safe(toW * (1 - e), 0)}px`)
+				cs.wBtn(idx, 'transform', `translateX(${cs.fixedSign * toW * e}px)`)
 			})
 			clearOpen(closeSelf)
 			emit('close')
@@ -891,7 +889,7 @@
 			// 直点冻结：钮内 32px 内距容纳 spinner 组，文字自钮内居中位归心
 			s = sides[directSide.value]
 			idx = directIndex.value
-			fromM = BTN_PAD
+			fromM = s.g.margins[idx] ?? 0
 			toM = fromM + SPIN_PAD / 2
 		} else {
 			return
@@ -899,14 +897,14 @@
 		cancelConfirmAnim()
 		confirmCtl.run((e : number) => {
 			confirmM = safe(fromM + (toM - fromM) * e, toM)
-			s.wText(idx, confirmM)
-			spinnerLead.value = Math.max(0, confirmM - SPIN_PAD)
+			s.wText(idx, 'margin-left', `${confirmM}px`)
+			spinnerLeft.value = Math.max(0, confirmM - SPIN_PAD)
 		})
 	})
 
 	// ---------- 量测与生命周期 ----------
 	onMounted(() => {
-		// 双侧各自量测+初始收起（宽 0；单侧组 total=0 自然跳过）
+		// 双侧各自量测+静态锁定+初始全藏行外（单侧组 total=0 自然跳过）
 		for (let s = 0; s < 2; s++) {
 			const labels = (s === SIDE_L ? leftList.value : rightList.value).map((a : SwipeAction) => a.text)
 			sides[s].measure(labels)
@@ -990,7 +988,7 @@
 		}
 	}
 
-	/* 裁切层：absolute 上探 1px 的纯按钮容器，裁掉首帧藏行外的按钮组 */
+	/* 裁切层：absolute 上探 1px 的纯按钮容器，裁掉初始藏行外的按钮组 */
 	.app-swipe-clip {
 		position: absolute;
 		top: -1px;
@@ -1009,13 +1007,15 @@
 		height: 1px;
 	}
 
-	/* 色块：恒贴行缘，宽由进度驱动（收起宽 0）；自身裁切，偏窄时文字随缘裁掉 */
+	/* 色块：右缘锚行右界，宽=叠塔宽（量测后设）；位移由 JS 内联直驱，首帧藏行右外 */
 	.app-swipe-btn {
 		position: absolute;
 		top: 0;
 		bottom: 0;
 		right: 0;
-		overflow: hidden;
+		flex-direction: row;
+		align-items: center;
+		transform: translateX(999px);
 		background-color: var(--std-primary);
 	}
 
@@ -1023,28 +1023,22 @@
 		background-color: var(--std-danger);
 	}
 
-	/* 左组：锚行左缘（方向镜像） */
+	/* 左向模式：锚行左缘（首帧藏行左外，方向镜像） */
 	.app-swipe-btn--left {
 		left: 0;
 		right: auto;
+		transform: translateX(-999px);
 	}
 
-	/* loading spinner：absolute 不入流，盒宽钉 20，左锚彩带前缘（离前缘距离由归心补间逐帧设定）；常驻零销毁，默认 display:none */
+	/* loading spinner：absolute 不入流，盒宽钉 20，left 由归心补间逐帧设定；常驻零销毁，默认 display:none */
 	.app-swipe-btn-spinner {
 		position: absolute;
 		top: 0;
 		bottom: 0;
-		left: 0;
 		width: 20px;
 		display: none;
 		align-items: center;
 		justify-content: center;
-	}
-
-	/* 左组 spinner：右锚（镜像） */
-	.app-swipe-btn-spinner--left {
-		left: auto;
-		right: 0;
 	}
 
 	.app-swipe-btn-spinner--on {
@@ -1065,25 +1059,6 @@
 		to {
 			transform: rotate(360deg);
 		}
-	}
-
-	/* 文字容器：absolute 钉彩带前缘内侧（内距 16，与 script BTN_PAD 同值），宽=文字宽（量测后设）；
-	   上下撑满使文字纵向居中；位移由 JS 直驱 */
-	.app-swipe-btn-label {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		left: 16px;
-		flex-direction: row;
-		align-items: center;
-		overflow: visible;
-	}
-
-	/* 左组文字容器：右锚（镜像），文字贴右 */
-	.app-swipe-btn-label--left {
-		left: auto;
-		right: 16px;
-		justify-content: flex-end;
 	}
 
 	.app-swipe-btn-text {
