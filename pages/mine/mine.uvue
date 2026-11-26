@@ -10,6 +10,7 @@
 					<app-checkbox v-model:checked="coverTabBar" label="盖住 tabBar" />
 				</template>
 			</app-list-item>
+			<app-list-item :hover="false" title="底部避让 / 系统安全区" :value="insetText" />
 			<app-list-item icon="eye" title="打开遮罩" arrow hover @click="maskVisible = true" />
 		</app-list>
 		<!-- 遮罩与浮层同父兄弟：浮层层序须大于遮罩的 999 -->
@@ -32,6 +33,15 @@
 	const probing = computed<boolean>(() => demoProbe.tabProbe === 'app-mask')
 	const maskVisible = ref<boolean>(false)
 	const coverTabBar = ref<boolean>(true)
+
+	// 自检读数：页面底部避让距离（含悬浮 tabBar）与系统底部安全区，两者之差即 tabBar 占用的高度
+	const insetText = ref('')
+	// #ifdef APP || WEB
+	const instance = getCurrentInstance()
+	onReady(() => {
+		insetText.value = `${instance?.proxy?.$page?.safeAreaInsets.bottom ?? 0} / ${uni.getWindowInfo().safeAreaInsets.bottom}`
+	})
+	// #endif
 
 	// 离开 tab 页即退出自检态，下次须从组件 demo 页重新进入
 	onPageHide(() => {

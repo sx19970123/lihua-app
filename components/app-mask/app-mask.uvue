@@ -1,5 +1,5 @@
 <template>
-	<view ref="rootEl" class="app-mask" :class="rootCls" :style="carrierStyle" @click="onClick" @touchmove="onTouchMove" />
+	<view v-if="shown" ref="rootEl" class="app-mask" :class="rootCls" :style="carrierStyle" @click="onClick" @touchmove="onTouchMove" />
 </template>
 
 <script setup lang="ts">
@@ -32,23 +32,24 @@
 	const nativeReady = hasNativeMask()
 	const rootEl = ref<any>(null)
 
+	// 宿主页：原生条带的几何与 tabBar 避让取自其内容区位置
+	// #ifdef APP
+	const page = getCurrentInstance()?.proxy?.$page
+	// #endif
+
 	// 当前进度（0~1）与原生层挂载态：非响应式，逐帧只经写层下发
 	let progress = props.visible === true ? 1 : 0
 	let nativeOn = false
 	// 宿主页隐藏期间原生层被摘掉，回来后重挂
 	let nativePaused = false
 	let tweenTimer : number | null = null
+	let hideTimer : number | null = null
 
-	// 进度大于 0 才显示；隐藏即 display:none（小程序端 pointer-events 不生效）
+	// 进度大于 0 才创建页面内层，归零即销毁（不显示时不占元素、不拦触摸）
 	const shown = ref<boolean>(props.visible === true)
 
-	// 不盖 tabBar 时挂修饰类（类定义仅 Web 端有：其余端页面内层本来到不了 tabBar）
-	const rootCls = computed<string>(() => {
-		if (!shown.value) {
-			return 'app-mask-hide'
-		}
-		return props.coverTabBar ? '' : 'app-mask-uncover-tabbar'
-	})
+	// 不盖 tabBar 时挂修饰类（仅 Web 有定义：底边上移一个 tabBar 高度；iOS 悬浮 tabBar 由 syncBottom 抬底边）
+	const rootCls = computed<string>(() => props.coverTabBar ? '' : 'app-mask-uncover-tabbar')
 
 	// 写层：小程序走 :style 载体；App/Web 载体恒为空对象，运行期的值全部 setProperty 直驱
 	const carrierOpacity = ref<number>(progress)
@@ -70,17 +71,44 @@
 		// #endif
 	}
 
-	// 原生条带范围=页面内容区之外的区域：自定义导航页无顶条，非 tab 页无底条
+	// 悬浮 tabBar 占用的底部距离（页面底部避让减系统安全区）：0=没有悬浮 tabBar
+	const floatingBarInset = () : number => {
+		// #ifdef APP-IOS
+		return (page?.safeAreaInsets.bottom ?? 0) - uni.getWindowInfo().safeAreaInsets.bottom
+		// #endif
+		// #ifndef APP-IOS
+		return 0
+		// #endif
+	}
+
+	// 悬浮 tabBar 盖在页面内容之上、压不到它下面的层：页面内层的底边抬到 tabBar 顶，该区域改由原生条带压暗
+	const syncBottom = () => {
+		// #ifdef APP-IOS
+		const bottom = floatingBarInset() > 0 ? (page?.safeAreaInsets.bottom ?? 0) : 0
+		rootEl.value?.style.setProperty('bottom', `${bottom}px`)
+		// #endif
+	}
+
+	// 原生条带范围=页面内容区之外的区域：上方（状态栏+导航栏）、下方（占位 tabBar 或悬浮 tabBar）
 	const buildStrips = () : MaskStrip[] => {
-		const win = uni.getWindowInfo()
 		const strips : MaskStrip[] = []
-		if (win.windowTop > 0) {
-			strips.push({ top: 0, bottom: win.windowTop })
+		// #ifdef APP
+		const body = page?.pageBody
+		if (body == null) {
+			return strips
 		}
-		if (props.coverTabBar && win.windowBottom > 0) {
-			const top = win.windowTop + win.windowHeight
-			strips.push({ top, bottom: top + win.windowBottom })
+		if (body.top > 0) {
+			strips.push({ top: 0, bottom: body.top })
 		}
+		if (props.coverTabBar) {
+			const screenBottom = uni.getWindowInfo().screenHeight
+			// 悬浮 tabBar 不占页面高度：条带顶=屏底减页面底部避让距离；占位 tabBar：条带顶=内容区底边
+			const barTop = floatingBarInset() > 0 ? screenBottom - (page?.safeAreaInsets.bottom ?? 0) : body.bottom
+			if (barTop < screenBottom) {
+				strips.push({ top: barTop, bottom: screenBottom })
+			}
+		}
+		// #endif
 		return strips
 	}
 
@@ -88,15 +116,17 @@
 		emit('click')
 	}
 
+	// 挂原生层：两层接缝取同一时刻的避让距离（页面内层底边=底部条带顶）
 	const attachNative = () => {
+		syncBottom()
 		showMask(buildStrips(), progress * STD_MASK_ALPHA, onMaskTap)
 	}
 
-	// 唯一写口：进度离开 0 即显示并挂原生层，归零即收起并摘原生层
-	const apply = (p : number) => {
+	// 唯一写口：进度离开 0 即显示并挂原生层，归零即收起并摘原生层（keepOn：进度为 0 时也保持挂上）
+	const apply = (p : number, keepOn : boolean = false) => {
 		const v = Math.max(0, Math.min(1, p))
 		progress = v
-		const on = v > 0
+		const on = keepOn || v > 0
 		if (on !== shown.value) {
 			shown.value = on
 		}
@@ -127,6 +157,10 @@
 	// 线性补间到目标进度，从当前进度起算
 	const tweenTo = (to : number) => {
 		cancelTween()
+		// 首帧同步起跑：淡入前两层先按起点进度挂上（尚不可见），与同一拍的浮层同时就位
+		if (to > 0 && progress === 0) {
+			apply(0, true)
+		}
 		const from = progress
 		const duration = props.duration ?? 200
 		if (duration <= 0 || Math.abs(to - from) < 0.01) {
@@ -162,28 +196,57 @@
 		tweenTo(v ? 1 : 0)
 	})
 
-	// 显示中切换 tabBar 覆盖：按新范围重挂条带
+	// 切换 tabBar 覆盖：显示中按新范围重挂条带（页面内层底边随之同步）
 	watch(() => props.coverTabBar, () => {
 		if (nativeOn) {
 			attachNative()
 		}
 	})
 
-	// 原生层悬在窗口上，不随宿主页一起被盖住：宿主页隐藏时摘掉，回来后按当前进度重挂
+	// 页面内层随显示才创建：创建后补写当前进度与底边（挂原生层那一刻元素可能还不存在）
+	watch(rootEl, (el : any) => {
+		if (el != null) {
+			write(progress)
+			syncBottom()
+		}
+	}, { flush: 'post' })
+
+	// 宿主页是否已被别的页面盖住：不再是页面栈顶，或其上开了弹窗页
+	const isCovered = () : boolean => {
+		// #ifdef APP
+		const pages = getCurrentPages()
+		const dialogs = page?.getDialogPages()
+		return pages[pages.length - 1] !== page || (dialogs != null && dialogs.length > 0)
+		// #endif
+		// #ifndef APP
+		return false
+		// #endif
+	}
+
+	// 原生层悬在窗口上，不随宿主页一起被盖住：被别的页面盖住时摘掉，回来后按当前进度重挂。
+	// App 切后台不算被盖住（条带留着，回前台不闪）；延后一拍再判，等页面栈更新
 	onPageHide(() => {
 		if (!nativeOn) {
 			return
 		}
-		nativePaused = true
-		nativeOn = false
-		hideMask()
+		if (hideTimer != null) {
+			clearTimeout(hideTimer)
+		}
+		hideTimer = setTimeout(() => {
+			hideTimer = null
+			if (nativeOn && isCovered()) {
+				nativePaused = true
+				nativeOn = false
+				hideMask()
+			}
+		}, 0)
 	})
 	onPageShow(() => {
 		if (!nativePaused) {
 			return
 		}
 		nativePaused = false
-		if (progress > 0) {
+		if (shown.value) {
 			nativeOn = true
 			attachNative()
 		}
@@ -199,6 +262,10 @@
 
 	onUnmounted(() => {
 		cancelTween()
+		if (hideTimer != null) {
+			clearTimeout(hideTimer)
+			hideTimer = null
+		}
 		if (nativeReady) {
 			hideMask()
 		}
@@ -208,8 +275,8 @@
 </script>
 
 <style lang="scss">
-	/* 页面内遮罩层：铺满可覆盖区域，色挂 --std-mask，透明度由 JS 逐帧下发；
-	   层序须盖过 Web 导航栏/tabBar 的 998 */
+	/* 页面内遮罩层：铺满可覆盖区域，色挂 --std-mask，透明度与底边由 JS 下发；
+	   缺省透明度 0，元素刚创建、JS 还没写到之前不会全显；层序须盖过 Web 导航栏/tabBar 的 998 */
 	.app-mask {
 		position: fixed;
 		top: 0;
@@ -218,22 +285,13 @@
 		bottom: 0;
 		z-index: 999;
 		background-color: var(--std-mask);
+		opacity: 0;
 	}
 
 	/* #ifdef WEB */
-	/* Web：左右边界与框架自身导航栏同口径（宽屏分栏时有左右窗） */
-	.app-mask {
-		left: var(--window-left, 0px);
-		right: var(--window-right, 0px);
-	}
-
-	/* Web：不盖 tabBar 时底边上移一个 tabBar 高度 */
+	/* Web：不盖 tabBar 时底边抬到 tabBar 上方 */
 	.app-mask-uncover-tabbar {
-		bottom: var(--window-bottom, 0px);
+		bottom: var(--uni-safe-area-inset-bottom, 0px);
 	}
 	/* #endif */
-
-	.app-mask-hide {
-		display: none;
-	}
 </style>

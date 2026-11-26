@@ -22,8 +22,11 @@
 		</app-list>
 
 		<app-card class="demo-card" title="环境">
-			<text class="demo-value">{{ envText }}</text>
+			<text class="demo-value">{{ envText }}{{ bodyText }}</text>
 		</app-card>
+
+		<!-- 底部触发：离中间偏上足够远，用于区分「闪一下」是否来自被点按钮自身的按压态 -->
+		<button type="primary" class="demo-bottom-trigger" @click="toggle">打开遮罩（底部触发）</button>
 
 		<!-- 遮罩与浮层同父兄弟：浮层层序须大于遮罩的 999 -->
 		<app-mask ref="maskEl" :visible="visible" @click="onMaskClick" />
@@ -87,12 +90,26 @@
 		uni.switchTab({ url: '/pages/mine/mine' })
 	}
 
+	// 环境读数（onReady 后内容区才量准）：条带范围取自页面内容区位置（pageBody）与屏高，top/bottom 即上下条带的接缝
+	const bodyText = ref('')
+	// #ifdef APP || WEB
+	const instance = getCurrentInstance()
+	onReady(() => {
+		const body = instance?.proxy?.$page?.pageBody
+		bodyText.value = ` · 内容区 top ${body?.top} / bottom ${body?.bottom}`
+	})
+	// #endif
 	const win = uni.getWindowInfo()
-	const envText = `原生层 ${hasNativeMask() ? '有' : '无'} · windowTop ${win.windowTop} · windowHeight ${win.windowHeight} · windowBottom ${win.windowBottom} · 运行时 ${uni.getSystemInfoSync().uniRuntimeVersion}`
+	const envText = `原生层 ${hasNativeMask() ? '有' : '无'} · 屏高 ${win.screenHeight} · 运行时 ${uni.getSystemInfoSync().uniRuntimeVersion}`
 </script>
 
 <style lang="scss">
 	@import '@/styles/demo.scss';
+
+	/* 底部触发按钮：排在页面内容末尾 */
+	.demo-bottom-trigger {
+		margin-top: var(--std-gap-lg);
+	}
 
 	/* 浮层：与遮罩同父兄弟，层序在遮罩之上 */
 	.demo-float {
