@@ -41,7 +41,7 @@
 			</view>
 		</view>
 
-		<!-- 验证码（proxy 模式：App/WEB 下开 dialogPage，成功回传走 handleRegister；启用与否受后台开关控制） -->
+		<!-- 验证码：页内浮层（压暗用 app-mask），成功回传走 handleRegister；启用与否受后台开关控制 -->
 		<Captcha ref="captchaRef" themeLight="#b48d4d" themeDark="#9a7a40" @success="handleRegister" />
 	</view>
 </template>

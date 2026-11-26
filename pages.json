@@ -123,17 +123,7 @@
 			"style": {
 				"navigationBarTitleText": "隐私政策"
 			}
-		},
-		// #ifdef APP || WEB
-		{
-			"path": "pages/captcha/captcha",
-			"style": {
-				"navigationStyle": "custom",
-				"disableScroll": true,
-				"backgroundColorContent": "transparent"
-			}
 		}
-		// #endif
 	],
 	// 底部液态玻璃 tabbar：iOS 26+ 系统 Liquid Glass（15-25 毛玻璃降级，材质随系统版本），
 	// 图标仅支持图片（iconfont 不可用）——uni-icons 字形渲染 PNG 明暗/选中四态经 theme.json 切换

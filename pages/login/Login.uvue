@@ -51,7 +51,7 @@
 
 		</view>
 
-		<!-- 验证码（proxy 模式：App/WEB 下开 dialogPage，成功回传走 handleLogin） -->
+		<!-- 验证码：页内浮层（压暗用 app-mask），成功回传走 handleLogin -->
 		<Captcha ref="captchaRef" themeLight="#b48d4d" themeDark="#9a7a40" @success="handleLogin" />
 	</view>
 </template>

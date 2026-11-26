@@ -358,3 +358,21 @@ Login.uvue 按"顶层零散装"重构，六工厂+声明顺序（依赖决定）
 **顺带删除**：原「跨域橡皮筋例外」分支（对侧永远到不了橡皮筋区，不可达）；阈值判定里因此恒真的 `!fromL`/`!fromR` 守卫；`closeWithInertia` 无人读取的侧参数。同侧过拖时被互斥收起会跳一下是原有问题，入口归一一并解决。
 
 **H5 实测**：右开→右拖、左开→左拖两向曲线均吻合公式；松手复原到收起；同侧过拖、跨域后拖回保持展开、未过中线松手收起、受阻位被互斥收起不跳、收起态长滑展开、删除链/确认/取消回归均正常。待真机：阻尼手感——曲线与过拖一致，嫌重或嫌轻调 `rubberOf` 的 k0 与 d。
+
+### 补记 25：验证码去 dialogPage——页内组件 + app-mask（app-mask 补齐全窗口遮罩之后）
+
+**背景**：验证码在 App/Web 上原本经 dialogPage 壳挂载（proxy/active 双模式），目的是拿全窗口蒙层——页内 fixed 遮罩盖不到原生导航栏与状态栏。代价是一整套跨页通信：成功结果走 `uni.$emit` 总线、主题色编码进 url、壳页加 `pages.json` 条件注册；dialogPage 内还有量测（selectorQuery 查不到组件元素）与动效（requestAnimationFrame 炸流程）两批坑。微信端没有 dialogPage，一直是业务页直接挂载。
+
+**决策**：app-mask 补齐「页面内层 + 导航栏/tabBar/状态栏原生条带」后，四端统一到页内这条路径；对外用法不变（`<Captcha ref themeLight themeDark @success>` + `open()`）。
+
+**结构**：组件根是零尺寸占位，下面两个同父兄弟——`<app-mask :visible>` 负责压暗，全屏浮层 `.lh-cap-mask`（fixed、层序 1000）拦截触摸、居中卡片，不再自己画背景。与 app-sheet 同构，对应坑⑧「需要互相压盖的层做成同父兄弟」。消费方须把 `<Captcha>` 挂在页面根的直接子级，不嵌进卡片。
+
+**dialogPage 原本白送的三样，页内要自己补**：① 返回拦截 → 组件内 `onBackPress`（打开时走本体 close 并拦下）；② 模态防重开 → `open()` 加「已打开则忽略」守卫；③ 开新页时键盘自然收起 → `open()` 里 `uni.hideKeyboard()`。
+
+**踩坑：`uni.hideKeyboard` 要进基座。** 真机一点登录就抛 `undefined class: UTSSDKModulesDCloudUniKeyboardIndexSwift, uni-keyboard 模块不存在，请重新打自定义基座`，`open()` 在 `visible.value = true` 之前被打断，验证码根本不打开。它在 App 上由内置 UTS 模块 `uni-keyboard` 实现，自定义基座只编入项目用到的模块；这次是该 API 首次被使用，现有基座自然没有。识别方法：API 文档页顶部的 `::: sourceCode` 指向 `uni_modules/uni-xxx` 的，都是这类模块，首次使用后要重打基座——兼容表只说明平台支持，不说明要不要进基座。处理：调用处包 try/catch（缺模块时键盘不自动收起，但不阻断打开）+ 重打基座。未选 `UniElement.blur()`：它不进基座，但要 `app-input` 暴露 blur、各调用页逐个输入框去调，且微信端不支持。
+
+**删除**：`mode` prop 与 proxy/active 全部分支、`uni.openDialogPage` / `closeDialogPage`、`lh-captcha-success` 总线、壳页 `pages/captcha/captcha.uvue` 与其 `pages.json` 条件注册。点选题量测逻辑未动：App/Web 仍走缓存的 `$page.getElementById`，微信回退 selectorQuery。
+
+**未处理**：iOS 侧滑返回默认不拦——验证码打开时从左缘侧滑会退掉整个页面（原来关的是 dialogPage）。要拦需给页面配 `swipeBackAsBackPress: true`，代价是该页平时的侧滑不再跟手；滑块钮离左缘约 50pt，不在侧滑触发区，暂不加。
+
+**待真机验证（用户执行）**：五种题型（重点点选题落点，App 上量测改走业务页路径）、返回键、切后台、亮暗与主题色、注册页、Web、微信端；安卓须先重打含 lihua-mask 插件的基座。app-mask 自身四项改动（切后台不摘条带、页面内层显示时创建、Web 变量替换、补间首帧同步）也尚未回报真机结果。
