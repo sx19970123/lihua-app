@@ -1,0 +1,13 @@
+import { HasNativeMask, ShowMask, SetMaskAlpha, HideMask, MaskStrip } from '../interface.uts'
+
+// Web 降级：无原生层，遮罩由组件的页面内层承担
+
+export const hasNativeMask : HasNativeMask = function () : boolean {
+	return false
+}
+
+export const showMask : ShowMask = function (_strips : MaskStrip[], _alpha : number, _onTap : () => void) : void {}
+
+export const setMaskAlpha : SetMaskAlpha = function (_alpha : number) : void {}
+
+export const hideMask : HideMask = function () : void {}

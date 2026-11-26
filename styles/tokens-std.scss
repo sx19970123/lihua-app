@@ -71,6 +71,7 @@ page {
 	--std-disabled-border-color: #d1d4d6;
 	--std-disabled-shallow-bg: #ecedee;
 	--std-input-bg: #ffffff;  /* 输入框底色 */
+	--std-mask: rgba(0, 0, 0, 0.5);  /* 遮罩（亮暗同值） */
 }
 
 @media (prefers-color-scheme: dark) {

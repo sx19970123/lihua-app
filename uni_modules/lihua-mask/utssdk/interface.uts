@@ -1,0 +1,24 @@
+/**
+ * 遮罩条带：窗口坐标系下的纵向区间（逻辑 px），左缘恒为 0、宽度恒为窗口宽
+ */
+export type MaskStrip = { top : number, bottom : number }
+
+/**
+ * 当前平台是否有原生遮罩能力
+ */
+export type HasNativeMask = () => boolean
+
+/**
+ * 挂条带（替换已有）：alpha 取 0~1；onTap 在点到条带时回调
+ */
+export type ShowMask = (strips : MaskStrip[], alpha : number, onTap : () => void) => void
+
+/**
+ * 改全部条带的透明度（取 0~1）
+ */
+export type SetMaskAlpha = (alpha : number) => void
+
+/**
+ * 移除全部条带
+ */
+export type HideMask = () => void

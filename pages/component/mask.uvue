@@ -1,0 +1,111 @@
+<template>
+	<view class="page-padding">
+		<app-card title="声明式（visible 淡入淡出）">
+			<text class="demo-label">本页带原生导航栏：遮罩应同时压暗导航栏；浮层须在遮罩之上、可点、不被压暗</text>
+			<view class="demo-row">
+				<button type="primary" @click="toggle">{{ shown ? '关闭遮罩' : '打开遮罩' }}</button>
+			</view>
+			<text class="demo-value">visible = {{ visible }} · 遮罩点击 × {{ clickCount }}</text>
+		</app-card>
+
+		<app-card class="demo-card" title="手动进度（setProgress 逐帧驱动）">
+			<text class="demo-label">拖动滑块，导航栏条带与页面内容区应始终同亮同暗、接缝处无亮线或暗线</text>
+			<view class="demo-row">
+				<slider :value="progress * 100" @changing="onSlider" @change="onSlider" />
+			</view>
+			<text class="demo-value">progress = {{ progressText }}</text>
+		</app-card>
+
+		<text class="demo-bare-label">coverTabBar：tabBar 条带只能在 tab 页上验证，点下面的行切到「我的」页自检</text>
+		<app-list>
+			<app-list-item :divider="false" icon="eye" title="tab 页自检" value="盖住 tabBar" arrow hover @click="goTabProbe" />
+		</app-list>
+
+		<app-card class="demo-card" title="环境">
+			<text class="demo-value">{{ envText }}</text>
+		</app-card>
+
+		<!-- 遮罩与浮层同父兄弟：浮层层序须大于遮罩的 999 -->
+		<app-mask ref="maskEl" :visible="visible" @click="onMaskClick" />
+		<view v-if="shown" class="demo-float">
+			<text class="demo-float-text app-t-lg app-c-emphasis">浮层在遮罩之上</text>
+			<button size="mini" @click="close">点我关闭</button>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppList from '@/components/app-list/app-list.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+	import AppMask from '@/components/app-mask/app-mask.uvue'
+	import { hasNativeMask } from '@/uni_modules/lihua-mask'
+	import { useDemoProbeStore } from '@/stores/demo-probe'
+
+	const demoProbe = useDemoProbeStore()
+	const visible = ref<boolean>(false)
+	const clickCount = ref<number>(0)
+	// 手动进度（0~1）：经 setProgress 下发，与 visible 两条驱动并存
+	const progress = ref<number>(0)
+	const maskEl = ref<any>(null)
+
+	const shown = computed<boolean>(() => visible.value || progress.value > 0)
+	const progressText = computed<string>(() => Math.round(progress.value * 100) + '%')
+
+	// 关闭：声明式在显示就走组件自己的淡出，否则把手动进度瞬归零
+	const close = () => {
+		if (visible.value) {
+			visible.value = false
+		} else {
+			maskEl.value?.setProgress(0)
+		}
+		progress.value = 0
+	}
+
+	const onMaskClick = () => {
+		clickCount.value++
+		close()
+	}
+
+	const toggle = () => {
+		if (shown.value) {
+			close()
+		} else {
+			visible.value = true
+		}
+	}
+
+	const onSlider = (e : UniSliderChangeEvent) => {
+		const v = e.detail.value / 100
+		progress.value = v
+		maskEl.value?.setProgress(v)
+	}
+
+	// 置自检标志后切到 tab 页，由该页显示 app-mask 的自检面板
+	const goTabProbe = () => {
+		demoProbe.enterTabProbe('app-mask')
+		uni.switchTab({ url: '/pages/mine/mine' })
+	}
+
+	const win = uni.getWindowInfo()
+	const envText = `原生层 ${hasNativeMask() ? '有' : '无'} · windowTop ${win.windowTop} · windowHeight ${win.windowHeight} · windowBottom ${win.windowBottom} · 运行时 ${uni.getSystemInfoSync().uniRuntimeVersion}`
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+
+	/* 浮层：与遮罩同父兄弟，层序在遮罩之上 */
+	.demo-float {
+		position: fixed;
+		left: var(--std-page-margin-x);
+		right: var(--std-page-margin-x);
+		top: 200px;
+		z-index: 1000;
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--std-card-pad-y) var(--std-card-pad-x);
+		border-radius: var(--std-radius);
+		background-color: var(--std-emphasis-bg);
+	}
+</style>

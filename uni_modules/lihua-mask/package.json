@@ -1,0 +1,17 @@
+{
+	"id": "lihua-mask",
+	"displayName": "lihua 原生遮罩",
+	"version": "1.0.0",
+	"description": "窗口级遮罩条带：盖住页面内容区之外的区域（状态栏+导航栏、tabBar），供 app-mask 组件调用",
+	"keywords": [
+		"mask",
+		"overlay",
+		"navbar"
+	],
+	"engines": {
+		"HBuilderX": "^5.11"
+	},
+	"uni_modules": {
+		"dependencies": []
+	}
+}

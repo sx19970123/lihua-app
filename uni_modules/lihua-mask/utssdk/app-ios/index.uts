@@ -1,0 +1,24 @@
+import { HasNativeMask, ShowMask, SetMaskAlpha, HideMask, MaskStrip } from '../interface.uts'
+
+export const hasNativeMask : HasNativeMask = function () : boolean {
+	return true
+}
+
+// 条带数组拍平成 [top, bottom, …]：跨 Swift 只传基础类型
+export const showMask : ShowMask = function (strips : MaskStrip[], alpha : number, onTap : () => void) : void {
+	const rects : number[] = []
+	for (let i = 0; i < strips.length; i++) {
+		rects.push(strips[i].top, strips[i].bottom)
+	}
+	MaskOverlay.showSwift(rects = rects, alpha = alpha, onTap = () => {
+		onTap()
+	})
+}
+
+export const setMaskAlpha : SetMaskAlpha = function (alpha : number) : void {
+	MaskOverlay.setAlphaSwift(alpha = alpha)
+}
+
+export const hideMask : HideMask = function () : void {
+	MaskOverlay.hideSwift()
+}

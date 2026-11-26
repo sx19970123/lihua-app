@@ -3,16 +3,58 @@
 		<app-list>
 			<app-list-item :divider="false" icon="tune" title="组件" arrow hover @click="goComponents" />
 		</app-list>
+		<!-- app-mask 的 tab 页自检面板：仅从组件 demo 页进入时出现（tabBar 条带只能在 tab 页上验），离开本页即退出 -->
+		<app-list v-if="probing" title="遮罩自检（tab 页）">
+			<app-list-item :hover="false">
+				<template #title>
+					<app-checkbox v-model:checked="coverTabBar" label="盖住 tabBar" />
+				</template>
+			</app-list-item>
+			<app-list-item icon="eye" title="打开遮罩" arrow hover @click="maskVisible = true" />
+		</app-list>
+		<!-- 遮罩与浮层同父兄弟：浮层层序须大于遮罩的 999 -->
+		<app-mask v-if="probing" :visible="maskVisible" :cover-tab-bar="coverTabBar" @click="maskVisible = false" />
+		<view v-if="maskVisible" class="mine-mask-float">
+			<text class="app-t-lg app-c-emphasis">遮罩之上（点遮罩关闭）</text>
+		</view>
 	</view>
 </template>
 
 <script setup lang="ts">
-	// 「我的」tab 页：个人中心入口聚合（当前仅组件 demo 库入口）
+	// 「我的」tab 页：个人中心入口聚合（当前仅组件 demo 库入口；另承载从组件 demo 页进入的 app-mask 自检面板）
 	import AppList from '@/components/app-list/app-list.uvue'
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
+	import AppMask from '@/components/app-mask/app-mask.uvue'
+	import { useDemoProbeStore } from '@/stores/demo-probe'
+
+	const demoProbe = useDemoProbeStore()
+	const probing = computed<boolean>(() => demoProbe.tabProbe === 'app-mask')
+	const maskVisible = ref<boolean>(false)
+	const coverTabBar = ref<boolean>(true)
+
+	// 离开 tab 页即退出自检态，下次须从组件 demo 页重新进入
+	onPageHide(() => {
+		maskVisible.value = false
+		demoProbe.leaveTabProbe()
+	})
 
 	const goComponents = () => {
 		uni.navigateTo({ url: '/pages/component/menu' })
 	}
 </script>
 
+<style lang="scss">
+	/* 浮层：与遮罩同父兄弟，层序在遮罩之上 */
+	.mine-mask-float {
+		position: fixed;
+		left: var(--std-page-margin-x);
+		right: var(--std-page-margin-x);
+		top: 160px;
+		z-index: 1000;
+		align-items: center;
+		padding: var(--std-card-pad-y) var(--std-card-pad-x);
+		border-radius: var(--std-radius);
+		background-color: var(--std-emphasis-bg);
+	}
+</style>

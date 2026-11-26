@@ -56,6 +56,12 @@
 			]
 		},
 		{
+			title: '弹层',
+			items: [
+				{ name: 'app-mask', label: '遮罩', icon: 'eye', url: '/pages/component/mask' }
+			]
+		},
+		{
 			title: '业务',
 			items: [
 				{ name: 'captcha', label: '验证码', icon: 'auth', url: '/pages/component/captcha' }

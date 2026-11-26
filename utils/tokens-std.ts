@@ -13,3 +13,6 @@ export const STD_LEADING_SM = 18
 export const STD_TREE_EMPTY_PAD_Y = 8
 // 树空态高度 = sm 行盒 + 留白×2（消费：app-tree 空态槽高）
 export const STD_TREE_EMPTY_HEIGHT = STD_LEADING_SM + STD_TREE_EMPTY_PAD_Y * 2
+
+// 遮罩不透明度（与 --std-mask 的 alpha 同值；原生条带的透明度只能由 JS 下发）
+export const STD_MASK_ALPHA = 0.5
