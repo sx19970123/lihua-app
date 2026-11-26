@@ -7,6 +7,14 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 		const els = side === SIDE_L ? h.textElsL.value : h.textElsR.value
 		return els[index]
 	}
+	const labelAt = (side : number, index : number) : any => {
+		const els = side === SIDE_L ? h.labelElsL.value : h.labelElsR.value
+		return els[index]
+	}
+	const btnStyleAt = (side : number, index : number) : any => {
+		const els = side === SIDE_L ? h.btnStyleL.value : h.btnStyleR.value
+		return els[index]
+	}
 	return {
 		content : (prop : string, val : string) => {
 			h.contentEl.value?.style.setProperty(prop, val)
@@ -16,7 +24,7 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			els[index]?.style.setProperty(prop, val)
 		},
 		text : (side : number, index : number, prop : string, val : string) => {
-			textAt(side, index)?.style.setProperty(prop, val)
+			labelAt(side, index)?.style.setProperty(prop, val)
 		},
 		// 真量测，取不到（零宽/异常）回退字符估算
 		textWidth : (side : number, index : number, label : string) : number => {
@@ -28,6 +36,15 @@ export const createPlatform = (h : SwipeHandles) : SwipePlatform => {
 			} catch (e) {
 			}
 			return estimateWidth(label)
+		},
+		// 载体与元素同步置 none（重渲染按载体重贴样式，元素直写兜底）
+		settle : (side : number, index : number) => {
+			const st = btnStyleAt(side, index)
+			if (st != null) {
+				st.transform = 'none'
+			}
+			const els = side === SIDE_L ? h.btnElsL.value : h.btnElsR.value
+			els[index]?.style.setProperty('transform', 'none')
 		},
 		// 触摸兜底空实现
 		markConfirmBarHit : () => {},

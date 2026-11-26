@@ -177,6 +177,12 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   class（max-height/opacity）或 v-show，禁 v-if 批量切换。
 - **烘焙字段+纯属性读**：class/显隐逻辑在 watchEffect 里写进 state 字段，模板只读属性；
   `:class="fn()"` 函数调用形态不追踪依赖（死路）。
+- **命令式写层不与 `:style` 载体共管一键**：载体里有的键，重渲染会按载体重贴、盖掉
+  setProperty 的同键写入；其常驻值须经载体落下（cross-platform-pitfalls 坑⑩）。
+- **隐藏态不留贴边的被绘制元素**：收起/藏起用宽度 0 或不绘制，勿靠「平移出裁切区
+  贴边」——小数宽度下露发丝线（cross-platform-pitfalls 坑⑨）。
+- **按序号取 v-for 元素引用时用序号 key**：引用数组序是打补丁序，不是 DOM 序；按
+  事件名等 key 重排即错位（cross-platform-pitfalls 坑⑪）。
 - import 统一写 script 顶部。
 - **可选布尔属性不传即 `false`**（Vue 的布尔转换；编译产物是 `{ type: Boolean, required:
   false }`，可在 `unpackage/dist/dev/app-ios/app-service.js` 里核对）。默认开的开关必须
