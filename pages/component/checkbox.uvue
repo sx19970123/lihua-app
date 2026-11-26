@@ -9,6 +9,26 @@
 		</app-card>
 
 		<app-card class="demo-card">
+			<text class="demo-label">尺寸三档：small / default / large</text>
+			<view class="demo-row demo-inline">
+				<app-checkbox v-model:checked="sizeSmall" size="small" label="小号" />
+				<view class="demo-spacer" />
+				<app-checkbox v-model:checked="sizeDefault" label="默认" />
+				<view class="demo-spacer" />
+				<app-checkbox v-model:checked="sizeLarge" size="large" label="大号" />
+			</view>
+			<text class="demo-value">checked = {{ sizeText }}</text>
+			<view class="demo-row demo-inline">
+				<app-checkbox v-model:checked="bareSmall" size="small" />
+				<view class="demo-spacer" />
+				<app-checkbox v-model:checked="bareDefault" />
+				<view class="demo-spacer" />
+				<app-checkbox v-model:checked="bareLarge" size="large" />
+			</view>
+			<text class="demo-value">checked（无文字）= {{ bareText }}</text>
+		</app-card>
+
+		<app-card class="demo-card">
 			<text class="demo-label">禁用态</text>
 			<view class="demo-row">
 				<app-checkbox v-model:checked="disabledOn" label="禁用（选中态）" disabled />
@@ -26,11 +46,34 @@
 
 	// 独立模式
 	const single = ref<boolean>(false)
+	// 三档（带文字 / 无文字）
+	const sizeSmall = ref<boolean>(true)
+	const sizeDefault = ref<boolean>(true)
+	const sizeLarge = ref<boolean>(false)
+	const bareSmall = ref<boolean>(false)
+	const bareDefault = ref<boolean>(true)
+	const bareLarge = ref<boolean>(false)
 	// 禁用两态
 	const disabledOn = ref<boolean>(true)
 	const disabledOff = ref<boolean>(false)
+
+	// 按档位顺序拼勾选状态
+	const triText = (a : boolean, b : boolean, c : boolean) : string =>
+		(a ? 'on' : 'off') + ' / ' + (b ? 'on' : 'off') + ' / ' + (c ? 'on' : 'off')
+	const sizeText = computed(() : string => triText(sizeSmall.value, sizeDefault.value, sizeLarge.value))
+	const bareText = computed(() : string => triText(bareSmall.value, bareDefault.value, bareLarge.value))
 </script>
 
 <style lang="scss">
 	@import '@/styles/demo.scss';
+
+	/* 横向排布三档，之间以占位 view 间隔（ucss 无 gap） */
+	.demo-inline {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.demo-spacer {
+		width: var(--std-gap-2xl);
+	}
 </style>

@@ -28,15 +28,15 @@ page {
 	--std-list-title-margin: 16px 16px 8px;  /* 列表组标题外距（上 | 左右 | 下） */
 	--std-list-icon-gap: 12px;  /* 列表行图标与文字间距 */
 
-	--std-card-pad-y: 12px;  /* 卡片头/体/脚纵向内距 */
-	--std-card-pad-x: 16px;  /* 卡片头/体/脚水平内距 */
+	--std-card-pad-y: 12px;  /* 卡片体/脚与浮层面板纵向内距 */
+	--std-card-pad-x: 12px;  /* 卡片头/体/脚与浮层面板水平内距 */
 
 	--std-form-gap: 12px;  /* 表单项纵向间距 */
 
 	--std-control-pad-y-sm: 6px;  /* 紧凑控件纵向内距（输入框/分段器 small 档） */
 	--std-control-pad-y: 10px;  /* 控件纵向内距（输入框/选择行/分段器 default 档） */
 	--std-control-pad-y-lg: 14px;  /* 大档控件纵向内距（输入框/分段器 large 档） */
-	--std-btn-pad-y: 11px;  /* 无边框按钮纵向内距 */
+	--std-btn-pad-y: 11px;  /* 无边框控件纵向内距（按钮、卡片头） */
 
 	--std-radius: 12px;  /* 主圆角 */
 	--std-radius-full: 9999px;  /* 胶囊圆角 */

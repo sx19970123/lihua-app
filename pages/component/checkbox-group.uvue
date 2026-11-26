@@ -11,6 +11,23 @@
 			</view>
 			<text class="demo-value">selected = {{ groupValuesText }}</text>
 		</app-card>
+
+		<app-card class="demo-card">
+			<text class="demo-label">组级 size：子项未传时沿用组，子项自传优先</text>
+			<view class="demo-row">
+				<app-checkbox-group v-model="smallValues" size="small">
+					<app-checkbox value="a" label="小号 A" />
+					<app-checkbox value="b" label="小号 B" />
+				</app-checkbox-group>
+			</view>
+			<view class="demo-row">
+				<app-checkbox-group v-model="largeValues" size="large">
+					<app-checkbox value="a" label="大号 A" />
+					<app-checkbox value="b" label="大号 B（子项自传 small）" size="small" />
+				</app-checkbox-group>
+			</view>
+			<text class="demo-value">small = {{ smallText }} / large = {{ largeText }}</text>
+		</app-card>
 	</view>
 </template>
 
@@ -21,8 +38,14 @@
 
 	// group 受控模式（c 项 disabled 不可勾选）
 	const groupValues = ref<string[]>([])
+	// 组级 size 两组
+	const smallValues = ref<string[]>(['a'])
+	const largeValues = ref<string[]>([])
 
-	const groupValuesText = computed(() => groupValues.value.length > 0 ? groupValues.value.join(', ') : '（空）')
+	const joinText = (values : string[]) : string => values.length > 0 ? values.join(', ') : '（空）'
+	const groupValuesText = computed(() : string => joinText(groupValues.value))
+	const smallText = computed(() : string => joinText(smallValues.value))
+	const largeText = computed(() : string => joinText(largeValues.value))
 </script>
 
 <style lang="scss">

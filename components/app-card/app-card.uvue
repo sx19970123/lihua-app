@@ -72,12 +72,12 @@
 		overflow: hidden;
 	}
 
-	/* 头部：标题左 + 附加右 */
+	/* 头部：标题左 + 附加右；纵向内距取无边框控件档 */
 	.app-card-header {
 		flex-direction: row;
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--std-card-pad-y) var(--std-card-pad-x);
+		padding: var(--std-btn-pad-y) var(--std-card-pad-x);
 	}
 
 	.app-card-title {

@@ -9,6 +9,8 @@
 const props = defineProps<{
 	// 选中值集合（v-model，与子项 value 对应）
 	modelValue?: string[]
+	// 子项尺寸：子项自身传了 size 时以子项为准
+	size?: 'small' | 'default' | 'large'
 }>()
 
 const emit = defineEmits<{
@@ -24,7 +26,9 @@ provide('app-checkbox-group', {
 		const next = list.includes(value) ? list.filter(v => v !== value) : list.concat([value])
 		emit('update:modelValue', next)
 		emit('change', next)
-	}
+	},
+	// 子项未传 size 时沿用的档位
+	size: () => props.size ?? 'default'
 })
 </script>
 

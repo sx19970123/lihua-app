@@ -2,12 +2,18 @@
 	<view class="app-checkbox" :class="{ 'app-checkbox-pressed': pressed, 'app-checkbox-grouped': !!groupCtx }"
 		@click.stop="onClick" @touchstart="pressed = true" @touchend="pressed = false" @touchcancel="pressed = false">
 		<view class="app-checkbox-box" :class="{
+			'app-checkbox-box-sm': curSize === 'small',
+			'app-checkbox-box-lg': curSize === 'large',
 			'app-checkbox-box-checked': isChecked,
 			'app-checkbox-box-disabled': disabled
 		}">
-			<uni-icons v-if="isChecked" class="app-checkbox-check" type="checkmarkempty" />
+			<uni-icons v-if="isChecked" class="app-checkbox-check" :class="checkSizeCls" type="checkmarkempty" />
 		</view>
-		<text v-if="label" class="app-checkbox-label" :class="{ 'app-checkbox-label-disabled': disabled }">{{ label }}</text>
+		<text v-if="label" class="app-checkbox-label" :class="{
+			'app-checkbox-label-sm': curSize === 'small',
+			'app-checkbox-label-lg': curSize === 'large',
+			'app-checkbox-label-disabled': disabled
+		}">{{ label }}</text>
 	</view>
 </template>
 
@@ -20,6 +26,8 @@ const props = defineProps<{
 	label?: string
 	// group 模式下的选中标识
 	value?: string
+	// 尺寸：small/default/large（组内未传时沿用 app-checkbox-group 的 size）
+	size?: 'small' | 'default' | 'large'
 	disabled?: boolean
 }>()
 
@@ -30,10 +38,17 @@ const emit = defineEmits<{
 
 const groupCtx = inject('app-checkbox-group', null) as {
 	includes: (value: string) => boolean,
-	toggle: (value: string) => void
+	toggle: (value: string) => void,
+	size: () => string
 } | null
 
 const pressed = ref<boolean>(false)
+
+// 生效档位：自身 size 优先，组内未传时沿用组
+const curSize = computed(() : string => props.size ?? groupCtx?.size() ?? 'default')
+
+// 勾标的档位修饰类（default 档为空串）
+const checkSizeCls = computed(() : string => curSize.value === 'default' ? '' : 'app-checkbox-check-' + curSize.value)
 
 // group 模式选中态随集合响应，独立模式随 prop
 const isChecked = computed(() => {
@@ -61,17 +76,21 @@ const onClick = () => {
 .app-checkbox {
 	flex-direction: row;
 	align-items: center;
+	/* 触区：内距撑大热区，外距同值负向抵消使占位等于视觉尺寸（伸出祖先盒子的部分接收不到触摸） */
+	padding: 6px;
+	margin: -6px;
 }
 
 .app-checkbox-pressed {
 	opacity: var(--std-active-opacity);
 }
 
-/* group 模式纵向列表间距（ucss 无 gap，由子项自带） */
+/* group 模式纵向行距（ucss 无 gap，由子项自带）= 触区内距 + 下外距，改其一须同步另一个 */
 .app-checkbox-grouped {
-	margin-bottom: var(--std-gap-sm);
+	margin-bottom: 2px;
 }
 
+/* size 三档：方块、勾标、圆角是本组件专用尺寸，取值写在组件内 */
 .app-checkbox-box {
 	width: 20px;
 	height: 20px;
@@ -79,6 +98,17 @@ const onClick = () => {
 	border-radius: 3px;
 	justify-content: center;
 	align-items: center;
+}
+
+.app-checkbox-box-sm {
+	width: 16px;
+	height: 16px;
+}
+
+.app-checkbox-box-lg {
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
 }
 
 .app-checkbox-box-checked {
@@ -96,11 +126,29 @@ const onClick = () => {
 	color: #ffffff;
 }
 
+.app-checkbox-check-sm {
+	font-size: 11px;
+}
+
+.app-checkbox-check-lg {
+	font-size: 17px;
+}
+
 .app-checkbox-label {
 	margin-left: var(--std-gap-sm);
 	font-size: var(--std-text-base);
 	line-height: var(--std-leading-base);
 	color: var(--std-emphasis-color);
+}
+
+.app-checkbox-label-sm {
+	font-size: var(--std-text-sm);
+	line-height: var(--std-leading-sm);
+}
+
+.app-checkbox-label-lg {
+	font-size: var(--std-text-lg);
+	line-height: var(--std-leading-lg);
 }
 
 .app-checkbox-label-disabled {

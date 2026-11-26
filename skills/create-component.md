@@ -12,8 +12,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 ## 前置流程（落笔前必做）
 
 1. **官方优先三档**：① x 内置组件（button/checkbox/loading…）改 css 能用则直接用；
-   ② uni-ui x 官方扩展（uni_modules，如 uni-icons-x、uni-badge-view）覆盖则导入用；
-   ③ 都没有才手搓。已定案：弹窗=uni.showModal（不封装）、badge=uni-badge-view（ext 27844）。
+   ② uni-ui x 官方扩展（uni_modules，如 uni-icons-x）覆盖则导入用；
+   ③ 都没有才手搓。已定案：弹窗=uni.showModal（不封装）；badge、tag 自建组件
+   （app-badge / app-tag，不用 uni-badge-view）。
 2. **读 sard 源码再落笔**，别凭文档脑补样式（app-tree 复刻走弯路的教训）。
 3. 通用组件不带业务名（app-steps 非 setup-track），进 `app-*` 族；业务组件进业务域目录。
 
@@ -64,7 +65,7 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   组件）。**组件内使用须在 style 头 @import typography.scss**（样式隔离 2.0，全局类进不了
   组件，press.scss 同款纪律）。
 - **间距语义层**（tokens-std.scss）：边距按**用途**挂 `--std-*` 语义 token——page-margin-x 16/
-  list-pad-y 15·x 16/list-title-margin 16·16·8/list-icon-gap 12/card-pad-y 12·x 16/
+  list-pad-y 15·x 16/list-title-margin 16·16·8/list-icon-gap 12/card-pad-y 12·x 12/
   form-gap 12/control-pad-y-sm 6·control-pad-y 10·control-pad-y-lg 14/btn-pad-y 11/section-gap 32——同名值不同位置=不同 token，一眼可读用途；x 端值不可嵌套
   var→各带字面量=独立旋钮。**建名纪律**：只为跨页面复用概念建名（≥2 消费点），组件内
   一次性微距留组件本地；通用无概念小间隙用 `--std-gap-*` 值层（xs4/sm8/md12/lg16/xl20/
@@ -73,8 +74,8 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   高度 = 行盒 + 纵向留白×2（带边框件再+边框×2）。Apple 实测三档（iPhone 402pt 机型，
   原生截图 px/3）：**小号 32 / 默认 44 / 列表行 52**，每档=行盒+对称留白——
   **紧凑档 32**（App Store「获取」胶囊 20+6×2；input small=18+6×2+边框2）；
-  **控件档 44**（App Store 搜索框 44.0pt=HIG 默认控件 44×44；按钮 22+11×2、带边框 input/
-  选择行 22+10×2+边框2；内距走 --std-btn-pad-y / --std-control-pad-y）；
+  **控件档 44**（App Store 搜索框 44.0pt=HIG 默认控件 44×44；按钮/卡片头 22+11×2、带边框
+  input/选择行 22+10×2+边框2；内距走 --std-btn-pad-y / --std-control-pad-y）；
   **列表行 52**（设置页实测 52.3pt=22+15×2；list-item/tree 节点/swipe 收起首档；
   input large 同高 22+14×2+边框2）。**分段器三档 32/44/52=外高同 app-input**（文本档同输入框：
   small 行盒 18+留白 6×2、default/large 行盒 22+留白 10×2/14×2，无边框；留白三档走
@@ -82,9 +83,12 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   挂组段位触区塌半；2026-11-25 拍板对齐输入框，玻璃滑块同日退役）。
   **行≠控件**：早先按 UIKit 默认行高 44 推的
   「行=控件 46」已作废。按钮/列表行=padding 直构不设 height；档位内距是语义 token 自带值
-  （Apple 实测，不要求落在 4pt 刻度上）。卡片头暂留 46（card-pad-y 12，不在三档上，待定）。
-- 档位做在组件 size prop（small/default/large ↔ 留白 8/12/16），高度数字由公式长出
-  （iOS 原生同型：档位是组件枚举，高度是 intrinsic 产物，无公开高度 token）。
+  （Apple 实测，不要求落在 4pt 刻度上）。卡片头 44（2026-11-26 归控件档，内距走
+  --std-btn-pad-y；卡片体/脚内距仍是 card-pad-y 12）。
+- 档位做在组件 size prop（small/default/large ↔ 留白见高度档位表），高度数字由公式长出
+  （iOS 原生同型：档位是组件枚举，高度是 intrinsic 产物，无公开高度 token）。组件专用的
+  非典型尺寸（如 checkbox 方块）取值写在组件内，不建 token。list-item 不设 size 档
+  （行高单一；带描述的行到时由内容撑高）。
 - HIG 明文仅字号阶梯/控件 44×44pt/带边框控件间距 12pt；行高等无官方数值，按本公式自定。
 - **JS 侧镜像**：`utils/tokens-std.ts`（STD_* 常量，与 tokens-std.scss 同名同值成对）——
   供 @keyframes 与 TS 布局算式消费（CSS 变量进不了这两处）；改尺度值两处成对改。
@@ -104,8 +108,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   `{}`/`()`/`[]` 计数相等）零差；⑤ 老 token（--lh-text-/--lh-leading-/--lh-button-height）
   消费零。历史上两次跑偏（行 46 应 52、控件 46 应 44）均属此范围，机器查代替靠记忆。
 - 存量已统一（2026-11-24 统一轮）：全局正文 17px、list/tree 行 52、input 44（small 32/
-  large 52）、分段器 32/44/52（2026-11-25 对齐输入框）、按钮 44、
-  卡片头 46、表单间距 12、手写 45/38/13px 清零；老 `--lh-text-*/leading-*/button-height/
+  large 52）、分段器 32/44/52（2026-11-25 对齐输入框）、checkbox 三档（方块 16/20/24、
+  文字档 sm/base/lg，组件专用尺寸留字面量；2026-11-26 落地待真机验）、按钮 44、
+  卡片头 44、表单间距 12、手写 45/38/13px 清零；老 `--lh-text-*/leading-*/button-height/
   segmented-height*` 已退役删除。残留暂不动：index
   尖峰页（S2-09 重做时按 std 写）、页面级锚（auth 80px/向导 48·24px）。
 
@@ -234,6 +239,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
   28×28**——常规按 44 设计、紧凑件下限 28（旧口径 ≥32 作废）；**热区可大于视觉**
   （icon 居中留缓冲）。相邻按钮热区紧贴零死区（系统 toolbar 同款），视觉间距用盒内
   非对称偏移收窄。
+- **视觉件不足 28 时用「内距 + 同值负外距」扩触区**：根节点 `padding: N; margin: -N`，
+  热区四周各扩 N、占位不变（行高不撑到 32/44）；组内行距随之拆成「触区内距 + 下外距」
+  两个耦合值；伸出祖先盒子的部分接收不到触摸。先例=app-checkbox（待真机验）。
 - 触感反馈：统一走 `utils/haptic.ts`（`haptic(type, onText?)`，type=light/medium/heavy；
   try/catch 包住、接口缺失不抛出；安卓/iOS/鸿蒙与微信支持，Web 无此 API 已在工具内挡）。
   **排查「不震」用 demo 页触感自检，按显示分三种**：①「调用异常」=运行时里没有这个接口
