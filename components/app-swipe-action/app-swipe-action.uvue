@@ -300,7 +300,8 @@
 	let confirmAction : SwipeAction | null = null
 	const removing = ref<boolean>(false)
 	// 手势
-	let dragTouchId = -1
+	// 当前跟踪的触点标识；null=没有。标识由系统分配、可为任意整数（iOS Safari 为负数），不能拿具体数值表示「没有」
+	let dragTouchId : number | null = null
 	// 拖拽被互斥打断：后续 move/end 全忽略直到抬手
 	let dragCancelled = false
 	// 节流：上次驱动时间戳（16ms≈一帧，同帧多次 move 只驱动末次）
@@ -594,10 +595,11 @@
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
-		if (dragTouchId < 0 || dragCancelled) {
+		const id = dragTouchId
+		if (id == null || dragCancelled) {
 			return
 		}
-		const p = findTouch(e, dragTouchId)
+		const p = findTouch(e, id)
 		if (p == null) {
 			return
 		}
@@ -656,10 +658,10 @@
 
 	const onTouchEnd = () => {
 		platform.clearConfirmBarHit()
-		if (dragTouchId < 0) {
+		if (dragTouchId == null) {
 			return
 		}
-		dragTouchId = -1
+		dragTouchId = null
 		// 跨域受阻位：压进对侧的有效位移（须在清标记前折算），0=不在受阻位
 		let crossX = 0
 		if ((crossDamp === SIDE_L && currentX > 0) || (crossDamp === SIDE_R && currentX < 0)) {
@@ -767,7 +769,7 @@
 		currentX = effOf(currentX)
 		crossDamp = -1
 		// 拖拽中被外部（互斥）收起=打断本轮拖拽
-		if (dragTouchId >= 0) {
+		if (dragTouchId != null) {
 			dragCancelled = true
 		}
 		cancelSpringTween()

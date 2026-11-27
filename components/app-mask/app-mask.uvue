@@ -1,5 +1,5 @@
 <template>
-	<view v-if="shown" ref="rootEl" class="app-mask" :class="rootCls" :style="carrierStyle" @click="onClick" @touchmove="onTouchMove" />
+	<view v-if="shown" ref="rootEl" class="app-mask" :class="rootCls" :style="carrierStyle" @click="onClick" @touchmove.stop.prevent="onTouchMove" />
 </template>
 
 <script setup lang="ts">
@@ -215,7 +215,7 @@
 		emit('click')
 	}
 
-	// 遮罩上的触摸不带动宿主页滚动
+	// 遮罩上的触摸不带动宿主页滚动；模板上的 stop/prevent 修饰符不可删：小程序端 preventDefault 不生效，靠它编译成 catch
 	const onTouchMove = (e : TouchEvent) => {
 		e.preventDefault()
 	}

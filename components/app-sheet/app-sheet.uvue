@@ -2,13 +2,15 @@
 	<view class="app-sheet">
 		<!-- 遮罩与面板同父兄弟、同为 fixed，层序靠显式 z-index（面板高于 app-mask 的 999） -->
 		<app-mask v-if="overlay" ref="maskEl" @click="onMaskClick" @backpress="onMaskClick" />
-		<view ref="panelEl" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
+		<!-- 面板与淡入层按 id 取元素，不用模板 ref：小程序真机上带 ref 的元素逐帧改样式会中断拖动 -->
+		<view :id="panelId" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
 			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
 			<!-- 内容在露头模式或首次打开时挂载，之后常驻；头部在上，内容区在下 -->
 			<!-- 内容主体只占可见高度：底部让出面板多出的那一截 -->
 			<view v-if="mounted" class="app-sheet-body" :style="{ bottom: reserve + 'px' }">
-				<!-- 头部（整条是拖动热区）：把手行与标题行按 head 显示；标题行里左右槽等宽、标题居中 -->
-				<view class="app-sheet-header" @touchstart="onHeaderTouchStart">
+					<!-- 头部（整条是拖动热区）：把手行与标题行按 head 显示；标题行里左右槽等宽、标题居中。
+						触摸移动就地处理，不冒泡、不带动页面滚动（小程序端靠修饰符编译成 catch） -->
+					<view class="app-sheet-header" @touchstart="onHeaderTouchStart" @touchmove.stop.prevent="onTouchMove">
 					<!-- 把手：停在关闭位时点击展开 -->
 					<view v-if="showHandle" class="app-sheet-handle" @touchstart="onHandleTouchStart">
 						<view class="app-sheet-handle-bar" />
@@ -57,7 +59,7 @@
 						<slot name="body" />
 					</view>
 					<!-- 内容淡入层：与面板同底色，盖在内容区上；透明度随展开进度归零，完全展开后不渲染 -->
-					<view v-if="fading" ref="fadeEl" class="app-sheet-fade" :style="fadeStyle" />
+					<view v-if="fading" :id="fadeId" class="app-sheet-fade" :style="fadeStyle" />
 				</view>
 			</view>
 		</view>
@@ -72,6 +74,7 @@
 	import AppMask from '@/components/app-mask/app-mask.uvue'
 	import { useThemeStore } from '@/stores/theme'
 	import { rubber } from '@/utils/damping'
+	import { getUUID } from '@/utils/uuid'
 
 	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
 	const props = withDefaults(defineProps<{
@@ -156,12 +159,20 @@
 	// 曲线起步速度（每毫秒走完行程的比例）
 	const SNAP_SLOPE = SNAP_AY / SNAP_AX
 	// 露头模式吸附的回弹：越过目标一小段再弹回，回弹段在吸附时长之外另加 BOUNCE_MS（ms）；
-	// 越过幅度=行程的 BOUNCE_RATIO 倍、不超过 BOUNCE_MAX（px），在最高档上还不超出面板顶到内容区顶的距离
+	// 越过幅度=行程的 BOUNCE_RATIO 倍、不超过 BOUNCE_MAX（px），另加朝向目标的速度项，在最高档上还不超出面板顶到内容区顶的距离
 	const BOUNCE_MS = 90
 	const BOUNCE_RATIO = 0.06
 	const BOUNCE_MAX = 12
 	// 回弹从吸附时长的该比例处开始鼓起
 	const BOUNCE_AT = 0.6
+	// 回弹的速度项：松手速度超出 BOUNCE_V0（px/ms）的部分按 BOUNCE_V_GAIN 折成像素，不超过 BOUNCE_V_MAX（px）
+	const BOUNCE_V0 = 0.4
+	const BOUNCE_V_GAIN = 8
+	const BOUNCE_V_MAX = 24
+	// 到头甩出：松手速度背向目标时，面板先顺速度冲出再折回；冲出段占吸附时长的 BOOST_AT，
+	// 段内三分之一处冲到最远（BOOST_NORM 为该曲线的归一系数），吸附行程自最远点起算
+	const BOOST_AT = 0.35
+	const BOOST_NORM = 6.75
 
 	// #ifdef APP
 	// 宿主页：面板顶部对齐其内容区
@@ -169,6 +180,18 @@
 	// #endif
 	// 组件实例（头部量测用）
 	const owner = getCurrentInstance()?.proxy
+	// 面板与淡入层的元素 id（同页多个抽屉须互不相同）
+	const nodeKey = getUUID()
+	const panelId = `app-sheet-panel-${nodeKey}`
+	const fadeId = `app-sheet-fade-${nodeKey}`
+	// #ifndef MP-WEIXIN
+	// 宿主页与取到的元素：元素经宿主页按 id 查询后缓存
+	let hostPage : any = null
+	let panelNode : any = null
+	let fadeNode : any = null
+	// 淡入层当前透明度：淡入层元素创建后补写
+	let fadeCover = 1
+	// #endif
 	// 页面内容区的底部安全区高度（px），与样式变量 --uni-safe-area-inset-bottom 同值
 	const safeBottom = () : number => {
 		// #ifdef APP
@@ -193,7 +216,6 @@
 	const showHeader = computed<boolean>(() => props.head == 'header' || props.head == 'both' || (props.head == null && !peek.value))
 
 	const maskEl = ref<any>(null)
-	const panelEl = ref<any>(null)
 	// 小程序端的位移载体；App/Web 载体只放几何，位移不进载体（避免重渲染贴回）
 	const carrierY = ref<number>(0)
 	// 面板几何（页面内容区坐标）：panelTop=面板顶；panelH=面板可见高度（关闭位的位移量）。
@@ -210,7 +232,6 @@
 	})
 
 	// 内容淡入层：小程序走 :style 载体；App/Web 载体为空，透明度由 writeY 直驱
-	const fadeEl = ref<any>(null)
 	const fading = ref<boolean>(false)
 	const fadeOpacity = ref<number>(1)
 	const fadeStyle = computed<any>(() => {
@@ -288,9 +309,9 @@
 		let top = 0
 		areaH = 1
 		// #ifdef WEB
-		// Web 的导航栏与 tabBar 是页内元素：面板让出导航栏，tabBar 页再让出 tabBar
+		// Web 的导航栏与 tabBar 是页内元素：面板让出导航栏，tabBar 页再让出 tabBar；windowHeight 已不含两者，勿再扣
 		top = Math.max(win.windowTop ?? 0, win.statusBarHeight ?? 0)
-		areaH = Math.max(1, win.windowHeight - top - (win.windowBottom ?? 0))
+		areaH = Math.max(1, win.windowHeight)
 		// #endif
 		// #ifdef MP-WEIXIN
 		// 小程序页面内容区本就从导航栏下方起算
@@ -314,8 +335,8 @@
 	type Phase = 'closed' | 'enter' | 'open' | 'drag' | 'settle' | 'leave'
 	let phase : Phase = 'closed'
 	let sheetY = panelH.value
-	// 当前跟踪的触点标识；-1=没有
-	let dragTouchId = -1
+	// 当前跟踪的触点标识；null=没有。标识由系统分配、可为任意整数（iOS Safari 为负数），不能拿具体数值表示「没有」
+	let dragTouchId : number | null = null
 	// none=还没带动面板 / sheet=抽屉拖动中
 	let mode : 'none' | 'sheet' = 'none'
 	const shown = ref<boolean>(false)
@@ -338,11 +359,29 @@
 		}
 	}
 
+	// #ifndef MP-WEIXIN
+	// 面板元素：首次向宿主页查询后缓存
+	const panelNodeOf = () : any => {
+		if (panelNode == null) {
+			panelNode = hostPage?.getElementById(panelId) ?? null
+		}
+		return panelNode
+	}
+	// 淡入层元素：随显示才创建，取到后补写当前透明度
+	const fadeNodeOf = () : any => {
+		if (fadeNode == null) {
+			fadeNode = hostPage?.getElementById(fadeId) ?? null
+			fadeNode?.style.setProperty('opacity', String(fadeCover))
+		}
+		return fadeNode
+	}
+	// #endif
+
 	// 唯一写口：面板位移、遮罩进度（=关闭位到最高一档之间的展开比例）与内容淡入层透明度同帧下发
 	const writeY = (y : number) => {
 		sheetY = y
 		// #ifndef MP-WEIXIN
-		panelEl.value?.style.setProperty('transform', `translateY(${y}px)`)
+		panelNodeOf()?.style.setProperty('transform', `translateY(${y}px)`)
 		// #endif
 		// #ifdef MP-WEIXIN
 		carrierY.value = y
@@ -357,7 +396,10 @@
 		const cover = peek.value || first <= 0 ? 0 : 1 - Math.min(1, beyond / (first * FADE_AT))
 		fading.value = cover > 0
 		// #ifndef MP-WEIXIN
-		fadeEl.value?.style.setProperty('opacity', String(cover))
+		fadeCover = cover
+		if (fading.value) {
+			fadeNodeOf()?.style.setProperty('opacity', String(cover))
+		}
 		// #endif
 		// #ifdef MP-WEIXIN
 		fadeOpacity.value = cover
@@ -425,7 +467,7 @@
 			fading.value = false
 			shown.value = false
 			// 面板已隐藏：按住未松的触摸不再带动面板
-			dragTouchId = -1
+			dragTouchId = null
 			mode = 'none'
 		}
 		if (pendingClose) {
@@ -434,8 +476,12 @@
 		}
 	}
 
+	// 回弹的速度项（px）：速度（px/ms）未超过 BOUNCE_V0 时为 0
+	const kickOf = (speed : number) : number => Math.min(BOUNCE_V_MAX, BOUNCE_V_GAIN * Math.max(0, speed - BOUNCE_V0))
+
 	// 面板走到悬停点 idx。enter=从关闭位的入场：非露头模式走入场曲线（行程越短越快，下限 ENTER_MS/4）；
-	// 其余走吸附曲线，v=松手速度（px/ms，正值向下）只在朝向目标时用来缩短时长。已在目标则直接收尾
+	// 其余走吸附曲线，v=松手速度（px/ms，正值向下）：朝向目标时缩短时长、加大回弹；背向目标时（露头模式在最高档之上甩出）先顺速度冲出再折回。
+	// 已在目标则直接收尾
 	const slideTo = (idx : number, enter : boolean = false, v : number = 0) => {
 		stopAnims()
 		const to = yOf(idx)
@@ -473,20 +519,29 @@
 			return
 		}
 		const toward = v * (to - from) > 0 ? Math.abs(v) : 0
+		const away = v * (to - from) < 0 ? Math.abs(v) : 0
 		const ms = toward > 0 ? Math.max(SNAP_MIN, Math.min(SNAP_MS, dist * SNAP_SLOPE / toward)) : SNAP_MS
 		// 露头模式带回弹：越过目标 over 再弹回，吸附总时长加长到 k 倍
 		let over = 0
 		if (peek.value) {
-			over = Math.min(BOUNCE_MAX, BOUNCE_RATIO * dist)
+			over = Math.min(BOUNCE_MAX, BOUNCE_RATIO * dist) + kickOf(toward)
 			// 最高档上不超出面板顶到内容区顶的距离
 			if (idx === anchorHs.length - 1) {
 				over = Math.min(over, panelTop.value)
 			}
 		}
+		// 到头甩出的冲出量：冲出量与松手时的越界量合计不超过到头拖动的越界上限
+		let boost = 0
+		if (peek.value && idx === anchorHs.length - 1 && away > 0) {
+			boost = Math.max(0, Math.min(Math.min(OVER_MAX, panelTop.value) - dist, kickOf(away)))
+		}
 		const k = over > 0 ? (SNAP_MS + BOUNCE_MS) / SNAP_MS : 1
+		// 冲出时吸附行程顺延：过最远点起算，总时长相应多出这一段
+		const peak = boost > 0 ? BOOST_AT / 3 : 0
+		const span = k + peak
 		const dir = to > from ? 1 : -1
 		startFrames((t : number) => {
-			const x = Math.min(1, t / (ms * k))
+			const x = Math.min(1, t / (ms * span))
 			if (x >= 1) {
 				stopAnims()
 				writeY(to)
@@ -498,12 +553,18 @@
 				return
 			}
 			// 吸附行程按原时长走完；回弹从吸附时长的 BOUNCE_AT 处按正弦平方鼓起，到总时长末尾归零
-			const at = x * k
-			let step = dist * easeOut(Math.min(1, at))
-			const u = (at - BOUNCE_AT) / (k - BOUNCE_AT)
+			const at = x * span
+			const run = at > peak ? at - peak : 0
+			let step = dist * easeOut(Math.min(1, run))
+			const u = (run - BOUNCE_AT) / (k - BOUNCE_AT)
 			if (over > 0 && u > 0) {
 				const s = Math.sin(Math.PI * u)
 				step = step + over * s * s
+			}
+			// 冲出段：吸附时长的 BOOST_AT 之内背离目标冲出 boost，再收回
+			if (boost > 0 && at < BOOST_AT) {
+				const w = at / BOOST_AT
+				step = step - boost * BOOST_NORM * w * (1 - w) * (1 - w)
 			}
 			writeY(from + dir * step)
 		})
@@ -625,7 +686,7 @@
 		}
 		// 拖动中被外部收起：先结束这次拖动
 		if (phase === 'drag') {
-			dragTouchId = -1
+			dragTouchId = null
 			mode = 'none'
 		}
 		setAnchor(0)
@@ -725,7 +786,7 @@
 		headerTouched = false
 		handleTouched = false
 		// 露头模式面板常驻，收起过程中也能接住；其余情况的关闭位与收起过程中不接触摸
-		if (dragTouchId >= 0 || (phase === 'leave' && !peek.value) || (phase === 'closed' && !peek.value)) {
+		if (dragTouchId != null || (phase === 'leave' && !peek.value) || (phase === 'closed' && !peek.value)) {
 			return
 		}
 		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
@@ -745,10 +806,11 @@
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
-		if (dragTouchId < 0) {
+		const id = dragTouchId
+		if (id == null) {
 			return
 		}
-		const p = findTouch(e, dragTouchId)
+		const p = findTouch(e, id)
 		if (p == null) {
 			return
 		}
@@ -812,10 +874,10 @@
 	const onTouchEnd = () => {
 		headerTouched = false
 		handleTouched = false
-		if (dragTouchId < 0) {
+		if (dragTouchId == null) {
 			return
 		}
-		dragTouchId = -1
+		dragTouchId = null
 		const wasSheet = mode === 'sheet'
 		mode = 'none'
 		const v = (Date.now() - trackT < V_STALE) ? carryMs : 0
@@ -842,10 +904,10 @@
 	const onTouchCancel = () => {
 		headerTouched = false
 		handleTouched = false
-		if (dragTouchId < 0) {
+		if (dragTouchId == null) {
 			return
 		}
-		dragTouchId = -1
+		dragTouchId = null
 		if (mode === 'sheet') {
 			mode = 'none'
 			slideTo(anchorIdx.value)
@@ -895,7 +957,19 @@
 		}
 	})
 
+	// #ifndef MP-WEIXIN
+	// 淡入层不再渲染：丢弃缓存的元素
+	watch(fading, (v : boolean) => {
+		if (!v) {
+			fadeNode = null
+		}
+	})
+	// #endif
+
 	onMounted(() => {
+		// #ifndef MP-WEIXIN
+		hostPage = owner?.$page ?? null
+		// #endif
 		measure()
 		// 露头模式：面板与内容随挂载创建，停在关闭位
 		if (peek.value) {
@@ -907,6 +981,14 @@
 			})
 		}
 		writeY(yOf(0))
+		// #ifndef MP-WEIXIN
+		// 挂载时还没取到面板元素（宿主页尚未登记）：延后按当前位移重写
+		if (panelNode == null) {
+			setTimeout(() => {
+				writeY(sheetY)
+			}, 0)
+		}
+		// #endif
 		if (props.visible === true) {
 			open()
 		}

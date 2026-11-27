@@ -24,6 +24,8 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
    贴边」（坑⑨）。
 7. **命令式写层不与 `:style` 载体共管一键**（坑⑩）：载体里有的键，常驻值须经载体落下。
 8. **按序号取 v-for 元素引用时用序号 key**（坑⑪）：引用数组序是打补丁序，不是 DOM 序。
+9. **触摸标识只判空、不比大小**（坑⑫）：跟踪中的触点标识用 `null` 表示没有，标识符可为
+   任意整数（iOS Safari 为负数）。
 
 ## 坑点清单
 
@@ -129,6 +131,22 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
 - **统一写法**：按序号取元素的 v-for 用**序号 key**（`:key="index"`，节点原地更新
   不搬运，引用数组序恒等 DOM 序；先例=app-swipe-action 彩带），或改走响应式 :style
   载体。
+
+### ⑫ 触摸标识符可为负数——不能拿 -1 当「无触摸」（iOS Safari 真机实证，2026-11-27）
+
+- **症状**：iPhone Safari 上抽屉按住拖不动——按下有反应、移动毫无反应；桌面浏览器
+  正常。侧滑、分段器当时是同一写法，同样会中。
+- **机理**：`Touch.identifier` 由系统分配、取值任意。WebKit（iOS）在进程启动时取一个
+  随机 32 位数作起点逐次加 1 分配（`WKTouchEventsGestureRecognizer.mm`：
+  `incrementingTouchIdentifier = arc4random()`），传到网页后按有符号整数解读为负数
+  （真机上报 -792208359、-792208358…）。手势组件以 `-1` 表示「未跟踪」、用
+  `< 0` / `>= 0` 判空，标识符为负时 `touchstart` 照常登记，之后每次 `touchmove` 都被
+  当成未跟踪直接返回（真机上报形态：登记计数正常、移动计数为 0）。按源码推断，起点
+  落在高位时整段会话都是负数，换一次启动才会变（本次实测的会话全程为负）。
+- **范围**：桌面 Chromium 的标识符从 0 起递增，不受影响；安卓 Chrome、App 端未实测。
+- **统一写法**：跟踪中的触点标识用可空类型（`number | null`，`null`=未跟踪），只做
+  `== null` 判空，不做大小比较；匹配触点只用 `===`。判空后先存局部常量再传给要求
+  `number` 的函数。先例=app-sheet / app-swipe-action / app-segmented。
 
 ## 动效实现坑档案（Vapor / 微信 VDOM，captcha 2026-11 真机实测；鸿蒙版开发前必读）
 

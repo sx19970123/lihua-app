@@ -290,7 +290,8 @@
 	}
 
 	// ---------- 拖动手势 ----------
-	let dragTouchId = -1
+	// 当前跟踪的触点标识；null=没有。标识由系统分配、可为任意整数（iOS Safari 为负数），不能拿具体数值表示「没有」
+	let dragTouchId : number | null = null
 	let startX = 0
 	let startY = 0
 	let lockX = 0
@@ -370,10 +371,11 @@
 	}
 
 	const onTouchMove = (e : TouchEvent) => {
-		if (dragTouchId < 0 || segW.value <= 0) {
+		const id = dragTouchId
+		if (id == null || segW.value <= 0) {
 			return
 		}
-		const p = findTouch(e, dragTouchId)
+		const p = findTouch(e, id)
 		if (p == null) {
 			return
 		}
@@ -426,10 +428,10 @@
 
 	const onTouchEnd = () => {
 		pressIdx.value = -1
-		if (dragTouchId < 0) {
+		if (dragTouchId == null) {
 			return
 		}
-		dragTouchId = -1
+		dragTouchId = null
 		// 未成拖动（轻点/纵向让位/没按在滑块上）：动画没停过，无需复位
 		if (horizontal !== true) {
 			horizontal = null
@@ -460,7 +462,7 @@
 	// ---------- 联动与生命周期 ----------
 	// 外部值变化 → 滑块跟进（拖动中不抢）
 	watch(() => props.modelValue, (v : string | null) => {
-		if (dragTouchId >= 0) {
+		if (dragTouchId != null) {
 			return
 		}
 		const idx = indexOfValue(v ?? '')
