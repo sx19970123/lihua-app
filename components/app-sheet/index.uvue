@@ -1,0 +1,439 @@
+<template>
+	<view class="app-sheet">
+		<!-- 遮罩与面板同父兄弟、同为 fixed，层序靠显式 z-index（面板高于 app-mask 的 999） -->
+		<app-mask v-if="overlay" ref="maskEl" @click="onMaskClick" @backpress="onMaskClick" />
+		<!-- 面板与淡入层取元素：小程序不用模板 ref（真机上带 ref 的元素逐帧改样式会中断拖动），位移走 :style 载体；App 用模板 ref，Web 按 id 取 -->
+		<!-- #ifdef MP-WEIXIN -->
+		<!-- 小程序：面板内的触摸移动在面板根就地拦下（catch），页面不跟着滚、外层滚动条不出现；面板自身的手势照常在这里处理。
+			 子级 scroll-view 自己接管内部滚动，不受影响 -->
+		<view :id="panelId" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
+			@touchstart="onTouchStart" @touchmove.stop="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
+		<!-- #endif -->
+		<!-- #ifndef MP-WEIXIN -->
+		<view ref="panelEl" :id="panelId" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
+			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
+		<!-- #endif -->
+			<!-- 内容在露头模式或首次打开时挂载，之后常驻；头部在上，内容区在下 -->
+			<!-- 内容主体只占可见高度：底部让出面板多出的那一截 -->
+			<view v-if="mounted" class="app-sheet-body" :style="{ bottom: reserve + 'px' }">
+					<!-- 头部（整条是拖动热区）：把手行与标题行按 head 显示；标题行里左右槽等宽、标题居中。
+						触摸移动就地处理，不冒泡、不带动页面滚动（小程序端靠修饰符编译成 catch） -->
+					<view class="app-sheet-header" @touchstart="onHeaderTouchStart" @touchmove.stop.prevent="onTouchMove">
+					<!-- 把手：停在关闭位时点击展开 -->
+					<view v-if="showHandle" class="app-sheet-handle" @touchstart="onHandleTouchStart">
+						<view class="app-sheet-handle-bar" />
+					</view>
+					<view v-if="showHeader" class="app-sheet-row">
+						<view class="app-sheet-side">
+							<view class="app-sheet-side-fill" :style="sideStyle">
+								<view class="app-sheet-side-inner">
+									<slot name="left" />
+								</view>
+							</view>
+						</view>
+						<view class="app-sheet-title">
+							<slot name="title" :close="close">
+								<text v-if="(title ?? '') !== ''" class="app-sheet-title-text">{{ title }}</text>
+							</slot>
+						</view>
+						<view class="app-sheet-side app-sheet-side--end">
+							<view class="app-sheet-side-fill app-sheet-side-fill--end" :style="sideStyle">
+								<view class="app-sheet-side-inner">
+									<slot name="right" :close="close">
+										<view v-if="showClose" class="app-sheet-close"
+											:hover-class="themeStore.isDark ? 'app-pressed-inset-dark' : 'app-pressed-inset'"
+											:hover-stay-time="100" @click="close">
+											<uni-icons class="app-sheet-close-icon" type="closeempty" />
+										</view>
+									</slot>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+				<!-- 内容区：铺满头部下方 -->
+				<view class="app-sheet-main">
+					<!-- 内置滚动：默认插槽 -->
+					<scroll-view v-if="!isBare" class="app-sheet-scroll" direction="vertical" :bounces="false"
+						@scroll="onBodyScroll">
+						<!-- 内容层：内距写在内容上（scroll-view 自身 padding 不生效） -->
+						<!-- #ifdef MP-WEIXIN -->
+						<!-- 小程序：滚动区把内部的触摸移动截住不往外传，面板收不到。内容层绑滚动守卫（视图层 wxs：到边后仍朝外的移动不带动页面）；
+							守卫拦下的移动不再冒泡，手势跟踪绑在它内侧的一层才收得到 -->
+						<view class="app-sheet-content" @touchstart="guard.start" @touchmove="guard.move">
+							<view @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd"
+								@touchcancel="onTouchCancel">
+						<!-- #endif -->
+						<!-- #ifndef MP-WEIXIN -->
+						<view class="app-sheet-content">
+						<!-- #endif -->
+							<slot />
+							<view class="app-sheet-bottom-safe" />
+						<!-- #ifdef MP-WEIXIN -->
+							</view>
+						<!-- #endif -->
+						</view>
+					</scroll-view>
+					<!-- 裸内容：调用方自带滚动容器 -->
+					<view v-else class="app-sheet-bare">
+						<slot name="body" />
+					</view>
+					<!-- 内容淡入层：与面板同底色，盖在内容区上；透明度随展开进度归零，完全展开后不渲染 -->
+					<!-- #ifdef MP-WEIXIN -->
+					<view v-if="fading" :id="fadeId" class="app-sheet-fade" :style="fadeStyle" />
+					<!-- #endif -->
+					<!-- #ifndef MP-WEIXIN -->
+					<view v-if="fading" ref="fadeEl" :id="fadeId" class="app-sheet-fade" :style="fadeStyle" />
+					<!-- #endif -->
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 底部抽屉：面板在关闭位与全开之间滑动，位移全 JS 驱动（进场与入场走定时曲线，松手回位走物理弹簧或缓出补间），遮罩用 app-mask；头部在内容区上方。
+	// 手势仲裁：头部（含把手）的纵向拖动带动面板；默认插槽的内容在顶部时下拉也带动面板，其余交给原生滚动；#body 模式不碰内容区手势。
+	// 内容到边后不带动页面：Web 靠样式表的 overscroll-behavior；小程序的滚动区会把内部的触摸移动截住不外传，手势跟踪与滚动守卫都绑在滚动区内部（见模板与 app-sheet-guard.wxs）。
+	// 高度：默认占满内容区（或 height）；auto-height 时面板高度=头部+默认插槽内容的自然高度，封顶内容区，内容超高时在滚动区内滚动。
+	// 文件分工：sheet-context 共享状态；sheet-platform 与 platform/ 写层；sheet-motion 运动；sheet-gesture 手势；sheet-layout 量测布局。
+	// 平台分叉（第 3 级，因小程序端元素引用无 .style）：写层 App/Web 走 setProperty 直驱，小程序走 :style 载体。
+
+	import AppMask from '@/components/app-mask/app-mask.uvue'
+	import { useThemeStore } from '@/stores/theme'
+	// #ifdef MP-WEIXIN
+	import { createPlatform } from './platform/mp'
+	// #endif
+	// #ifndef MP-WEIXIN
+	import { createPlatform } from './platform/app'
+	// #endif
+	import { createSheetContext } from './sheet-context'
+	import { createSheetGesture } from './sheet-gesture'
+	import { createSheetLayout } from './sheet-layout'
+	import { createSheetMotion } from './sheet-motion'
+
+	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
+	const props = withDefaults(defineProps<{
+		// 显示（v-model:visible）
+		visible?: boolean
+		// 头部标题（#title 插槽的默认内容）
+		title?: string
+		// 可关闭：显示关闭钮，遮罩点击、返回键和下拉都能关；false 时只能由外部改 visible 关闭。露头模式停在关闭位时不显示关闭钮
+		closable?: boolean
+		// 可拖动：拖头部带动面板，内容在顶部时下拉也带动；closable=false 时恒不可拖
+		draggable?: boolean
+		// 内容在顶部时下拉带动面板（收起方向）；false 时只能拖头部
+		closeOnContentDrag?: boolean
+		// 是否带遮罩（返回键只在带遮罩时被拦截）
+		overlay?: boolean
+		// 面板高度：不传=占满页面内容区；0~1=内容区高度的比例；大于 1=像素（超过内容区高度时取内容区高度）
+		height?: number
+		// 自动高度：面板高度按头部+默认插槽内容的自然高度，封顶页面内容区；忽略 height，#body 裸内容不适用
+		autoHeight?: boolean
+		// 露头：关闭位不是完全隐藏，而是露出头部和内容区顶部的一截（关闭位高度=头部高度+底部安全区）；面板与内容在挂载时就创建
+		peek?: boolean
+		// 头部形态：handle=只有把手，header=只有标题行，both=两者都有，none=都没有。不传时露头模式为 handle，否则为 header
+		head?: string
+	}>(), {
+		closable : true,
+		draggable : true,
+		closeOnContentDrag : true,
+		overlay : true
+	})
+
+	const emit = defineEmits<{
+		(e : 'update:visible', value : boolean) : void
+		(e : 'open') : void
+		(e : 'close') : void
+	}>()
+
+	// 头部三槽作用域给 close；自定义标题内容超长时的省略由调用方处理
+	defineSlots<{
+		default() : any
+		left(props : { close : () => void }) : any
+		title(props : { close : () => void }) : any
+		right(props : { close : () => void }) : any
+		body() : any
+	}>()
+
+	// 宿主页：面板顶部对齐其内容区（取内容区几何与安全区）
+	let page : any = null
+	// #ifdef APP
+	page = getCurrentInstance()?.proxy?.$page
+	// #endif
+	// 组件实例（头部量测用）
+	const owner = getCurrentInstance()?.proxy
+
+	const themeStore = useThemeStore()
+	themeStore.init()
+
+	// 共享状态与各职责模块：模块之间只经 ctx 互调
+	const ctx = createSheetContext(props, emit, page, owner)
+	ctx.platform = createPlatform(ctx)
+	ctx.layout = createSheetLayout(ctx)
+	ctx.motion = createSheetMotion(ctx)
+	ctx.gesture = createSheetGesture(ctx)
+	ctx.layout.resetHeadH()
+	ctx.layout.syncClosed()
+
+	// 面板修饰类：未显示时隐藏；露头模式面板浮在页面上，带顶边阴影与细线
+	const panelCls = computed<string>(() => {
+		if (!ctx.shown.value) {
+			return 'app-sheet-panel-hide'
+		}
+		return ctx.peek.value ? 'app-sheet-panel-float' : ''
+	})
+	// 默认关闭钮：有标题行才显示；露头且停在关闭位时不显示
+	const showClose = computed<boolean>(() => props.closable === true && ctx.showHeader.value && !(ctx.peek.value && !ctx.opened.value))
+
+	// 遮罩点击与返回键：可关闭则关闭
+	const onMaskClick = () => {
+		if (props.closable === true) {
+			ctx.motion.close()
+		}
+	}
+
+	// 模板绑定：只别名模板要用的；普通状态一律经 ctx 读写
+	const { maskEl, panelId, fadeId, reserve, fading, mounted, isBare, peek, showHandle, showHeader } = ctx
+	const { panelEl, fadeEl, panelStyle, fadeStyle } = ctx.platform
+	const { sideStyle, onBodyScroll } = ctx.layout
+	const { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel, onHeaderTouchStart, onHandleTouchStart } = ctx.gesture
+	const { close } = ctx.motion
+
+	watch(() => props.visible, (v : boolean) => {
+		if (v) {
+			ctx.motion.open()
+		} else {
+			ctx.motion.close()
+		}
+	})
+
+	// 头部形态变化：关闭位高度随之变化，重新对位，再量布局
+	watch(() => props.head, () => {
+		ctx.layout.resetHeadH()
+		if (ctx.layout.syncClosed()) {
+			ctx.motion.realign()
+		}
+		nextTick(() => {
+			ctx.layout.fitLayout(true)
+		})
+	})
+
+	// 淡入层不再渲染：丢弃缓存的元素
+	watch(ctx.fading, (v : boolean) => {
+		if (!v) {
+			ctx.platform.dropFadeNode()
+		}
+	})
+
+	onMounted(() => {
+		ctx.layout.measure()
+		// 露头模式：面板与内容随挂载创建，整块面板先落在屏幕外，再升到关闭位
+		if (ctx.peek.value) {
+			ctx.mounted.value = true
+			ctx.shown.value = true
+			// 自动高度等打开前再量（打开流程会等量定高度再入场），其余模式挂载即量头部
+			if (!ctx.autoFit.value) {
+				nextTick(() => {
+					ctx.layout.fitLayout(true)
+				})
+			}
+			ctx.motion.writeY(ctx.panelH.value + ctx.reserve.value)
+			ctx.motion.slideIn()
+		} else {
+			ctx.motion.writeY(ctx.layout.yClosed())
+		}
+		// 挂载时元素可能还没登记（Web 按 id 查询）：延后按当前位移重写
+		ctx.platform.rewriteAfterMount(() => {
+			ctx.motion.writeY(ctx.sheetY)
+		})
+		if (props.visible === true) {
+			ctx.motion.open()
+		}
+	})
+
+	// 插槽内容变化后重量布局（自动高度时含内容自然高度）
+	onUpdated(() => {
+		ctx.layout.fitLayout()
+	})
+
+	onUnmounted(() => {
+		ctx.motion.stopAnims()
+	})
+
+	// onGuardStart、onGuardTop 供小程序端滚动守卫经 callMethod 调用；fit 供内容变化未触发更新时主动重量
+	defineExpose({ close, fit : ctx.layout.fit, onGuardStart : ctx.layout.onGuardStart, onGuardTop : ctx.layout.onGuardTop })
+</script>
+
+<!-- #ifdef MP-WEIXIN -->
+<!-- 内容区滚动守卫（视图层）：小程序的滚动区会把内部的触摸移动截住不外传，守卫绑在滚动区的内容层上 -->
+<script src="./app-sheet-guard.wxs" module="guard" lang="wxs"></script>
+<!-- #endif -->
+
+<style lang="scss">
+	/* 按压类（styles/press.scss）：关闭钮 */
+	@import '@/styles/press.scss';
+
+	/* 面板：几何由 JS 下发（top/height），位移由 JS 逐帧写入；层序须高于 app-mask 的 999 */
+	.app-sheet-panel {
+		position: fixed;
+		left: 0;
+		right: 0;
+		z-index: 1000;
+		overflow: hidden;
+		border-radius: var(--std-radius) var(--std-radius) 0 0;
+		background-color: var(--std-emphasis-bg);
+		/* #ifndef APP */
+		will-change: transform;
+		/* #endif */
+	}
+
+	.app-sheet-panel-hide {
+		display: none;
+	}
+
+	/* 露头模式：面板浮在页面内容上，顶边向上投影；细线用于底色相近或暗色时勾出边界 */
+	.app-sheet-panel-float {
+		border-top: 1px solid var(--std-border-color);
+		box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+	}
+
+	/* 主体：铺满面板，头部在上、内容区在下 */
+	.app-sheet-body {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+	}
+
+	/* 内容区：铺满头部下方 */
+	.app-sheet-main {
+		flex: 1;
+		position: relative;
+	}
+
+	.app-sheet-scroll {
+		flex: 1;
+	}
+
+	/* #ifdef WEB */
+	/* 内容滚到边后不把余量传给页面（触摸与鼠标滚轮）。Web 的 scroll-view 根节点不滚动，滚动的是运行时内建的 .uni-scroll-view 层，
+	   须穿透组件样式作用域；小程序由 app-sheet-guard.wxs 在视图层拦，App 的滚动区默认不带动页面 */
+	.app-sheet-scroll :deep(.uni-scroll-view) {
+		overscroll-behavior: contain;
+	}
+	/* #endif */
+
+	.app-sheet-bottom-safe {
+		height: var(--uni-safe-area-inset-bottom);
+	}
+
+	/* 裸内容容器：调用方的滚动容器在其中撑满 */
+	.app-sheet-bare {
+		flex: 1;
+	}
+
+	/* 内容淡入层：铺满内容区、与面板同底色，压在内容之上 */
+	.app-sheet-fade {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 1;
+		background-color: var(--std-emphasis-bg);
+	}
+
+	/* 头部：把手行、标题行按 head 显示 */
+	.app-sheet-header {
+		flex-direction: column;
+	}
+
+	/* 把手行 */
+	.app-sheet-handle {
+		height: 48px;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.app-sheet-handle-bar {
+		width: 36px;
+		height: 4px;
+		border-radius: 2px;
+		background-color: var(--std-fourth-color);
+	}
+
+	/* 标题行 */
+	.app-sheet-row {
+		height: 56px;
+		flex-direction: row;
+		align-items: center;
+	}
+
+	/* 左右槽：内距取页面边距，不参与压缩；两槽等宽（宽度由 fitLayout 量得），标题因此居中 */
+	.app-sheet-side {
+		flex-shrink: 0;
+		height: 44px;
+		padding: 0 var(--std-page-margin-x);
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.app-sheet-side--end {
+		justify-content: flex-end;
+	}
+
+	/* 占位层：最小宽度=两槽统一宽度；内层包插槽内容，保持自然宽供量测 */
+	.app-sheet-side-fill {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.app-sheet-side-fill--end {
+		justify-content: flex-end;
+	}
+
+	.app-sheet-side-inner {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	/* 标题：占满两槽之间，内容居中，超出裁剪 */
+	.app-sheet-title {
+		flex: 1;
+		min-width: 0;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		overflow: hidden;
+	}
+
+	/* 标题文字：超长时收缩到可用宽度，尾部省略 */
+	.app-sheet-title-text {
+		flex-shrink: 1;
+		min-width: 0px;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+		font-weight: 600;
+		font-size: var(--std-text-lg);
+		line-height: var(--std-leading-lg);
+		color: var(--std-emphasis-color);
+	}
+
+	/* 关闭钮：圆形，热区 44 */
+	.app-sheet-close {
+		width: 44px;
+		height: 44px;
+		border-radius: var(--std-radius-full);
+		background-color: var(--std-secondary-bg);
+		justify-content: center;
+		align-items: center;
+	}
+
+	.app-sheet-close-icon {
+		font-size: 18px;
+		color: var(--std-emphasis-color);
+	}
+</style>

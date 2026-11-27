@@ -171,7 +171,7 @@
 	import AppInput from '@/components/app-input/app-input.uvue'
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
 	import AppSegmented from '@/components/app-segmented/app-segmented.uvue'
-	import AppSheet from '@/components/app-sheet/app-sheet.uvue'
+	import AppSheet from '@/components/app-sheet/index.uvue'
 
 	const basicVisible = ref<boolean>(false)
 	// 露头版头部形态
