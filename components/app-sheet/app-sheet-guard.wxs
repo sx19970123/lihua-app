@@ -1,0 +1,66 @@
+// 内容区滚动守卫（视图层同步执行）：内容已滚到边、手指仍朝外滑时，这次触摸移动不交给系统，页面不跟着滚；
+// 其余移动照常交给原生滚动。绑在滚动区的内容层上：小程序的滚动区会把内部的触摸移动截住，外层收不到。
+// 按下时按内容层与滚动盒子的位置差量出当前位置，之后按手指位移预判（拖动期间位移与滚动一比一）。
+// 量到的位置经 callMethod 回传逻辑层，作为「内容在顶部」的另一依据（逻辑层的滚动事件成批节流，到顶后的最后一条可能送不到）。
+// 量不到（滚动盒子取不到、基础库低于 2.14.2 无 getBoundingClientRect）时不拦。须为 ES5 语法。
+var EDGE = 1
+
+// 当前滚过的距离 top 与还能往下滚的最大距离 max；量不到返回 null
+function measure(content, ownerInstance) {
+	var box = ownerInstance.selectComponent('.app-sheet-scroll')
+	if (!box || typeof box.getBoundingClientRect !== 'function' || typeof content.getBoundingClientRect !== 'function') {
+		return null
+	}
+	var outer = box.getBoundingClientRect()
+	var inner = content.getBoundingClientRect()
+	if (!outer || !inner) {
+		return null
+	}
+	return { top: outer.top - inner.top, max: Math.max(0, inner.height - outer.height) }
+}
+
+function start(event, ownerInstance) {
+	var g = null
+	var top = -1
+	if (event.touches.length === 1) {
+		var m = measure(event.instance, ownerInstance)
+		if (m) {
+			g = { y: event.touches[0].clientY, top: m.top, max: m.max, pos: m.top, topSent: false }
+			top = m.top
+		}
+	}
+	var state = ownerInstance.getState()
+	state.guard = g
+	// 回传按下时量到的位置；-1=量不到
+	ownerInstance.callMethod('onGuardStart', top)
+}
+
+// 返回 false=拦下这次移动（不冒泡、不触发默认滚动）
+function move(event, ownerInstance) {
+	var g = ownerInstance.getState().guard
+	if (!g || event.touches.length !== 1) {
+		return
+	}
+	var dy = event.touches[0].clientY - g.y
+	if (dy === 0) {
+		return
+	}
+	// 手指上移内容向下滚，朝底边去；手指下移朝顶边去
+	var target = g.top - dy
+	var outward = dy < 0 ? target > g.pos : target < g.pos
+	var atEdge = dy < 0 ? g.pos >= g.max - EDGE : g.pos <= EDGE
+	if (outward && atEdge) {
+		if (dy > 0 && !g.topSent) {
+			// 在顶边拦下：此刻内容必在顶部，通知逻辑层（每次手势只报一次）
+			g.topSent = true
+			ownerInstance.callMethod('onGuardTop')
+		}
+		return false
+	}
+	g.pos = target < 0 ? 0 : (target > g.max ? g.max : target)
+}
+
+module.exports = {
+	start: start,
+	move: move
+}

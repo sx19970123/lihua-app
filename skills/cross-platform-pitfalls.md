@@ -26,6 +26,10 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
 8. **按序号取 v-for 元素引用时用序号 key**（坑⑪）：引用数组序是打补丁序，不是 DOM 序。
 9. **触摸标识只判空、不比大小**（坑⑫）：跟踪中的触点标识用 `null` 表示没有，标识符可为
    任意整数（iOS Safari 为负数）。
+10. **Web 端给 scroll-view 的滚动盒子加样式须穿透**（坑⑬）：`.组件类 :deep(.uni-scroll-view)`，
+    放在 `#ifdef WEB` 内；写在组件类上的滚动盒子属性落空。
+11. **滚动区内部的触摸移动，处理函数绑在滚动区内部**（坑⑭）：小程序的滚动区把内部
+    touchmove 截住，外层（含 wxs）收不到；wxs 与逻辑层分层嵌套。
 
 ## 坑点清单
 
@@ -146,7 +150,49 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
 - **范围**：桌面 Chromium 的标识符从 0 起递增，不受影响；安卓 Chrome、App 端未实测。
 - **统一写法**：跟踪中的触点标识用可空类型（`number | null`，`null`=未跟踪），只做
   `== null` 判空，不做大小比较；匹配触点只用 `===`。判空后先存局部常量再传给要求
-  `number` 的函数。先例=app-sheet / app-swipe-action / app-segmented。
+   `number` 的函数。先例=app-sheet / app-swipe-action / app-segmented。
+
+### ⑬ Web 端 scroll-view 的根节点不滚动（Web 实证，2026-11-27）
+
+- **症状**：给 scroll-view 的组件类写 `overscroll-behavior` 一类滚动盒子属性不生效；量根
+  节点 `overflow` 为 visible。
+- **机理**：本仓 Web 构建（VDOM 运行时）里 `<scroll-view>` 根元素只做布局，内建
+  `div.uni-scroll-view` → `div.uni-scroll-view`（内联 overflow，真正滚动的一层）→
+  `div.uni-scroll-view-content`。组件样式带作用域属性，直接写内层类名选不中。
+- **统一写法**：`/* #ifdef WEB */ .组件类 :deep(.uni-scroll-view) { … } /* #endif */`，
+  编译为 `.组件类[data-v-…] .uni-scroll-view`。先例=app-sheet：内容到边不带动页面用
+  `overscroll-behavior: contain`（滚轮实测：规则关时内容到底后页面 420→1113，规则开不动）。
+- 蒸汽版 Web 运行时（`uni-h5/dist-x-vapor`）根节点即滚动盒子，本仓 Web 构建未用它；
+  日后若切到蒸汽版 Web，此写法落空须复核。
+
+### ⑭ 小程序端滚动区截住内部的触摸移动（开发者工具自动化实测，2026-11-27，基础库 3.18.0）
+
+- **症状**：绑在 scroll-view 外层（面板根、组件根）的 touchmove 处理——逻辑层 bind 与
+  wxs 都算——对滚动区内部发起的触摸从不触发；touchstart、touchend 照常冒泡。滚动区
+  自身节点上的绑定同样收不到。
+- **实证**：逻辑层留痕序列为「按下 S、移动只有滚动事件 B、松手 E」；改绑到滚动区的直接
+  子节点后每步移动都有收到。
+- **影响**：靠 touchmove 的手势仲裁在小程序上此前从不生效（抽屉「内容在顶部时下拉带动
+  面板」）。
+- **统一写法**：需要滚动区内部触摸移动的处理，绑在滚动区内部的内容层上。同一元素上 wxs
+  与逻辑层不能绑同一个事件：分两层嵌套，wxs 在外、逻辑层在内（wxs 返回 false 拦下时事件
+  不再冒泡，逻辑层须在它内侧才收得到）。两端模板用条件编译注释把开始标签拆成两份，其余
+  端结构不变。先例=app-sheet 小程序端内容层。
+
+### ⑮ 小程序端在 uvue 里用 wxs 响应事件（开发者工具实测，2026-11-27）
+
+- **写法**：`<!-- #ifdef MP-WEIXIN --><script src="./x.wxs" module="guard"
+  lang="wxs"></script><!-- #endif -->` 放在 `</script>` 之后，模板按模块名绑定
+  `@touchstart="guard.start"`。编译器按 `<script module>` 声明的模块名识别，编成
+  `bindtouchstart="{{guard.start}}"`，脚本里不必有同名变量。
+- **实测可用**：`event.instance` 与 `ownerInstance.selectComponent('.类名')` 的
+  `getBoundingClientRect()` 同步返回且含滚动偏移（按下时量到的位置与真实滚动位置逐步
+  一致）；`ownerInstance.getState()` 可存手势状态；`ownerInstance.callMethod('名', 参数)`
+  调到组件 `defineExpose` 暴露的方法；`setStyle` 的键用连字符或单词形式生效。
+- **未在自动化下验证**：`return false` 对页面滚动的实际拦截。自动化注入的触摸不受
+  catch / preventDefault 约束（头部的 catchtouchmove 同样拦不住页面滚动），只能真机确认；
+  官方文档口径是「返回 false 相当于同时调用了 stopPropagation 和 preventDefault」。
+- wxs 须 ES5 语法；同一节点 wxs 与逻辑层不能绑同一事件（坑⑭）。
 
 ## 动效实现坑档案（Vapor / 微信 VDOM，captcha 2026-11 真机实测；鸿蒙版开发前必读）
 
@@ -202,6 +248,32 @@ create-component.md「动画」节。
 15. 鸿蒙（Vapor）预期缺口（未验证，届时逐条实测）：@keyframes 兼容表标 x（仅
     transition 可用）→keyframes 方案若不可用，回退方案=requestAnimationFrame 全端
     支持，JS 逐帧补间 setProperty；app-harmony 插件目录留白。
+
+## 小程序端自动化实测注意事项（开发者工具自动化，2026-11-27 实测）
+
+验证小程序端行为时用得到，踩过的坑都在这里，免得重走。
+
+- **入口**：编译用 HBuilderV 的 cli（`~/.hbuilderv-alpha/extensions/dcloud.hbuilderx-uniapp-sdk-*/sdk.app/Contents/MacOS/cli`），
+  `launch mp-weixin --project <工程路径> --compile true`（仅编译，约 10 秒）；开自动化用
+  `<微信开发者工具>/Contents/MacOS/cli auto --project <unpackage/dist/dev/mp-weixin> --auto-port 9420`；
+  连接用 npm 包 `miniprogram-automator` 的 `connect({ wsEndpoint })`。
+- **选元素用 xpath**：`page.getElementByXpath("//*[@class='x']")` 能选到组件内部节点。`A >>> B`
+  跨组件选择器在本版本工具里元素句柄全解析到页面根（量到的都是页面尺寸）。逻辑层
+  `wx.createSelectorQuery()` 配 `>>>` 会把应用服务打挂（之后查询全部栈溢出或不回调、页面
+  白屏），须 `cli close` 后重开。
+- **页面滚动位置**：`page.scrollTop()` 在抽屉页恒为 0，改用逻辑层
+  `wx.createSelectorQuery().selectViewport().scrollOffset()`。
+- **触摸**：`element.touchstart / touchmove / touchend({ touches, changedTouches })` 是真实输入
+  （会原生滚动），但以给定元素为事件目标——不做坐标命中，目标取外层节点时其子节点不在事件
+  路径上；触摸点对象不自带 `screenX / screenY`，不下发就没有，别据此误判平台缺字段。注入的
+  触摸不受 catch / preventDefault 约束，不能用来验证「拦住页面滚动」一类行为。
+- **逻辑层留痕**：`mp.evaluate` 里可返回 Promise；组件内临时 `defineExpose` 一个写
+  `uni.setStorageSync` 的方法，配 wxs `callMethod`，再用
+  `mp.callWxMethod('getStorageSync', key)` 读。
+- **编译偶发不退出**：日志出现 `[plugin:uts] ENOENT …uts2js…` 后进程挂起，中断会留下半截
+  产物；清 `unpackage/cache/.mp-weixin/.uts2js` 后重编，命令带看门狗。
+- **Web 端内置浏览器**：面板不在前台时页面定时器被节流（`setTimeout(20)` 实际约 1 秒），
+  靠定时器的动画停在中途；手势回归改为同步派发触摸事件后直接读位移，不等吸附。
 
 ## 对数法（跨端差异诊断标准流程）
 
