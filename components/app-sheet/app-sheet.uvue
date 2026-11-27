@@ -2,7 +2,7 @@
 	<view class="app-sheet">
 		<!-- 遮罩与面板同父兄弟、同为 fixed，层序靠显式 z-index（面板高于 app-mask 的 999） -->
 		<app-mask v-if="overlay" ref="maskEl" @click="onMaskClick" @backpress="onMaskClick" />
-		<!-- 面板与淡入层按 id 取元素，不用模板 ref：小程序真机上带 ref 的元素逐帧改样式会中断拖动 -->
+		<!-- 面板与淡入层取元素：小程序不用模板 ref（真机上带 ref 的元素逐帧改样式会中断拖动），位移走 :style 载体；App 用模板 ref，Web 按 id 取 -->
 		<!-- #ifdef MP-WEIXIN -->
 		<!-- 小程序：面板内的触摸移动在面板根就地拦下（catch），页面不跟着滚、外层滚动条不出现；面板自身的手势照常在这里处理。
 			 子级 scroll-view 自己接管内部滚动，不受影响 -->
@@ -10,7 +10,7 @@
 			@touchstart="onTouchStart" @touchmove.stop="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
 		<!-- #endif -->
 		<!-- #ifndef MP-WEIXIN -->
-		<view :id="panelId" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
+		<view ref="panelEl" :id="panelId" class="app-sheet-panel" :class="panelCls" :style="panelStyle"
 			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchCancel">
 		<!-- #endif -->
 			<!-- 内容在露头模式或首次打开时挂载，之后常驻；头部在上，内容区在下 -->
@@ -79,7 +79,12 @@
 						<slot name="body" />
 					</view>
 					<!-- 内容淡入层：与面板同底色，盖在内容区上；透明度随展开进度归零，完全展开后不渲染 -->
+					<!-- #ifdef MP-WEIXIN -->
 					<view v-if="fading" :id="fadeId" class="app-sheet-fade" :style="fadeStyle" />
+					<!-- #endif -->
+					<!-- #ifndef MP-WEIXIN -->
+					<view v-if="fading" ref="fadeEl" :id="fadeId" class="app-sheet-fade" :style="fadeStyle" />
+					<!-- #endif -->
 				</view>
 			</view>
 		</view>
@@ -87,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-	// 底部抽屉：面板在关闭位与全开之间滑动，位移全 JS 驱动（入场曲线与吸附曲线），遮罩用 app-mask；头部在内容区上方。
+	// 底部抽屉：面板在关闭位与全开之间滑动，位移全 JS 驱动（进场与入场走定时曲线，松手回位走物理弹簧或缓出补间），遮罩用 app-mask；头部在内容区上方。
 	// 手势仲裁：头部（含把手）的纵向拖动带动面板；默认插槽的内容在顶部时下拉也带动面板，其余交给原生滚动；#body 模式不碰内容区手势。
 	// 内容到边后不带动页面：Web 靠样式表的 overscroll-behavior；小程序的滚动区会把内部的触摸移动截住不外传，手势跟踪与滚动守卫都绑在滚动区内部（见模板与 app-sheet-guard.wxs）。
 	// 高度：默认占满内容区（或 height）；auto-height 时面板高度=头部+默认插槽内容的自然高度，封顶内容区，内容超高时在滚动区内滚动。
@@ -97,6 +102,7 @@
 	import { useThemeStore } from '@/stores/theme'
 	import { rubber } from '@/utils/damping'
 	import { domElementById } from '@/utils/dom'
+	import { createSpringControl } from '@/utils/spring'
 	import { getUUID } from '@/utils/uuid'
 
 	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
@@ -150,7 +156,7 @@
 	const V_GAP = 40
 	// 帧间隔（ms）
 	const FRAME_MS = 16
-	// 入场时长（ms）：非露头模式从关闭位滑到展开位，行程较短时等比缩短（下限四分之一）
+	// 入场时长（ms）：非露头模式从关闭位滑到展开位，行程较短时等比缩短（下限四分之一）；露头面板进场固定用全长
 	const ENTER_MS = 360
 	// 到位判定：距目标的位移不超过该值（px）视为已到达
 	const SETTLE_X = 0.5
@@ -160,7 +166,7 @@
 	const HANDLE_H = 48
 	const HEADER_H = 56
 	// 露头模式到头拖动的橡皮筋：越过展开位或关闭位后，视觉越界的渐近幅度（px）；上侧还受面板顶到内容区顶的距离限制。
-	// 面板底部同时多留同高度的延长段在屏幕外，面板向上越界时由它补位
+	// 面板底部同时多留同高度的延长段在屏幕外：露头拖动或弹簧过冲使面板向上越界时，由它补位
 	const OVER_MAX = 40
 	// 头部带动面板的起拖阈值（px）：纵向位移超过它才算拖动
 	const CLAIM_SLOP = 3
@@ -168,25 +174,14 @@
 	const LOCK = 8
 	// 点击容差（px）：带动面板后位移仍在容差内且不算快甩的，按点击处理
 	const TAP_SLOP = 8
-	// 松手回位对齐 anime-swipe-deck 的卡片回位：固定 720ms cubic-bezier(0.25, 0.46, 0.45, 0.94)，不做速度接管
-	const RETURN_MS = 720
-	const RETURN_AX = 0.25
-	const RETURN_AY = 0.46
-	const RETURN_BX = 0.45
-	const RETURN_BY = 0.94
-	// 按钮/程序开关沿用浮动面板的 300ms cubic-bezier(0.22, 0.8, 0.28, 1)
+	// 松手回位照搬侧滑：带速度松手（速度超过 SPRING_V，px/ms）走物理弹簧，停顿后松手走缓出补间；程序开合沿用浮动面板曲线。
+	// 补间与程序开合时长同为 PANEL_MS（ms）
+	const SPRING_V = 0.3
 	const PANEL_MS = 300
 	const PANEL_AX = 0.22
 	const PANEL_AY = 0.8
 	const PANEL_BX = 0.28
 	const PANEL_BY = 1
-	// 快速甩动换档对齐 anime-swipe-deck 的卡片飞出：时长=行程/速度（夹在 350~900ms），cubic-bezier(0.22, 0.61, 0.36, 1)
-	const FLY_MS_MIN = 350
-	const FLY_MS_MAX = 900
-	const FLY_AX = 0.22
-	const FLY_AY = 0.61
-	const FLY_BX = 0.36
-	const FLY_BY = 1
 
 	// #ifdef APP
 	// 宿主页：面板顶部对齐其内容区
@@ -224,20 +219,30 @@
 	const showHeader = computed<boolean>(() => props.head == 'header' || props.head == 'both' || (props.head == null && !peek.value))
 
 	const maskEl = ref<any>(null)
-	// 小程序端的位移载体；App/Web 载体只放几何，位移不进载体（避免重渲染贴回）
+	// #ifndef MP-WEIXIN
+	// 面板与淡入层的元素引用（App 写层用；Web 按 id 取元素，不用它们）
+	const panelEl = ref<any>(null)
+	const fadeEl = ref<any>(null)
+	// #endif
+	// 小程序端的逐帧位移载体；Web 的载体只放几何（位移进载体会被重渲染贴回）；安卓的载体另带落点 landedY
 	const carrierY = ref<number>(0)
+	// #ifdef APP-ANDROID
+	// 载体里的位移落点：安卓的面板节点到显示时才实例化，挂载期写下的位移留不下，落点随几何一并写进载体。
+	// 只收静止位（由 writeY 同步）；动画与拖动中的逐帧位移仍走 setProperty
+	const landedY = ref<number>(0)
+	// #endif
 	// 面板几何（页面内容区坐标）：panelTop=面板顶；panelH=面板可见高度（关闭位的位移量）。
-	// 露头模式面板实际高度多出 reserve：向上越界时面板抬起，多出的这截从屏幕底补进来，底部不留空
+	// 面板实际高度多出 reserve：向上越界（露头拖动、弹簧过冲）时面板抬起，多出的这截从屏幕底补进来，底部不留空
 	const panelTop = ref<number>(0)
 	const panelH = ref<number>(1)
-	const reserve = computed<number>(() => peek.value ? OVER_MAX : 0)
+	const reserve = computed<number>(() => OVER_MAX)
 	// 内容淡入层：是否渲染 + 小程序端的透明度载体
 	const fading = ref<boolean>(false)
 	const fadeOpacity = ref<number>(1)
 
 	// ---------- 写层 ----------
 	// 面板位移与淡入层透明度两端相反：小程序没有 element.style，且真机上逐帧改带 ref 的元素会中断拖动，只能走 :style 载体；
-	// App/Web 反过来，位移不进载体（重渲染会把旧值贴回），按 id 取元素后 setProperty 直驱。平台分叉只在这一处。
+	// App/Web 反过来，逐帧位移不进载体（重渲染会把旧值贴回），取到元素后 setProperty 直驱。平台分叉只在这里与面板样式载体两处。
 	let writer : any = null
 	// #ifdef MP-WEIXIN
 	writer = {
@@ -258,41 +263,30 @@
 	}
 	// #endif
 	// #ifndef MP-WEIXIN
-	let host : any = null
 	let panelNode : any = null
 	let fadeNode : any = null
-	let fadeCover = 1
-	const hostOf = () : any => {
-		if (host == null) {
-			host = owner?.$page ?? null
-		}
-		return host
-	}
-	// 面板元素：首次查询后缓存。Web 没有 $page.getElementById，按 id 取 DOM；App 走宿主页
+	// 面板元素：App 每次取模板 ref 的当前值（挂载后引用会被重新赋值，不缓存），Web 按 id 取 DOM、首次取到后缓存
 	const panelNodeOf = () : any => {
+		// #ifdef APP
+		panelNode = panelEl.value
+		// #endif
+		// #ifdef WEB
 		if (panelNode == null) {
-			// #ifdef WEB
 			panelNode = domElementById(panelId)
-			// #endif
-			// #ifdef APP
-			panelNode = hostOf()?.getElementById(panelId) ?? null
-			// #endif
 		}
+		// #endif
 		return panelNode
 	}
-	// 淡入层元素：随显示才创建，取到后补写当前透明度
+	// 淡入层元素：随显示才创建，不显示后丢弃；取法同面板
 	const fadeNodeOf = () : any => {
+		// #ifdef APP
+		fadeNode = fadeEl.value
+		// #endif
+		// #ifdef WEB
 		if (fadeNode == null) {
-			// #ifdef WEB
 			fadeNode = domElementById(fadeId)
-			// #endif
-			// #ifdef APP
-			fadeNode = hostOf()?.getElementById(fadeId) ?? null
-			// #endif
-			if (fadeNode != null) {
-				fadeNode.style.setProperty('opacity', String(fadeCover))
-			}
 		}
+		// #endif
 		return fadeNode
 	}
 	writer = {
@@ -305,11 +299,19 @@
 		move: (y : number) => {
 			const node : any = panelNodeOf()
 			if (node != null) {
+				// #ifdef APP-IOS
 				node.style.setProperty('transform', 'translate3d(0, ' + y + 'px, 0)')
+				// #endif
+				// #ifdef APP-ANDROID
+				// 安卓蒸汽端不应用 translate3d，只认 2D 形式
+				node.style.setProperty('transform', 'translateY(' + y + 'px)')
+				// #endif
+				// #ifdef WEB
+				node.style.setProperty('transform', 'translate3d(0, ' + y + 'px, 0)')
+				// #endif
 			}
 		},
 		fade: (opacity : number) => {
-			fadeCover = opacity
 			if (fading.value) {
 				const node : any = fadeNodeOf()
 				if (node != null) {
@@ -335,7 +337,13 @@
 	}
 	// #endif
 	// 模板用的两个样式载体：形状由写层按平台给出
-	const panelStyle = computed<any>(() => writer.panelStyle())
+	const panelStyle = computed<any>(() => {
+		const style : any = writer.panelStyle()
+		// #ifdef APP-ANDROID
+		style.transform = 'translateY(' + landedY.value + 'px)'
+		// #endif
+		return style
+	})
 	const fadeStyle = computed<any>(() => writer.fadeStyle())
 
 	// 可用高度（px）：自动高度封顶与 height 按比例换算时用
@@ -445,10 +453,22 @@
 		}
 	}
 
+	let animTimer : number | null = null
+	// 松手回位的物理弹簧：与侧滑惯性收起同一引擎、同一参数，初速承接松手末速度；springing=弹簧在跑
+	const settleSpring = createSpringControl()
+	let springing = false
+	// 是否有动画在跑（补间、进场或弹簧）
+	const animating = () : boolean => animTimer != null || springing
 	// 唯一写口：面板位移、遮罩进度（=关闭位到展开位之间的展开比例）与内容淡入层透明度同帧下发
 	const writeY = (y : number) => {
 		sheetY = y
 		writer.move(y)
+		// #ifdef APP-ANDROID
+		// 静止位才同步给载体：此刻既没有动画在跑，也不在拖动中
+		if (!animating() && mode !== 'sheet') {
+			landedY.value = y
+		}
+		// #endif
 		const beyond = panelH.value - y - closedH
 		const span = panelH.value - closedH
 		const p = span > 0 ? Math.max(0, Math.min(1, beyond / span)) : 1
@@ -460,8 +480,9 @@
 		writer.fade(cover)
 	}
 
-	let animTimer : number | null = null
 	const stopAnims = () => {
+		settleSpring.cancel()
+		springing = false
 		if (animTimer != null) {
 			clearInterval(animTimer)
 			animTimer = null
@@ -498,6 +519,12 @@
 		const o = 1 - t
 		return 3 * o * o * t * ay + 3 * o * t * t * by + t * t * t
 	}
+
+	// 停顿后松手的补间（侧滑同款缓出）：入参为时间比例，返回剩余行程比例
+	const tweenRest = (x : number) : number => (1 - x) * (1 - x)
+
+	// 入场曲线：速度线性升到峰值后按平方衰减；入参为时间比例，返回剩余行程比例
+	const enterRest = (x : number) : number => (1 - x) * (1 - x) * (1 - x) * (1 + 3 * x)
 
 	// 是否正从关闭位展开 / 正收回关闭位（到位时发 open / close）
 	let pendingOpen = false
@@ -542,14 +569,27 @@
 		}
 	}
 
-	// 面板走到展开位或关闭位。enter=从关闭位的入场：非露头模式走入场曲线（行程越短越快，下限 ENTER_MS/4）；
-	// 其余按 anime-swipe-deck：手指松手且换档（commit）走卡片飞出（时长=行程/速度），松手不换档走卡片回位（720ms），
-	// 按钮点击/程序换档走浮动面板的 300ms 曲线。已在目标则直接收尾
-	const slideTo = (open : boolean, enter : boolean = false, handOff : boolean = false, v : number = 0, commit : boolean = false) => {
+	// 物理弹簧走到 to：v0=初速（px/s）。面板越过展开位的量不超过延长段（否则底部露空）；终帧落到位再收尾
+	const springTo = (to : number, v0 : number, done : () => void) => {
+		stopAnims()
+		springing = true
+		const cap = -reserve.value
+		settleSpring.run(sheetY, to, v0, (x : number) => {
+			writeY(x < cap ? cap : x)
+		}, () => {
+			springing = false
+			writeY(to)
+			done()
+		})
+	}
+
+	// 面板走到展开位或关闭位。带速度松手走物理弹簧，停顿后松手走缓出补间（回位照搬侧滑）；
+	// 程序开合（按钮、外部改 visible、点按回到当前目标）走浮动面板曲线。
+	// enter=非露头模式从关闭位的入场，走入场曲线（行程越短越快，下限 ENTER_MS/4）。已在目标则直接收尾
+	const slideTo = (open : boolean, enter : boolean = false, v : number = 0, handOff : boolean = false) => {
 		stopAnims()
 		const to = open ? 0 : yClosed()
 		const from = sheetY
-		const dist = Math.abs(from - to)
 		if (!open) {
 			phase = 'leave'
 			// 已在关闭位或更靠下（拖出屏外）直接收尾
@@ -559,62 +599,65 @@
 			}
 		} else {
 			phase = enter ? 'enter' : 'settle'
-			if (dist <= SETTLE_X) {
+			if (Math.abs(from - to) <= SETTLE_X) {
 				writeY(to)
 				finishOpen()
 				return
 			}
 		}
+		const done = () => {
+			if (open) {
+				finishOpen()
+			} else {
+				finishClose()
+			}
+		}
 		if (enter && !peek.value) {
-			const ms = Math.max(ENTER_MS / 4, ENTER_MS * dist / panelH.value)
+			const ms = Math.max(ENTER_MS / 4, ENTER_MS * Math.abs(from - to) / panelH.value)
 			startFrames((t : number) => {
 				const x = Math.min(1, t / ms)
 				if (x >= 1) {
 					stopAnims()
 					writeY(to)
-					finishOpen()
+					done()
 					return
 				}
-				// 曲线：速度线性升到峰值后按平方衰减；r 为剩余行程比例
-				const r = (1 - x) * (1 - x) * (1 - x) * (1 + 3 * x)
-				writeY(to + (from - to) * r)
+				writeY(to + (from - to) * enterRest(x))
 			})
 			return
 		}
-		let ms = PANEL_MS
-		let ax = PANEL_AX
-		let ay = PANEL_AY
-		let bx = PANEL_BX
-		let by = PANEL_BY
-		if (handOff) {
-			if (commit && Math.abs(v) > FLING_V) {
-				// 甩动换档：时长按行程/松手速度，表观速度贴着手指；夹住极端值
-				ms = Math.max(FLY_MS_MIN, Math.min(FLY_MS_MAX, dist / Math.abs(v)))
-				ax = FLY_AX
-				ay = FLY_AY
-				bx = FLY_BX
-				by = FLY_BY
-			} else {
-				ms = RETURN_MS
-				ax = RETURN_AX
-				ay = RETURN_AY
-				bx = RETURN_BX
-				by = RETURN_BY
-			}
+		if (handOff && Math.abs(v) > SPRING_V) {
+			springTo(to, v * 1000, done)
+			return
 		}
 		startFrames((t : number) => {
-			const x = Math.min(1, t / ms)
+			const x = Math.min(1, t / PANEL_MS)
 			if (x >= 1) {
 				stopAnims()
 				writeY(to)
-				if (open) {
-					finishOpen()
-				} else {
-					finishClose()
-				}
+				done()
 				return
 			}
-			writeY(from + (to - from) * ease(x, ax, ay, bx, by))
+			writeY(to + (from - to) * (handOff ? tweenRest(x) : 1 - ease(x, PANEL_AX, PANEL_AY, PANEL_BX, PANEL_BY)))
+		})
+	}
+
+	// 露头面板进场：整块面板从屏幕外升到关闭位，走入场曲线、时长用全长；期间仍是关闭态
+	const slideIn = () => {
+		const from = sheetY
+		const to = yClosed()
+		if (from <= to) {
+			writeY(to)
+			return
+		}
+		startFrames((t : number) => {
+			const x = Math.min(1, t / ENTER_MS)
+			if (x >= 1) {
+				stopAnims()
+				writeY(to)
+				return
+			}
+			writeY(to + (from - to) * enterRest(x))
 		})
 	}
 
@@ -647,7 +690,12 @@
 	const realign = () => {
 		if (phase === 'closed') {
 			// 关闭位恒为 yClosed（含自动高度量取中：此时 opened 已置真，但面板仍在关闭位等入场）
-			writeY(yClosed())
+			if (!animating()) {
+				writeY(yClosed())
+			} else {
+				// 进场中：从当前位置改指向新的关闭位
+				slideIn()
+			}
 		} else if (phase === 'open') {
 			writeY(0)
 		} else if (phase === 'enter' || phase === 'settle' || phase === 'leave') {
@@ -684,7 +732,7 @@
 			finish()
 			return
 		}
-		if (!force && (animTimer != null || phase === 'drag')) {
+		if (!force && (animating() || phase === 'drag')) {
 			if (autoFit.value) {
 				fitPending = true
 			}
@@ -927,6 +975,11 @@
 		if (dragTouchId != null || (phase === 'leave' && !peek.value) || (phase === 'closed' && !peek.value)) {
 			return
 		}
+		// 进场中触摸：面板先落到关闭位，这次触摸按停在关闭位处理
+		if (animating() && phase === 'closed') {
+			stopAnims()
+			writeY(yClosed())
+		}
 		const t = e.changedTouches.length > 0 ? e.changedTouches[0] : e.touches[0]
 		if (t == null) {
 			return
@@ -1035,9 +1088,9 @@
 		if (!wasSheet) {
 			return
 		}
-		// 点击：回当前目标；拖动：按松手位置与速度选展开或收起
-		const changed = setOpened(still ? opened.value : pickOpen(v))
-		slideTo(opened.value, false, !still, v, changed)
+		// 点击：回当前目标；拖动：按松手位置与速度选展开或收起，带速度松手由弹簧承接
+		setOpened(still ? opened.value : pickOpen(v))
+		slideTo(opened.value, false, still ? 0 : v, !still)
 	}
 
 	// 系统打断（来电等）：回到当前目标
@@ -1090,7 +1143,7 @@
 
 	onMounted(() => {
 		measure()
-		// 露头模式：面板与内容随挂载创建，停在关闭位
+		// 露头模式：面板与内容随挂载创建，整块面板先落在屏幕外，再升到关闭位
 		if (peek.value) {
 			mounted.value = true
 			shown.value = true
@@ -1100,9 +1153,12 @@
 					fitLayout(true)
 				})
 			}
+			writeY(panelH.value + reserve.value)
+			slideIn()
+		} else {
+			writeY(yClosed())
 		}
-		writeY(yClosed())
-		// 挂载时元素可能还没登记（App/Web 按 id 查询）：延后按当前位移重写
+		// 挂载时元素可能还没登记（Web 按 id 查询）：延后按当前位移重写
 		writer.rewriteAfterMount(() => {
 			writeY(sheetY)
 		})
@@ -1142,7 +1198,9 @@
 		overflow: hidden;
 		border-radius: var(--std-radius) var(--std-radius) 0 0;
 		background-color: var(--std-emphasis-bg);
+		/* #ifndef APP */
 		will-change: transform;
+		/* #endif */
 	}
 
 	.app-sheet-panel-hide {

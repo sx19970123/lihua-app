@@ -1,7 +1,7 @@
 <template>
 	<view class="page-padding sheet-demo-page">
 		<app-card title="露头版（peek + 单档展开）">
-			<text class="demo-label">底部的抽屉关闭时露出头部，不收起。展开后直接停在 80%，松手沿卡片回位曲线吸附；往下拖收回。内容在顶部时下拉带动面板，不在顶部时滚内容</text>
+			<text class="demo-label">底部的抽屉关闭时露出头部，不收起。展开后直接停在 80%，松手承接速度、弹簧回位；往下拖收回。内容在顶部时下拉带动面板，不在顶部时滚内容</text>
 			<text class="demo-label">头部形态 head：把手 / 标题行 / 两者 / 无（切换后关闭位高度跟着变）</text>
 			<view class="demo-row">
 				<app-segmented v-model="headMode" :options="HEAD_MODES" size="small" />
