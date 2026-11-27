@@ -62,6 +62,16 @@
 			</view>
 		</app-card>
 
+		<app-card class="demo-card" title="自动高度（auto-height）">
+			<text class="demo-label">不传 height、不给内容定高：面板按默认插槽内容的自然高度展开，封顶页面内容区；内容超高时在面板内滚动。打开后内容变化可调组件暴露的 fit() 重新量取</text>
+			<view class="demo-row">
+				<button @click="autoVisible = true">按内容展开</button>
+			</view>
+			<view class="demo-row">
+				<button @click="autoLongVisible = true">超长内容（滚动）</button>
+			</view>
+		</app-card>
+
 		<app-card class="demo-card" title="带输入框">
 			<text class="demo-label">输入框一个在内容顶部、一个在列表末尾：看键盘弹出后输入框是否被挡、列表能否滚到末尾的输入框</text>
 			<view class="demo-row">
@@ -136,6 +146,22 @@
 		<app-sheet v-model:visible="longVisible" title="这是一个特别特别长的标题用来验证超长时尾部省略并且始终居中">
 			<app-list-item v-for="i in 8" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
 		</app-sheet>
+
+		<!-- 抽屉九：自动高度（短内容，内容变化后调 fit 重量） -->
+		<app-sheet ref="autoSheet" v-model:visible="autoVisible" auto-height title="自动高度">
+			<view class="sheet-demo-auto">
+				<text class="app-t-base app-c-secondary">面板高度按下面内容的自然高度走，底部安全区已计入；点按钮增加行数并调 fit()，打开状态下高度跟着变</text>
+			</view>
+			<app-list-item v-for="i in autoRows" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+			<view class="sheet-demo-auto">
+				<button @click="addAutoRow">增加一行</button>
+			</view>
+		</app-sheet>
+
+		<!-- 抽屉十：自动高度（内容超过页面内容区时封顶滚动） -->
+		<app-sheet v-model:visible="autoLongVisible" auto-height title="自动高度（滚动）">
+			<app-list-item v-for="i in 30" :key="i" :divider="i > 1" :title="'列表项 ' + i" value="详情" />
+		</app-sheet>
 	</view>
 </template>
 
@@ -163,6 +189,11 @@
 	const inputVisible = ref<boolean>(false)
 	const wideVisible = ref<boolean>(false)
 	const longVisible = ref<boolean>(false)
+	const autoVisible = ref<boolean>(false)
+	const autoLongVisible = ref<boolean>(false)
+	const autoRows = ref<number>(2)
+	// 自动高度抽屉：插槽内容在页面侧变化，子组件不一定收到更新，改变行数后主动重量
+	const autoSheet = ref<any>(null)
 	const closable = ref<boolean>(true)
 	const draggable = ref<boolean>(true)
 	const closeOnContentDrag = ref<boolean>(true)
@@ -176,6 +207,14 @@
 	const confirm = (close : () => void) => {
 		confirmCount.value++
 		close()
+	}
+
+	// 自动高度抽屉增加一行：内容变化后等渲染完成再重量
+	const addAutoRow = () => {
+		autoRows.value++
+		nextTick(() => {
+			autoSheet.value?.fit()
+		})
 	}
 </script>
 
@@ -202,6 +241,11 @@
 
 	/* 抽屉内输入框的四周留白 */
 	.sheet-demo-field {
+		padding: var(--std-gap-md) var(--std-page-margin-x);
+	}
+
+	/* 自动高度抽屉的内容留白 */
+	.sheet-demo-auto {
 		padding: var(--std-gap-md) var(--std-page-margin-x);
 	}
 </style>

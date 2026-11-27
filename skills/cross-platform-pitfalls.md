@@ -194,6 +194,42 @@ description: 指导 lihua-app（uni-app x 蒸汽版）跨端（App-iOS/Android/H
   官方文档口径是「返回 false 相当于同时调用了 stopPropagation 和 preventDefault」。
 - wxs 须 ES5 语法；同一节点 wxs 与逻辑层不能绑同一事件（坑⑭）。
 
+### ⑯ Web 发布版构建：`$page.getElementById` 折成 null；`panelNodeOf()?.style…` 整句编空（HBuilderX 5.38 alpha `cli publish web` + 浏览器实证，2026-11-27）
+
+- **症状**：抽屉在 Web 上完全不位移——面板 `style` 里只有 top/height、没有 transform，
+  露头抽屉关闭态直接摊在展开位（盖住整页）。
+- **机理一（取元素）**：Web 产物里 `hostOf()?.getElementById(id) ?? null` 整个表达式被折成
+  常量 `null`（产物原文 `null==se&&(se=null)`），元素永远取不到。App 仍走
+  `$page.getElementById`；Web 改走 `document.getElementById`（收敛在 `utils/dom.ts` 的
+  `domElementById`，其余端返回 null）。
+- **机理二（写样式语句编空）**：写层 `move` 原为一句
+  `panelNodeOf()?.style.setProperty('transform', …)`，Web 产物里是 `move:e=>{}`。对照变体
+  （均发布版实测）——
+  - 丢弃：模板字符串/字符串拼接；独占函数体、前面加一句、包进 `if`；把被调函数体改复杂；
+    属性换 opacity；实参换 `String()`。
+  - 保留：`const node = panelNodeOf(); node?.style…` 与 `node.style…`；同一句把被调函数
+    换成 `fadeNodeOf()`；demo 页的 `ref.value?.fit()`；同文件 `fade` 里的 `fadeNodeOf()?.style…`。
+
+  触发点跟着「被调函数是 `panelNodeOf`」走，具体原因没有分离出来（不是「any 的一句话
+  可选链」——那种写法别处是保留的）。
+- **范围**：只验了本机发布版（`cli publish web`）；HBuilderX 运行到浏览器的开发版没法
+  无界面出包，未验。小程序产物里同类语句正常（写层走 :style 载体，不经这条路）；App 未编译。
+- **统一写法**：Web 取元素用 `document.getElementById`；命令式写样式先落局部 any 再判空
+  （`const node : any = f(); if (node != null) { node.style.setProperty(…) }`）。先例=
+  app-sheet 写层的 `move` / `fade`。
+
+### ⑰ Web 编译把局部算术量内联进比较时丢括号（Web 构建实证，2026-11-27）
+
+- **症状**：`const rows = A + B; const bad = rows > 0 && cond` 在 Web 产物里是
+  `(A)+(B>0&&cond)`（`+` 优先级高于 `>`，原意 `rows > 0` 丢失）。抽屉 auto-height 的
+  `headBad` 曾是这个写法：产物原文
+  `(L.value?48:0)+(Q.value?56:0)>0&&(null==u||u.height<=0)`——把手行存在时左操作数恒为
+  48 或 49，判空恒真，量取结果会被当成布局未就绪丢掉（按产物推演，未在页面上复现）。
+- **范围**：同一表达式在 MP 产物里保留局部变量、结果正确；App 未验。写法上统一规避。
+- **写法**：局部量参与比较时先归成布尔量——`const hasHead = showHandle || showHeader;
+  const bad = hasHead && …`，不要把 `A + B` 直接写进 `> 0` / `===` 一类比较。先例=
+  app-sheet 的 `fitLayout`。
+
 ## 动效实现坑档案（Vapor / 微信 VDOM，captcha 2026-11 真机实测；鸿蒙版开发前必读）
 
 先例=captcha 的滑切/高度动画（`components/captcha/captcha.uvue`）。各端实现形态：

@@ -90,11 +90,13 @@
 	// 底部抽屉：面板在关闭位与全开之间滑动，位移全 JS 驱动（入场曲线与吸附曲线），遮罩用 app-mask；头部在内容区上方。
 	// 手势仲裁：头部（含把手）的纵向拖动带动面板；默认插槽的内容在顶部时下拉也带动面板，其余交给原生滚动；#body 模式不碰内容区手势。
 	// 内容到边后不带动页面：Web 靠样式表的 overscroll-behavior；小程序的滚动区会把内部的触摸移动截住不外传，手势跟踪与滚动守卫都绑在滚动区内部（见模板与 app-sheet-guard.wxs）。
+	// 高度：默认占满内容区（或 height）；auto-height 时面板高度=头部+默认插槽内容的自然高度，封顶内容区，内容超高时在滚动区内滚动。
 	// 平台分叉（第 3 级，因小程序端元素引用无 .style）：写层 App/Web 走 setProperty 直驱，小程序走 :style 载体。
 
 	import AppMask from '@/components/app-mask/app-mask.uvue'
 	import { useThemeStore } from '@/stores/theme'
 	import { rubber } from '@/utils/damping'
+	import { domElementById } from '@/utils/dom'
 	import { getUUID } from '@/utils/uuid'
 
 	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
@@ -113,6 +115,8 @@
 		overlay?: boolean
 		// 面板高度：不传=占满页面内容区；0~1=内容区高度的比例；大于 1=像素（超过内容区高度时取内容区高度）
 		height?: number
+		// 自动高度：面板高度按头部+默认插槽内容的自然高度，封顶页面内容区；忽略 height，#body 裸内容不适用
+		autoHeight?: boolean
 		// 露头：关闭位不是完全隐藏，而是露出头部和内容区顶部的一截（关闭位高度=头部高度+底部安全区）；面板与内容在挂载时就创建
 		peek?: boolean
 		// 头部形态：handle=只有把手，header=只有标题行，both=两者都有，none=都没有。不传时露头模式为 handle，否则为 header
@@ -210,6 +214,8 @@
 	const slots = useSlots()
 	// 裸内容模式：调用方自带滚动容器
 	const isBare = computed<boolean>(() => !!slots.body)
+	// 自动高度：按默认插槽内容的自然高度定面板高度（忽略 height）；裸内容由调用方定高，不参与
+	const autoFit = computed<boolean>(() => props.autoHeight === true && !isBare.value)
 	const canDrag = computed<boolean>(() => props.closable === true && props.draggable === true)
 	// 露头模式：关闭位露出头部
 	const peek = computed<boolean>(() => props.peek === true)
@@ -262,18 +268,30 @@
 		}
 		return host
 	}
-	// 面板元素：首次向宿主页查询后缓存
+	// 面板元素：首次查询后缓存。Web 没有 $page.getElementById，按 id 取 DOM；App 走宿主页
 	const panelNodeOf = () : any => {
 		if (panelNode == null) {
+			// #ifdef WEB
+			panelNode = domElementById(panelId)
+			// #endif
+			// #ifdef APP
 			panelNode = hostOf()?.getElementById(panelId) ?? null
+			// #endif
 		}
 		return panelNode
 	}
 	// 淡入层元素：随显示才创建，取到后补写当前透明度
 	const fadeNodeOf = () : any => {
 		if (fadeNode == null) {
+			// #ifdef WEB
+			fadeNode = domElementById(fadeId)
+			// #endif
+			// #ifdef APP
 			fadeNode = hostOf()?.getElementById(fadeId) ?? null
-			fadeNode?.style.setProperty('opacity', String(fadeCover))
+			// #endif
+			if (fadeNode != null) {
+				fadeNode.style.setProperty('opacity', String(fadeCover))
+			}
 		}
 		return fadeNode
 	}
@@ -285,23 +303,34 @@
 			return {}
 		},
 		move: (y : number) => {
-			panelNodeOf()?.style.setProperty('transform', `translate3d(0, ${y}px, 0)`)
+			const node : any = panelNodeOf()
+			if (node != null) {
+				node.style.setProperty('transform', 'translate3d(0, ' + y + 'px, 0)')
+			}
 		},
 		fade: (opacity : number) => {
 			fadeCover = opacity
 			if (fading.value) {
-				fadeNodeOf()?.style.setProperty('opacity', String(opacity))
+				const node : any = fadeNodeOf()
+				if (node != null) {
+					node.style.setProperty('opacity', String(opacity))
+				}
 			}
 		},
 		dropFadeNode: () => {
 			fadeNode = null
 		},
 		rewriteAfterMount: (rewrite : () => void) => {
-			if (panelNode == null) {
-				setTimeout(() => {
-					rewrite()
-				}, 0)
+			// 挂载时元素可能还没登记：按当前位移重写，取不到元素就稍后重试
+			let tries = 0
+			const run = () => {
+				rewrite()
+				if (panelNode == null && tries < 3) {
+					tries++
+					setTimeout(run, 32)
+				}
 			}
+			setTimeout(run, 0)
 		}
 	}
 	// #endif
@@ -309,8 +338,10 @@
 	const panelStyle = computed<any>(() => writer.panelStyle())
 	const fadeStyle = computed<any>(() => writer.fadeStyle())
 
-	// 可用高度（px）：height 按比例换算时用
+	// 可用高度（px）：自动高度封顶与 height 按比例换算时用
 	let areaH = 1
+	// 页面内容区顶（px）：面板顶让出的导航区高度，自动高度重算面板顶时用
+	let insetTop = 0
 	// 露头时关闭位的高度（px）=头部行高+底部安全区：初值按形态取样式常量，量测后更新
 	let headH = 1
 	const resetHeadH = () => {
@@ -358,10 +389,12 @@
 		top = Math.max(0, (win.statusBarHeight ?? 0) - bodyTop)
 		areaH = Math.max(1, win.windowHeight - top)
 		// #endif
+		insetTop = top
 		const h = props.height
-		const ph = h == null || h <= 0 ? areaH : h <= 1 ? Math.round(areaH * h) : Math.min(h, areaH)
+		// 自动高度先按内容区高度给临时几何：面板停在关闭位（屏幕外或只露头部），量定内容高度后再改
+		const ph = autoFit.value ? areaH : h == null || h <= 0 ? areaH : h <= 1 ? Math.round(areaH * h) : Math.min(h, areaH)
 		panelH.value = Math.max(1, ph)
-		panelTop.value = top + (areaH - panelH.value)
+		panelTop.value = insetTop + (areaH - panelH.value)
 		syncClosed()
 	}
 
@@ -473,6 +506,11 @@
 	// 到达展开位
 	const finishOpen = () => {
 		phase = 'open'
+		// 动画期间的内容变化收尾后补量
+		if (fitPending) {
+			fitPending = false
+			fitLayout()
+		}
 		if (pendingOpen) {
 			pendingOpen = false
 			emit('open')
@@ -490,6 +528,13 @@
 			// 面板已隐藏：按住未松的触摸不再带动面板
 			dragTouchId = null
 			mode = 'none'
+		}
+		// 动画期间的内容变化收尾后补量；收起后隐藏的面板不量
+		if (fitPending) {
+			fitPending = false
+			if (peek.value) {
+				fitLayout()
+			}
 		}
 		if (pendingClose) {
 			pendingClose = false
@@ -592,72 +637,135 @@
 		return true
 	}
 
-	// ---------- 头部量测 ----------
+	// ---------- 布局量测 ----------
 	// 两槽统一的最小宽度（px）：初值取标准控件宽，量测后取两槽自然宽的较宽者（不低于标准控件宽）；标题在等宽的两槽之间居中
 	const SIDE_MIN = 44
 	const sideW = ref<number>(SIDE_MIN)
 	const sideStyle = computed<any>(() => ({ minWidth: sideW.value + 'px' }))
-	// 布局未就绪时的重量次数
-	let fitRetry = 0
 
 	// 关闭位变化后重新对位：静止的直接落到当前目标，运动中的从当前位置重走
 	const realign = () => {
-		if (phase === 'closed' || phase === 'open') {
-			writeY(opened.value ? 0 : yClosed())
+		if (phase === 'closed') {
+			// 关闭位恒为 yClosed（含自动高度量取中：此时 opened 已置真，但面板仍在关闭位等入场）
+			writeY(yClosed())
+		} else if (phase === 'open') {
+			writeY(0)
 		} else if (phase === 'enter' || phase === 'settle' || phase === 'leave') {
 			slideTo(opened.value)
 		}
 	}
 
-	// 量头部高度（露头时作为关闭位）与标题行左右槽的自然宽；force 用于刚打开或刚挂载时（此时动画可能在跑）
-	const fitHead = (force : boolean = false) : void => {
-		if (!shown.value || (!force && (animTimer != null || phase === 'drag'))) {
+	// 默认插槽内容的自然高度（px，含底部安全区）；-1=还没量到
+	let contentH = -1
+	// 动画/拖动中收到的内容变化：收尾后再补量
+	let fitPending = false
+
+	// 应用自动高度：面板高度=头部实高+内容自然高度，封顶内容区；面板底边不动，顶边随高度上移
+	const applyFitHeight = (headPx : number) => {
+		const total = Math.max(1, Math.min(areaH, headPx + Math.max(0, contentH)))
+		if (total === panelH.value) {
 			return
 		}
-		uni.createSelectorQuery().in(owner)?.select('.app-sheet-header')?.boundingClientRect()?.selectAll('.app-sheet-side-inner')?.boundingClientRect()?.exec((ret) => {
+		panelH.value = total
+		panelTop.value = insetTop + (areaH - total)
+		syncClosed()
+		realign()
+	}
+
+	// 量头部实高、左右槽自然宽与（自动高度时）默认插槽内容的自然高度；
+	// force 用于刚打开/刚挂载（此时动画可能在跑），tries 为布局未就绪时的重量次数
+	const fitLayout = (force : boolean = false, done : (() => void) | null = null, tries : number = 0) : void => {
+		const finish = () => {
+			if (done != null) {
+				done()
+			}
+		}
+		if (!shown.value) {
+			finish()
+			return
+		}
+		if (!force && (animTimer != null || phase === 'drag')) {
+			if (autoFit.value) {
+				fitPending = true
+			}
+			return
+		}
+		const query = uni.createSelectorQuery().in(owner)
+		if (query == null) {
+			finish()
+			return
+		}
+		query.select('.app-sheet-header').boundingClientRect()
+		if (autoFit.value) {
+			query.select('.app-sheet-content').boundingClientRect()
+		}
+		query.selectAll('.app-sheet-side-inner').boundingClientRect().exec((ret) => {
 			const head = ret[0] as { height : number } | null
-			const rects = ret[1] as Array<{ width : number }> | null
-			if (head == null || rects == null) {
-				return
+			let idx = 1
+			let body : { height : number } | null = null
+			if (autoFit.value) {
+				body = ret[1] as { height : number } | null
+				idx = 2
 			}
-			// 没有头部可量
-			if (!showHandle.value && !showHeader.value) {
-				return
-			}
-			// 头部还没排出布局：稍后重量，最多三次
-			if (head.height <= 0) {
-				if (force && fitRetry < 3) {
-					fitRetry++
+			const rects = ret[idx] as Array<{ width : number }> | null
+			// 元素还没登记或布局未就绪：稍后重量，最多三次；仍量不到就按现有几何打开，不阻断
+			const hasHead = showHandle.value || showHeader.value
+			const headBad = hasHead && (head == null || head.height <= 0)
+			const bodyBad = autoFit.value && body == null
+			if (headBad || bodyBad) {
+				if (force && tries < 3) {
 					setTimeout(() => {
-						fitHead(true)
+						fitLayout(true, done, tries + 1)
 					}, 32)
+					return
 				}
+				finish()
 				return
 			}
-			fitRetry = 0
-			let w = 0
-			for (let i = 0; i < rects.length; i++) {
-				if (rects[i].width > w) {
-					w = rects[i].width
+			if (rects != null) {
+				let w = 0
+				for (let i = 0; i < rects.length; i++) {
+					if (rects[i].width > w) {
+						w = rects[i].width
+					}
 				}
+				sideW.value = Math.max(SIDE_MIN, Math.ceil(w))
 			}
-			sideW.value = Math.max(SIDE_MIN, Math.ceil(w))
+			const rows = (showHandle.value ? HANDLE_H : 0) + (showHeader.value ? HEADER_H : 0)
+			const headPx = head != null && head.height > 0 ? Math.ceil(head.height) : rows
 			// 头部实高与常量不一致时，按实高修正关闭位（露头时再加底部安全区）
-			if (peek.value) {
+			let closedChanged = false
+			if (peek.value && head != null && head.height > 0) {
 				const real = Math.round(head.height) + safeBottom()
 				if (real != headH) {
 					headH = Math.max(1, real)
-					if (syncClosed()) {
-						realign()
-					}
+					closedChanged = syncClosed()
 				}
 			}
+			if (autoFit.value && body != null) {
+				contentH = Math.max(0, Math.ceil(body.height))
+				applyFitHeight(headPx)
+			} else if (closedChanged) {
+				realign()
+			}
+			finish()
 		})
+	}
+
+	// 重新量取并应用自动高度；打开后默认插槽内容变了，由调用方在 nextTick 后调
+	const fit = () => {
+		if (autoFit.value && shown.value) {
+			fitLayout()
+		}
 	}
 
 	// 展开到全开；从关闭位展开时按入场处理
 	const open = () => {
 		if (phase === 'drag') {
+			return
+		}
+		// 自动高度量取中：本次打开已受理，等量完再入场
+		if (opened.value && phase === 'closed') {
 			return
 		}
 		const enter = phase === 'closed'
@@ -666,16 +774,32 @@
 			writeY(yClosed())
 			mounted.value = true
 			shown.value = true
-			fitRetry = 0
-			nextTick(() => {
-				fitHead(true)
-			})
 		}
 		if (phase === 'open' && opened.value) {
 			return
 		}
 		setOpened(true)
-		slideTo(true, enter)
+		if (enter) {
+			if (autoFit.value) {
+				// 先量内容再入场：面板此时停在关闭位，量定高度后从这里展开
+				nextTick(() => {
+					fitLayout(true, () => {
+						if (!opened.value || !shown.value) {
+							return
+						}
+						writeY(yClosed())
+						slideTo(true, true)
+					})
+				})
+				return
+			}
+			nextTick(() => {
+				fitLayout(true)
+			})
+			slideTo(true, true)
+			return
+		}
+		slideTo(true, false)
 	}
 
 	// 收起到关闭位
@@ -946,15 +1070,14 @@
 		}
 	})
 
-	// 头部形态变化：关闭位高度随之变化，重新对位，再量头部
+	// 头部形态变化：关闭位高度随之变化，重新对位，再量布局
 	watch(() => props.head, () => {
 		resetHeadH()
 		if (syncClosed()) {
 			realign()
 		}
-		fitRetry = 0
 		nextTick(() => {
-			fitHead(true)
+			fitLayout(true)
 		})
 	})
 
@@ -971,10 +1094,12 @@
 		if (peek.value) {
 			mounted.value = true
 			shown.value = true
-			fitRetry = 0
-			nextTick(() => {
-				fitHead(true)
-			})
+			// 自动高度等打开前再量（打开流程会等量定高度再入场），其余模式挂载即量头部
+			if (!autoFit.value) {
+				nextTick(() => {
+					fitLayout(true)
+				})
+			}
 		}
 		writeY(yClosed())
 		// 挂载时元素可能还没登记（App/Web 按 id 查询）：延后按当前位移重写
@@ -986,17 +1111,17 @@
 		}
 	})
 
-	// 插槽内容变化后重量头部
+	// 插槽内容变化后重量布局（自动高度时含内容自然高度）
 	onUpdated(() => {
-		fitHead()
+		fitLayout()
 	})
 
 	onUnmounted(() => {
 		stopAnims()
 	})
 
-	// onGuardStart、onGuardTop 供小程序端滚动守卫经 callMethod 调用
-	defineExpose({ close, onGuardStart, onGuardTop })
+	// onGuardStart、onGuardTop 供小程序端滚动守卫经 callMethod 调用；fit 供内容变化未触发更新时主动重量
+	defineExpose({ close, fit, onGuardStart, onGuardTop })
 </script>
 
 <!-- #ifdef MP-WEIXIN -->
@@ -1103,7 +1228,7 @@
 		align-items: center;
 	}
 
-	/* 左右槽：内距取页面边距，不参与压缩；两槽等宽（宽度由 fitHead 量得），标题因此居中 */
+	/* 左右槽：内距取页面边距，不参与压缩；两槽等宽（宽度由 fitLayout 量得），标题因此居中 */
 	.app-sheet-side {
 		flex-shrink: 0;
 		height: 44px;
