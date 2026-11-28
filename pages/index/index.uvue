@@ -36,6 +36,45 @@
 			<button class="btn" @tap="wsManualReconnect">手动重连</button>
 			<button class="btn" @tap="wsClose">主动关闭</button>
 		</view>
+		<view class="card">
+			<text class="label">液态玻璃 · glass-effect-view（iOS 26+ 液态玻璃、iOS 15-25 降级系统毛玻璃；Web/安卓/微信官方未支持——本卡无条件编译，直接观察各端表现）</text>
+			<text class="value">interactive：{{ glassInteractive ? '开' : '关' }}　tint：{{ glassTintName }}　点击计数：{{ glassTaps }}</text>
+			<view class="glass-stage">
+				<view class="glass-stage-body">
+					<text class="glass-caption">GLASS · regular / clear / tint / radius / 嵌套</text>
+					<view class="glass-panel-row">
+						<glass-effect-view class="glass-panel" glass-style="regular" :interactive="glassInteractive" :tint-color="glassTint" @click="onGlassTap">
+							<view class="glass-panel-inner">
+								<text class="glass-panel-title">regular</text>
+								<text class="glass-panel-detail">tint：{{ glassTintName }}</text>
+								<glass-effect-view class="glass-chip" glass-style="clear">
+									<text class="glass-chip-text">嵌套玻璃</text>
+								</glass-effect-view>
+							</view>
+						</glass-effect-view>
+						<glass-effect-view class="glass-panel glass-panel-r" glass-style="clear" :interactive="glassInteractive" :tint-color="glassTint">
+							<view class="glass-panel-inner">
+								<text class="glass-panel-title">clear</text>
+								<text class="glass-panel-detail">tint：{{ glassTintName }}</text>
+							</view>
+						</glass-effect-view>
+					</view>
+					<view class="glass-shape-row">
+						<glass-effect-view class="glass-shape-circle" glass-style="regular" :interactive="glassInteractive"></glass-effect-view>
+						<glass-effect-view class="glass-shape-pill" glass-style="clear" :interactive="glassInteractive"></glass-effect-view>
+						<glass-effect-view class="glass-shape-rect" glass-style="regular" :interactive="glassInteractive"></glass-effect-view>
+					</view>
+				</view>
+			</view>
+			<view class="glass-stage glass-drag-stage" ref="dragStageEl" @touchstart="onDragStart" @touchmove.stop.prevent="onDragMove">
+				<glass-effect-view class="glass-ball" glass-style="clear" :interactive="glassInteractive" :style="dragStyle"></glass-effect-view>
+				<text class="glass-hint">按住任意位置拖动圆片（transform 直绑玻璃自身）</text>
+			</view>
+			<view class="glass-controls">
+				<button class="btn glass-ctl-btn" @tap="toggleInteractive">interactive 开/关</button>
+				<button class="btn glass-ctl-btn glass-ctl-btn-r" @tap="cycleTint">切换 tint</button>
+			</view>
+		</view>
 	</view>
 </template>
 
@@ -193,6 +232,58 @@ const runPow = async () => {
 		powRunning.value = false
 	}
 }
+
+// ---------- 液态玻璃 demo ----------
+const glassInteractive = ref(false)
+const glassTaps = ref(0)
+const glassTints = ['transparent', 'rgba(255, 59, 48, 0.25)', 'rgba(0, 122, 255, 0.25)', 'rgba(52, 199, 89, 0.25)']
+const glassTintNames = ['无', '红', '蓝', '绿']
+const glassTintIndex = ref(0)
+const glassTint = computed(() : string => glassTints[glassTintIndex.value])
+const glassTintName = computed(() : string => glassTintNames[glassTintIndex.value])
+const toggleInteractive = () => {
+	glassInteractive.value = !glassInteractive.value
+}
+const cycleTint = () => {
+	glassTintIndex.value = (glassTintIndex.value + 1) % glassTints.length
+}
+const onGlassTap = () => {
+	glassTaps.value++
+}
+
+// 拖拽圆片：transform 直绑玻璃元素，位置钳制在拖拽区内
+const DRAG_BALL_SIZE = 64
+const dragStageEl = ref<UniElement | null>(null)
+const dragX = ref(90)
+const dragY = ref(56)
+const dragStyle = computed(() : string => `transform: translate(${dragX.value}px, ${dragY.value}px)`)
+let dragRect : DOMRect | null = null
+let grabDX = 0
+let grabDY = 0
+
+const onDragStart = (e : TouchEvent) => {
+	try {
+		dragRect = dragStageEl.value?.getBoundingClientRect() ?? null
+	} catch (err) {
+		dragRect = null
+	}
+	if (dragRect == null) {
+		return
+	}
+	const t = e.touches[0]
+	grabDX = t.clientX - dragRect.left - dragX.value
+	grabDY = t.clientY - dragRect.top - dragY.value
+}
+
+const onDragMove = (e : TouchEvent) => {
+	const rect = dragRect
+	if (rect == null) {
+		return
+	}
+	const t = e.touches[0]
+	dragX.value = Math.min(Math.max(t.clientX - rect.left - grabDX, 0), rect.width - DRAG_BALL_SIZE)
+	dragY.value = Math.min(Math.max(t.clientY - rect.top - grabDY, 0), rect.height - DRAG_BALL_SIZE)
+}
 </script>
 
 <style>
@@ -222,6 +313,131 @@ const runPow = async () => {
 
 	.btn {
 		margin-top: 8px;
+	}
+
+	.glass-stage {
+		position: relative;
+		margin-top: 10px;
+		border-radius: 12px;
+		background-image: linear-gradient(to right, #ff453a, #ffd60a, #30d158, #0a84ff, #bf5af2);
+	}
+
+	.glass-drag-stage {
+		height: 190px;
+		background-image: linear-gradient(to right, #ff9f0a, #ff375f, #bf5af2, #64d2ff, #32d74b);
+	}
+
+	.glass-stage-body {
+		padding: 12px;
+	}
+
+	.glass-caption {
+		font-size: 13px;
+		font-weight: bold;
+		color: #ffffff;
+		margin-bottom: 10px;
+	}
+
+	.glass-panel-row {
+		flex-direction: row;
+	}
+
+	.glass-panel {
+		flex: 1;
+		height: 130px;
+		border-radius: 20px;
+	}
+
+	.glass-panel-r {
+		margin-left: 12px;
+	}
+
+	.glass-panel-inner {
+		flex: 1;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.glass-panel-title {
+		font-size: 20px;
+		font-weight: bold;
+		color: #111111;
+	}
+
+	.glass-panel-detail {
+		margin-top: 4px;
+		font-size: 12px;
+		color: #222222;
+	}
+
+	.glass-chip {
+		margin-top: 8px;
+		width: 96px;
+		height: 28px;
+		border-radius: 14px;
+	}
+
+	.glass-chip-text {
+		font-size: 12px;
+		color: #222222;
+	}
+
+	.glass-shape-row {
+		flex-direction: row;
+		margin-top: 12px;
+		align-items: center;
+	}
+
+	.glass-shape-circle {
+		width: 56px;
+		height: 56px;
+		border-radius: 28px;
+	}
+
+	.glass-shape-pill {
+		width: 130px;
+		height: 44px;
+		border-radius: 22px;
+		margin-left: 14px;
+	}
+
+	.glass-shape-rect {
+		width: 90px;
+		height: 56px;
+		border-radius: 14px;
+		margin-left: 14px;
+	}
+
+	.glass-ball {
+		position: absolute;
+		left: 0;
+		top: 0;
+		width: 64px;
+		height: 64px;
+		border-radius: 32px;
+	}
+
+	.glass-hint {
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 8px;
+		text-align: center;
+		font-size: 12px;
+		color: #ffffff;
+	}
+
+	.glass-controls {
+		flex-direction: row;
+		margin-top: 10px;
+	}
+
+	.glass-ctl-btn {
+		flex: 1;
+	}
+
+	.glass-ctl-btn-r {
+		margin-left: 8px;
 	}
 
 </style>
