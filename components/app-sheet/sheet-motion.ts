@@ -11,7 +11,7 @@ const ENTER_MS = 360
 const SETTLE_X = 0.5
 // 内容淡入：超出关闭位的露出高度到达全开的该比例时内容完全显示
 const FADE_AT = 0.85
-// 松手回位照搬侧滑：带速度松手（速度超过 SPRING_V，px/ms）走物理弹簧，停顿后松手走缓出补间；程序开合沿用浮动面板曲线。
+// 松手回位：带速度松手（速度超过 SPRING_V，px/ms）走物理弹簧，停顿后松手走缓出补间；程序开合走 PANEL 曲线。
 // 补间与程序开合时长同为 PANEL_MS（ms）
 const SPRING_V = 0.3
 const PANEL_MS = 300
@@ -42,7 +42,7 @@ export type SheetMotion = {
 
 export const createSheetMotion = (ctx : SheetContext) : SheetMotion => {
 	let animTimer : number | null = null
-	// 松手回位的物理弹簧：与侧滑惯性收起同一引擎、同一参数，初速承接松手末速度；springing=弹簧在跑
+	// 松手回位的物理弹簧：初速承接松手末速度；springing=弹簧在跑
 	const settleSpring = createSpringControl()
 	let springing = false
 
@@ -108,7 +108,7 @@ export const createSheetMotion = (ctx : SheetContext) : SheetMotion => {
 		return 3 * o * o * t * ay + 3 * o * t * t * by + t * t * t
 	}
 
-	// 停顿后松手的补间（侧滑同款缓出）：入参为时间比例，返回剩余行程比例
+	// 停顿后松手的补间（缓出）：入参为时间比例，返回剩余行程比例
 	const tweenRest = (x : number) : number => (1 - x) * (1 - x)
 
 	// 入场曲线：速度线性升到峰值后按平方衰减；入参为时间比例，返回剩余行程比例
@@ -157,7 +157,7 @@ export const createSheetMotion = (ctx : SheetContext) : SheetMotion => {
 		}
 	}
 
-	// 物理弹簧走到 to：v0=初速（px/s）。面板越过展开位的量不超过延长段（否则底部露空）；终帧落到位再收尾
+	// 物理弹簧走到 to：v0=初速（px/s）。面板越过展开位的量不超过延长段；终帧落到位再收尾
 	const springTo = (to : number, v0 : number, done : () => void) => {
 		stopAnims()
 		springing = true
@@ -171,8 +171,8 @@ export const createSheetMotion = (ctx : SheetContext) : SheetMotion => {
 		})
 	}
 
-	// 面板走到展开位或关闭位。带速度松手走物理弹簧，停顿后松手走缓出补间（回位照搬侧滑）；
-	// 程序开合（按钮、外部改 visible、点按回到当前目标）走浮动面板曲线。
+	// 面板走到展开位或关闭位。带速度松手走物理弹簧，停顿后松手走缓出补间；
+	// 程序开合（按钮、外部改 visible、点按回到当前目标）走 PANEL 曲线。
 	// enter=非露头模式从关闭位的入场，走入场曲线（行程越短越快，下限 ENTER_MS/4）。已在目标则直接收尾
 	const slideTo = (open : boolean, enter : boolean = false, v : number = 0, handOff : boolean = false) => {
 		stopAnims()

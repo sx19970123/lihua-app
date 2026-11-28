@@ -8,13 +8,12 @@ export const createPlatform = (h : SheetHandles) : SheetPlatform => {
 	const panelEl = ref<any>(null)
 	const fadeEl = ref<any>(null)
 	// #ifdef APP-ANDROID
-	// 载体里的位移落点：安卓的面板节点到显示时才实例化，挂载期写下的位移留不下，落点随几何一并写进载体。
-	// 只收静止位；动画与拖动中的逐帧位移仍走 setProperty
+	// 载体里的位移落点：只收静止位，随几何一并写进载体；逐帧位移走 setProperty
 	const landedY = ref<number>(0)
 	// #endif
 	let panelNode : any = null
 	let fadeNode : any = null
-	// 面板元素：App 每次取模板 ref 的当前值（挂载后引用会被重新赋值，不缓存），Web 按 id 取 DOM、首次取到后缓存
+	// 面板元素：App 每次取模板 ref 的当前值，Web 按 id 取 DOM、首次取到后缓存
 	const panelNodeOf = () : any => {
 		// #ifdef APP
 		panelNode = panelEl.value
@@ -59,7 +58,7 @@ export const createPlatform = (h : SheetHandles) : SheetPlatform => {
 				node.style.setProperty('transform', 'translate3d(0, ' + y + 'px, 0)')
 				// #endif
 				// #ifdef APP-ANDROID
-				// 安卓蒸汽端不应用 translate3d，只认 2D 形式
+				// 位移写 2D 形式
 				node.style.setProperty('transform', 'translateY(' + y + 'px)')
 				// #endif
 				// #ifdef WEB

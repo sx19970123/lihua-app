@@ -1,4 +1,4 @@
-// 抽屉平台适配器·小程序：没有 element.style，位移与透明度都走 :style 载体。契约见 ../sheet-platform.ts
+// 抽屉平台适配器·小程序：位移与透明度都走 :style 载体。契约见 ../sheet-platform.ts
 import { computed, ref } from 'vue'
 import type { SheetHandles, SheetPlatform } from '../sheet-platform'
 

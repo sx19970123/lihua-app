@@ -67,13 +67,13 @@ export type SheetContext = {
 	// 面板与淡入层的元素 id（同页多个抽屉互不相同）
 	panelId : string
 	fadeId : string
-	// ---- 跨模块读写的普通状态：只能经 ctx.xxx 读写，不能解构出来 ----
+	// ---- 跨模块读写的普通状态：读写一律经 ctx.xxx ----
 	phase : SheetPhase
 	// 当前面板位移（px）；全开为 0
 	sheetY : number
 	// none=还没带动面板 / sheet=抽屉拖动中
 	mode : 'none' | 'sheet'
-	// 当前跟踪的触点标识；null=没有。标识由系统分配、可为任意整数（iOS Safari 为负数），不能拿具体数值表示「没有」
+	// 当前跟踪的触点标识；null=没有。标识是系统分配的任意整数，只用 null 表示没有
 	dragTouchId : number | null
 	// 露头时关闭位的高度（px）=头部行高+底部安全区：初值按形态取样式常量，量测后更新
 	headH : number
@@ -81,8 +81,7 @@ export type SheetContext = {
 	closedH : number
 	// 动画/拖动中收到的内容变化：收尾后再补量
 	fitPending : boolean
-	// 小程序端滚动守卫的回传（经 wxs 的 callMethod 调到；其余端没有守卫，恒为 -1）：本次手势按下时量到的内容位置。
-	// 内容是否在顶部除滚动事件外另以它为准：滚动事件成批节流，到顶后的最后一条可能送不到逻辑层
+	// 小程序端滚动守卫的回传（经 wxs 的 callMethod 调到；其余端没有守卫，恒为 -1）：本次手势按下时量到的内容位置，\n\t// 内容是否在顶部除滚动事件外另以它为准
 	guardTop : number
 	// ---- 组装时挂上的模块 ----
 	platform : SheetPlatform

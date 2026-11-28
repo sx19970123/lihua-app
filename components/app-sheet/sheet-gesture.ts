@@ -46,8 +46,7 @@ export const createSheetGesture = (ctx : SheetContext) : SheetGesture => {
 	let topX = 0
 	let topY = -1
 
-	// 事件时刻（ms）。小程序端逻辑层的触摸事件成批送达：按处理时刻取时间会把一批事件算成同一时刻，松手速度丢失，
-	// 改用事件自带的时间戳；其余端沿用处理时刻
+	// 事件时刻（ms）：小程序端取事件自带的时间戳，其余端取处理时刻
 	const stampOf = (e : any) : number => {
 		// #ifdef MP-WEIXIN
 		return typeof e.timeStamp === 'number' && e.timeStamp > 0 ? e.timeStamp : Date.now()
@@ -148,7 +147,7 @@ export const createSheetGesture = (ctx : SheetContext) : SheetGesture => {
 		startY = t.screenY
 		fromClosed = ctx.phase === 'closed'
 		topX = t.screenX
-		// 新手势开始：上一次手势的守卫回传作废（本次的回传晚于按下事件到达）
+		// 新手势开始：上一次手势的守卫回传作废
 		ctx.guardTop = -1
 		topY = ctx.layout.contentAtTop() ? t.screenY : -1
 		trackY = t.screenY
@@ -168,7 +167,7 @@ export const createSheetGesture = (ctx : SheetContext) : SheetGesture => {
 			return
 		}
 		// #ifdef MP-WEIXIN
-		// 带动面板之前的移动也采样：逻辑层收到的移动事件少，一甩可能只有一两个样本
+		// 带动面板之前的移动也采样
 		sample(p, stampOf(e))
 		// #endif
 		if (ctx.mode === 'none') {
@@ -223,8 +222,7 @@ export const createSheetGesture = (ctx : SheetContext) : SheetGesture => {
 			return
 		}
 		// #ifdef MP-WEIXIN
-		// 松手事件带着手指的最后位置，补一次采样：最后一段位移可能没有单独的移动事件。
-		// 逻辑层收到的移动事件稀疏，这段的间隔上限放宽到 V_STALE
+		// 松手事件带着手指的最后位置，补一次采样；这段的采样间隔上限放宽到 V_STALE
 		const last = findTouch(e, ctx.dragTouchId)
 		if (last != null) {
 			sample(last, stampOf(e), V_STALE)

@@ -192,7 +192,7 @@
 	const autoVisible = ref<boolean>(false)
 	const autoLongVisible = ref<boolean>(false)
 	const autoRows = ref<number>(2)
-	// 自动高度抽屉：插槽内容在页面侧变化，子组件不一定收到更新，改变行数后主动重量
+	// 自动高度抽屉：增加行数后经它调 fit 重量
 	const autoSheet = ref<any>(null)
 	const closable = ref<boolean>(true)
 	const draggable = ref<boolean>(true)

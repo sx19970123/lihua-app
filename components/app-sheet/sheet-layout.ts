@@ -78,16 +78,16 @@ export const createSheetLayout = (ctx : SheetContext) : SheetLayout => {
 		let top = 0
 		areaH = 1
 		// #ifdef WEB
-		// Web 的导航栏与 tabBar 是页内元素：面板让出导航栏，tabBar 页再让出 tabBar；windowHeight 已不含两者，勿再扣
+		// Web 的导航栏与 tabBar 是页内元素：top 取导航栏高度，可用高度直接取 windowHeight（已不含两者）
 		top = Math.max(win.windowTop ?? 0, win.statusBarHeight ?? 0)
 		areaH = Math.max(1, win.windowHeight)
 		// #endif
 		// #ifdef MP-WEIXIN
-		// 小程序页面内容区本就从导航栏下方起算
+		// 内容区从导航栏下方起算：可用高度直接取 windowHeight
 		areaH = Math.max(1, win.windowHeight)
 		// #endif
 		// #ifndef WEB || MP-WEIXIN
-		// App：面板顶让出「状态栏高 − 内容区顶」；自定义导航页的内容区从屏幕顶起算
+		// App：面板顶让出「状态栏高 − 内容区顶」
 		const body = ctx.page?.pageBody
 		const bodyTop = body == null ? 0 : body.top
 		top = Math.max(0, (win.statusBarHeight ?? 0) - bodyTop)

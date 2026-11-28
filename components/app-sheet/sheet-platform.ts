@@ -1,7 +1,5 @@
 // 抽屉平台适配器契约：核心只认这张表，platform/ 各平台文件须实现全部成员。
-// 平台分叉（第 3 级，因小程序端元素引用无 .style）：面板位移与淡入层透明度两端相反——
-// 小程序没有 element.style，且真机上逐帧改带 ref 的元素会中断拖动，只能走 :style 载体；
-// App/Web 逐帧位移不进载体（重渲染会把旧值贴回），取到元素后 setProperty 直驱
+// 平台分叉：小程序的位移与透明度走 :style 载体，App/Web 逐帧位移不进载体、取到元素后 setProperty 直驱
 import type { ComputedRef, Ref } from 'vue'
 
 // 核心交给适配器的句柄
