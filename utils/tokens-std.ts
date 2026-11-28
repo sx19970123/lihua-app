@@ -16,3 +16,9 @@ export const STD_TREE_EMPTY_HEIGHT = STD_LEADING_SM + STD_TREE_EMPTY_PAD_Y * 2
 
 // 遮罩不透明度（与 --std-mask 的 alpha 同值；原生条带的透明度只能由 JS 下发）
 export const STD_MASK_ALPHA = 0.5
+
+// 主色/文本主色亮暗双值（JS 侧消费=内置 loading 不支持 CSS 变量）
+export const STD_PRIMARY = '#3b82f6'
+export const STD_PRIMARY_DARK = '#60a5fa'
+export const STD_EMPHASIS = '#000'
+export const STD_EMPHASIS_DARK = '#fff'

@@ -24,7 +24,8 @@
 			title: '基础',
 			items: [
 				{ name: 'app-card', label: '卡片', icon: 'images', url: '/pages/component/card' },
-				{ name: 'app-resize-transition', label: '高度过渡', icon: 'arrow-down', url: '/pages/component/resize-transition' }
+				{ name: 'app-resize-transition', label: '高度过渡', icon: 'arrow-down', url: '/pages/component/resize-transition' },
+				{ name: 'app-loading', label: '加载中', icon: 'spinner-cycle', url: '/pages/component/loading' }
 			]
 		},
 		{

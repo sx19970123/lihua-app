@@ -1,0 +1,56 @@
+<template>
+	<view class="app-loading" :style="rootStyle">
+		<loading :ios-spinner="iosSpinner" :paused="paused" :style="iconStyle" />
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 加载指示器：内置 loading 薄壳，统一默认尺寸与颜色（默认文本色，primary 走主题主色）；iOS 出系统雪花，其余端引擎弧线
+	// 分叉级位：第 3 级——仅 script 一处 #ifdef 定 ios-spinner 常量，模板单份
+	import { useThemeStore } from '@/stores/theme'
+	import { STD_EMPHASIS, STD_EMPHASIS_DARK, STD_PRIMARY, STD_PRIMARY_DARK } from '@/utils/tokens-std'
+
+	// iOS 出系统雪花；其余端不支持该属性，恒 false
+	// #ifdef APP-IOS
+	const iosSpinner : boolean = true
+	// #endif
+	// #ifndef APP-IOS
+	const iosSpinner : boolean = false
+	// #endif
+
+	const props = withDefaults(defineProps<{
+		// 图标边长 px；iOS 雪花非矢量勿超 37
+		size ?: number
+		// 指示色；空串或缺省走默认色（内置 loading 不支持 CSS 变量）
+		color ?: string
+		// 跟随主题主色；缺省走文本色
+		primary ?: boolean
+		// 暂停旋转；常驻但隐藏的实例须传 true
+		paused ?: boolean
+	}>(), { size : 16, paused : false })
+
+	// 雪花取 color、弧线取 border-color，两处同值各端各取所需
+	const themeStore = useThemeStore()
+	themeStore.init()
+	const resolvedColor = computed(() : string => {
+		if (props.color) return props.color
+		if (props.primary) return themeStore.isDark ? STD_PRIMARY_DARK : STD_PRIMARY
+		return themeStore.isDark ? STD_EMPHASIS_DARK : STD_EMPHASIS
+	})
+
+	const rootStyle = computed(() : any => ({ width : props.size + 'px', height : props.size + 'px' }))
+	const iconStyle = computed(() : any => ({
+		width : props.size + 'px',
+		height : props.size + 'px',
+		color : resolvedColor.value,
+		borderColor : resolvedColor.value
+	}))
+</script>
+
+<style lang="scss">
+	.app-loading {
+		flex-shrink: 0;
+		align-items: center;
+		justify-content: center;
+	}
+</style>

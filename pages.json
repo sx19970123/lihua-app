@@ -119,6 +119,12 @@
 			}
 		},
 		{
+			"path": "pages/component/loading",
+			"style": {
+				"navigationBarTitleText": "app-loading"
+			}
+		},
+		{
 			"path": "pages/protocol/UserAgreement",
 			"style": {
 				"navigationBarTitleText": "用户协议"

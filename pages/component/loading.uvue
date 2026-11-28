@@ -1,0 +1,61 @@
+<template>
+	<view class="page-padding">
+		<app-card title="默认文本色 / primary 主色">
+			<view class="demo-row demo-loading-row">
+				<app-loading class="demo-loading-gap" />
+				<app-loading class="demo-loading-gap" :size="24" />
+				<app-loading class="demo-loading-gap" :size="32" />
+				<app-loading class="demo-loading-gap" primary />
+				<app-loading primary :size="24" />
+			</view>
+			<text class="demo-label">默认走文本色；primary 跟随主题主色；iOS 出系统雪花（非矢量勿超 37px），其余端为引擎弧线</text>
+		</app-card>
+
+		<app-card class="demo-card" title="自定义颜色">
+			<view class="demo-row demo-loading-row">
+				<view class="demo-loading-pad">
+					<app-loading :size="20" color="#ffffff" :paused="paused" />
+				</view>
+				<app-loading class="demo-loading-gap" :size="20" color="#ef4444" />
+				<app-loading :size="20" color="#5ac725" />
+			</view>
+			<view class="demo-row">
+				<button size="mini" @click="togglePaused">paused = {{ paused }}</button>
+			</view>
+			<text class="demo-label">paused 控制旋转启停：常驻但隐藏的实例应传 true，勿让隐藏的 loading 空转</text>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppLoading from '@/components/app-loading/index.uvue'
+
+	const paused = ref<boolean>(false)
+	const togglePaused = () => {
+		paused.value = !paused.value
+	}
+</script>
+
+<style lang="scss">
+	@import '@/styles/demo.scss';
+
+	.demo-loading-row {
+		flex-direction: row;
+		align-items: center;
+	}
+
+	.demo-loading-gap {
+		margin-right: 16px;
+	}
+
+	/* 深底白标：模拟按钮内反白场景 */
+	.demo-loading-pad {
+		width: 44px;
+		height: 44px;
+		background-color: var(--std-primary);
+		align-items: center;
+		justify-content: center;
+		margin-right: 16px;
+	}
+</style>
