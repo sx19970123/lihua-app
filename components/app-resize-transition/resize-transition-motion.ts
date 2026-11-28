@@ -116,7 +116,7 @@ export const createResizeTransitionMotion = (ctx : ResizeTransitionContext) : Re
 		lastAt = now
 		target = next
 		const cur = current
-		const wasMirroring = ctx.mirroring.value
+		const wasDirect = ctx.direct.value
 		// 这次变化的时长（ms）：沿用指定值，否则按落差算；首次落值与连续改目标不补间
 		let ms = 0
 		if (cur != null && !streaming) {
@@ -130,11 +130,11 @@ export const createResizeTransitionMotion = (ctx : ResizeTransitionContext) : Re
 		}
 		// 连续改目标=内容在自己动：盒子直接落到目标
 		if (streaming) {
-			ctx.mirroring.value = true
+			ctx.direct.value = true
 			writeDirect(next, false, 0)
 			return
 		}
-		ctx.mirroring.value = false
+		ctx.direct.value = false
 		if (ctx.platform.jsTween) {
 			// 在跑的补间改目标：沿用原时钟换算起点，位置连续
 			if (timer != null && Math.abs(next - cur) >= 0.5) {
@@ -151,7 +151,7 @@ export const createResizeTransitionMotion = (ctx : ResizeTransitionContext) : Re
 			}
 			return
 		}
-		if (wasMirroring) {
+		if (wasDirect) {
 			// 直接落位刚结束：等 CSS 过渡类挂回去再写，这次变化才带过渡；期间来了新目标就不写
 			cancel()
 			current = next
@@ -169,7 +169,7 @@ export const createResizeTransitionMotion = (ctx : ResizeTransitionContext) : Re
 
 	const nudge = (delta : number, duration : number) : boolean => {
 		const base = target
-		if (base == null || delta !== delta) {
+		if (base == null || !isFinite(delta)) {
 			return false
 		}
 		nudgeAt = Date.now()
@@ -182,7 +182,7 @@ export const createResizeTransitionMotion = (ctx : ResizeTransitionContext) : Re
 		lastAt = nudgeAt
 		target = next
 		ctx.emit('resize', next, 0)
-		ctx.mirroring.value = true
+		ctx.direct.value = true
 		writeDirect(next, false, 0)
 		return true
 	}

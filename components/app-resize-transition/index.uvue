@@ -45,7 +45,7 @@
 	const { carrierStyle } = ctx.platform
 
 	// CSS 过渡类在首次落值之后才挂，逐次直接落位期间摘掉
-	const animCls = computed<string>(() => ctx.ready.value && !ctx.mirroring.value ? ctx.platform.boxCls : '')
+	const animCls = computed<string>(() => ctx.ready.value && !ctx.direct.value ? ctx.platform.boxCls : '')
 
 	// 内容自己动高度时经注入收到每一刻的变化量，盒子同一拍加上去
 	provide(RESIZE_TRANSITION_NOTIFY, ctx.observe.notify)

@@ -31,9 +31,9 @@ export const createResizeTransitionObserve = (ctx : ResizeTransitionContext) : R
 	// 对账定时器；null=没有
 	let reconcileTimer : number | null = null
 
-	// 宽为 0=内容层当前没渲染（如祖先隐藏），这次结果不下发
+	// 宽为 0=内容层当前没渲染（如祖先隐藏），这次结果不下发；非有限值不下发
 	const apply = (width : number, height : number) => {
-		if (width > 0 && height >= 0) {
+		if (width > 0 && isFinite(height) && height >= 0) {
 			ctx.motion.resizeTo(height, true, 0)
 		}
 	}

@@ -23,7 +23,7 @@ export type ResizeTransitionContext = {
 	// 外层盒子是否已落到量出的高度：落值之后才挂 CSS 过渡类，首次落值不播动画
 	ready : Ref<boolean>
 	// 是否在逐次直接落位（内容自己动高度，盒子每一拍直接落到目标、不补间）；期间不挂 CSS 过渡类
-	mirroring : Ref<boolean>
+	direct : Ref<boolean>
 	// ---- 组装时挂上的模块 ----
 	platform : ResizeTransitionPlatform
 	observe : ResizeTransitionObserve
@@ -38,7 +38,7 @@ export const createResizeTransitionContext = (emit : ResizeTransitionEmit) : Res
 		// 外层盒子是否已落到量出的高度：落值之后才挂 CSS 过渡类，首次落值不播动画
 		ready : ref<boolean>(false),
 		// 是否在逐次直接落位（内容自己动高度，盒子每一拍直接落到目标、不补间）；期间不挂 CSS 过渡类
-		mirroring : ref<boolean>(false),
+		direct : ref<boolean>(false),
 		platform : null as any as ResizeTransitionPlatform,
 		observe : null as any as ResizeTransitionObserve,
 		motion : null as any as ResizeTransitionMotion
