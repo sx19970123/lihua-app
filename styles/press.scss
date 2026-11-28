@@ -1,7 +1,8 @@
 /*
  * 按压反馈四等级（全仓统一维护，组件/页面 style 内 @import）。
  * 用法：hover-class 驱动 + :hover-stay-time="100"，暗色按 themeStore.isDark 选 -dark 类；
- * 类内色值须写字面量（原生驱动不走 var/@media）。
+ * 类内色值须写字面量（原生驱动不走 var/@media）；
+ * @import 须放在导入方自身含 background-color 的规则之后。
  */
 
 /* 行级（树行/列表行）：行级分隔线也挂本类，自身类只管几何 */

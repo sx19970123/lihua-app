@@ -61,9 +61,6 @@
 </script>
 
 <style lang="scss">
-	/* 按压类（styles/press.scss） */
-	@import '@/styles/press.scss';
-
 	/* 根：底色/圆角走 token；overflow hidden 裁圆角 */
 	.app-card {
 		flex-direction: column;
@@ -119,4 +116,7 @@
 		line-height: var(--std-leading-base);
 		color: var(--std-tertiary-color);
 	}
+
+	/* 按压类（styles/press.scss）：须在含 background-color 的规则之后 */
+	@import '@/styles/press.scss';
 </style>

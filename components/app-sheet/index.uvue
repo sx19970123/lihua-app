@@ -271,9 +271,6 @@
 <!-- #endif -->
 
 <style lang="scss">
-	/* 按压类（styles/press.scss）：关闭钮 */
-	@import '@/styles/press.scss';
-
 	/* 面板：几何由 JS 下发（top/height），位移由 JS 逐帧写入；层序须高于 app-mask 的 999 */
 	.app-sheet-panel {
 		position: fixed;
@@ -436,4 +433,7 @@
 		font-size: 18px;
 		color: var(--std-emphasis-color);
 	}
+
+	/* 按压类（styles/press.scss）：须在含 background-color 的规则之后 */
+	@import '@/styles/press.scss';
 </style>
