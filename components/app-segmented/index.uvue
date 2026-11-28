@@ -1,0 +1,286 @@
+<template>
+	<view class="app-segmented" :class="rootCls" @touchstart="onTouchStart" @touchmove="onTouchMove"
+		@touchend="onTouchEnd" @touchcancel="onTouchEnd">
+		<view ref="groupEl" class="app-segmented-group">
+			<!-- 按压高亮：与滑块同形同位，层序在滑块下 -->
+			<view class="app-segmented-ghost" :class="ghostCls" :style="ghostStyle" />
+			<!-- 滑块：纯色块无文案（选中态=段内文字/图标变色，落下后才高亮） -->
+			<view :class="pointerCls" :style="pointerStyle" />
+			<!-- 内容层：层序在滑块上，兼触区 -->
+			<view class="app-segmented-row" :class="rowCls">
+				<view v-for="(opt, i) in items" :key="opt.value" class="app-segmented-item" :class="itemCls"
+					:style="cellStyle" @touchstart="onItemTouchStart(i)" @click="onItemTap(i)">
+					<!-- 图标槽：icon 字段兜底，或 #icon 插槽按段自定义 -->
+					<view v-if="hasIcon" class="app-segmented-icon" :class="iconCls">
+						<slot name="icon" :item="opt" :index="i" :selected="index === i">
+							<uni-icons v-if="opt.icon !== ''" class="app-segmented-icon-glyph" :class="glyphCls[i]"
+								:type="opt.icon" />
+						</slot>
+					</view>
+					<text v-if="opt.label !== ''" class="app-segmented-label" :class="labelCls[i]">{{ opt.label }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 分段器：等分滑块，点选切换、按住滑块拖动切换；三档外高同 app-input，拖动到位轻震，
+	// 滑块到头压缩自身不越界。滑块位移走 :style 绑定：拖动跟手，松手弹簧落位（utils/spring）
+	// 文件分工：segmented-context 共享状态与烘焙类；segmented-selection 选中映射；segmented-layout 量测；segmented-motion 运动；segmented-gesture 手势；segmented-tap 点按。
+
+	import { useThemeStore } from '@/stores/theme'
+	import type { SegItem, SegmentedOption } from './segmented-context'
+	import { createSegmentedContext } from './segmented-context'
+	import { createSegmentedGesture } from './segmented-gesture'
+	import { createSegmentedLayout } from './segmented-layout'
+	import { createSegmentedMotion } from './segmented-motion'
+	import { createSegmentedSelection } from './segmented-selection'
+	import { createSegmentedTap } from './segmented-tap'
+
+	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
+	const props = withDefaults(defineProps<{
+		// 选项：裸字符串=值即标签；对象可单项禁用/带图标（label 空串=纯图标段）
+		options : (string | SegmentedOption)[]
+		// 当前值（v-model）
+		modelValue ?: string
+		// 三档：small / default（默认）/ large
+		size ?: 'small' | 'default' | 'large'
+		// default=主圆角（默认）；round=胶囊
+		shape ?: 'default' | 'round'
+		// 全局禁用
+		disabled ?: boolean
+		// 是否占满父容器宽度；false=宽度随内容并靠左，段位取最宽者等分
+		block ?: boolean
+		// 按压高亮
+		hover ?: boolean
+	}>(), {
+		block : true,
+		hover : true
+	})
+
+	const emit = defineEmits<{
+		(e : 'update:modelValue', value : string) : void
+		(e : 'change', value : string) : void
+	}>()
+
+	// #icon 作用域插槽（item/index/selected）；内容与文字的间距由消费方自管
+	defineSlots<{
+		icon(props : { item : SegItem, index : number, selected : boolean }) : any
+	}>()
+
+	// 组件实例（段位量测用）
+	const owner = getCurrentInstance()?.proxy ?? null
+
+	const themeStore = useThemeStore()
+
+	const slots = useSlots()
+
+	// 共享状态与各职责模块：模块之间只经 ctx 互调
+	const ctx = createSegmentedContext(props, emit, slots, owner)
+	ctx.selection = createSegmentedSelection(ctx)
+	ctx.layout = createSegmentedLayout(ctx)
+	ctx.motion = createSegmentedMotion(ctx)
+	ctx.gesture = createSegmentedGesture(ctx)
+	ctx.tap = createSegmentedTap(ctx)
+	themeStore.init()
+
+	// 按压高亮（hover 可关）：按下的段显示与滑块同形同位的影子（层序在滑块下，底色取按压类）；
+	// 位移超 5px（滑动/纵滚）或松手即收起
+	const ghostCls = computed<string>(() => 'app-segmented-ghost'
+		+ (ctx.isRound.value ? ' app-segmented-ghost--round' : '')
+		+ (themeStore.isDark ? ' app-pressed-inset-dark' : ' app-pressed-inset')
+		+ (ctx.pressIdx.value < 0 || !ctx.ready.value ? ' app-segmented-ghost-hide' : ''))
+
+	// 模板绑定：只别名模板要用的；普通状态一律经 ctx 读写
+	const { items, index, groupEl, cellStyle, rootCls, rowCls, itemCls, iconCls, hasIcon, pointerCls, pointerStyle, ghostStyle, labelCls, glyphCls } = ctx
+	const { onTouchStart, onTouchMove, onTouchEnd } = ctx.gesture
+	const { onItemTouchStart, onItemTap } = ctx.tap
+
+	// 外部值变化 → 滑块跟进（拖动中不抢）
+	watch(() => props.modelValue, (v : string | null) => {
+		if (ctx.dragTouchId != null) {
+			return
+		}
+		const idx = ctx.selection.indexOfValue(v ?? '')
+		if (idx >= 0 && idx !== ctx.index.value) {
+			ctx.motion.commit(idx)
+		}
+	})
+
+	// 选项/尺寸/宽度模式变化 → 重排后重量测重就位（就位不弹簧）
+	const resettle = () => {
+		nextTick(() => {
+			ctx.springCtl.cancel()
+			ctx.dragX.value = null
+			ctx.animX.value = null
+			ctx.index.value = Math.max(0, ctx.selection.indexOfValue(props.modelValue ?? ''))
+			if (ctx.isBlock.value) {
+				ctx.cellW.value = 0
+				ctx.layout.measure()
+			} else {
+				ctx.layout.fitCells()
+			}
+		})
+	}
+	watch(() => props.options, resettle)
+	watch(() => props.size, resettle)
+	watch(() => props.block, resettle)
+
+	onMounted(() => {
+		resettle()
+	})
+
+	onUnmounted(() => {
+		ctx.springCtl.cancel()
+	})
+</script>
+
+<style lang="scss">
+	/* 按压类（styles/press.scss）：影子高亮的底色 */
+	@import '@/styles/press.scss';
+
+	/* 根=轨道：灰底圆角；水平内距即滑块侧边内缩 */
+	.app-segmented {
+		flex-direction: column;
+		padding: 0 var(--std-gap-xs);
+		border-radius: var(--std-radius);
+		background-color: var(--std-secondary-bg);
+	}
+
+	.app-segmented--round {
+		border-radius: var(--std-radius-full);
+	}
+
+	/* 内容宽模式：不拉伸占满，宽度随内容 */
+	.app-segmented--hug {
+		align-self: flex-start;
+	}
+
+	/* 组：高亮、滑块、内容三层同父，按 z-index 排层序（层序只在同父兄弟间可靠） */
+	.app-segmented-group {
+		position: relative;
+		z-index: 1;
+		flex-direction: row;
+		align-items: stretch;
+	}
+
+	/* 按压高亮：几何与滑块一致 */
+	.app-segmented-ghost {
+		position: absolute;
+		top: var(--std-gap-xs);
+		bottom: var(--std-gap-xs);
+		left: 0;
+		z-index: 0;
+		border-radius: 8px;
+	}
+
+	.app-segmented-ghost--round {
+		border-radius: var(--std-radius-full);
+	}
+
+	.app-segmented-ghost-hide {
+		opacity: 0;
+	}
+
+	/* 内容层：段位的父容器，兼触区 */
+	.app-segmented-row {
+		position: relative;
+		z-index: 2;
+		flex: 1;
+		flex-direction: row;
+	}
+
+	.app-segmented-row--hug {
+		flex: 0 0 auto;
+	}
+
+	/* 段位：高度由内距撑出（外高同 app-input）；内距必须挂段位，不挂根/组 */
+	.app-segmented-item {
+		flex: 1;
+		flex-direction: row;
+		justify-content: center;
+		align-items: center;
+		min-width: 0;
+		padding: var(--std-control-pad-y) var(--std-gap-md);
+	}
+
+	.app-segmented-item--hug {
+		flex: 0 0 auto;
+	}
+
+	.app-segmented-item--small {
+		padding-top: var(--std-control-pad-y-sm);
+		padding-bottom: var(--std-control-pad-y-sm);
+	}
+
+	.app-segmented-item--large {
+		padding-top: var(--std-control-pad-y-lg);
+		padding-bottom: var(--std-control-pad-y-lg);
+	}
+
+	/* 文本档同 app-input：small 走修饰类 */
+	.app-segmented-label {
+		font-size: var(--std-text-lg);
+		line-height: var(--std-leading-lg);
+		color: var(--std-secondary-color);
+	}
+
+	.app-segmented-label-sm {
+		font-size: var(--std-text-sm);
+		line-height: var(--std-leading-sm);
+	}
+
+	/* 图标槽：行盒钉为文字行高，防 uni-icons 默认行盒撑高段位 */
+	.app-segmented-icon {
+		flex-direction: row;
+		align-items: center;
+		height: var(--std-leading-lg);
+		overflow: visible;
+	}
+
+	.app-segmented-icon-sm {
+		height: var(--std-leading-sm);
+	}
+
+	.app-segmented-icon-glyph {
+		font-size: 18px;
+		color: var(--std-secondary-color);
+	}
+
+	.app-segmented-icon-glyph-sm {
+		font-size: 16px;
+	}
+
+	.app-segmented-icon-gap {
+		margin-right: var(--std-gap-xs);
+	}
+
+	/* 状态色（文字与图标共用）：选中强调 / 禁用灰；须排在各自基类之后 */
+	.app-segmented-selected {
+		color: var(--std-emphasis-color);
+	}
+
+	.app-segmented-disabled {
+		color: var(--std-disabled-color);
+	}
+
+	/* 滑块：实色；圆角=主圆角减内缩量（同心）；宽=1/n，位移由 JS 驱动 */
+	.app-segmented-pointer {
+		position: absolute;
+		top: var(--std-gap-xs);
+		bottom: var(--std-gap-xs);
+		left: 0;
+		z-index: 1;
+		border-radius: 8px;
+		background-color: var(--std-emphasis-bg);
+	}
+
+	.app-segmented-pointer--round {
+		border-radius: var(--std-radius-full);
+	}
+
+	.app-segmented-pointer-hide {
+		opacity: 0;
+	}
+</style>

@@ -170,7 +170,7 @@
 	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
 	import AppInput from '@/components/app-input/app-input.uvue'
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
-	import AppSegmented from '@/components/app-segmented/app-segmented.uvue'
+	import AppSegmented from '@/components/app-segmented/index.uvue'
 	import AppSheet from '@/components/app-sheet/index.uvue'
 
 	const basicVisible = ref<boolean>(false)

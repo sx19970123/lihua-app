@@ -97,7 +97,7 @@
 
 <script setup lang="ts">
 	import AppCard from '@/components/app-card/app-card.uvue'
-	import AppSegmented from '@/components/app-segmented/app-segmented.uvue'
+	import AppSegmented from '@/components/app-segmented/index.uvue'
 	import AppInput from '@/components/app-input/app-input.uvue'
 	import { haptic } from '@/utils/haptic'
 
