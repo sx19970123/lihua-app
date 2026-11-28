@@ -23,7 +23,8 @@
 		{
 			title: '基础',
 			items: [
-				{ name: 'app-card', label: '卡片', icon: 'images', url: '/pages/component/card' }
+				{ name: 'app-card', label: '卡片', icon: 'images', url: '/pages/component/card' },
+				{ name: 'app-resize-transition', label: '高度过渡', icon: 'arrow-down', url: '/pages/component/resize-transition' }
 			]
 		},
 		{

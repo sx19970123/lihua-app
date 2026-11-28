@@ -1,0 +1,90 @@
+<template>
+	<view ref="boxEl" class="app-resize-transition" :class="animCls" :style="carrierStyle">
+		<view ref="contentEl" class="app-resize-transition-content">
+			<slot />
+		</view>
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 高度过渡：包住一段内容，内容高度变化时外层盒子的高度平滑跟过去，带它的卡片随之伸缩。
+	// 供其他组件内部使用，也可直接放进页面；内容按自然高度排布（不靠 flex 填满父级剩余高度），伸出内容盒的浮层会被裁切。
+	// 孤立的一次高度变化走补间，时长按落差定（24×√落差，钳在 140~360ms，见 resize-transition-motion.ts）；
+	// 内容自己在动高度时逐次直接落位。
+	// 变化检测：插槽内容经本组件更新时自动重量；App/Web 另监视内容层尺寸；
+	// 会自己动高度的组件（如 app-tree）经注入把每一刻的高度变化量报给本组件，盒子同一拍加上去，不等量测。
+	// 小程序没有尺寸监听：不经本组件更新、也没报变化量的变化，由调用方调 refresh。
+	// 平台分叉（第 3 级，因小程序端元素引用无 .style、没有尺寸监听，App 端 CSS 高度过渡不生效）：
+	// 写层 App/Web 走 setProperty 直驱，小程序走 :style 载体；高度补间 App 由 JS 逐帧驱动，Web/小程序交给 CSS 过渡。
+	// 文件分工：resize-transition-context 共享状态；resize-transition-platform 与 platform/ 写层、补间方式与尺寸监听；
+	// resize-transition-observe 变化检测与量测；resize-transition-motion 高度补间。
+
+	// #ifdef MP-WEIXIN
+	import { createPlatform } from './platform/mp'
+	// #endif
+	// #ifndef MP-WEIXIN
+	import { createPlatform } from './platform/app'
+	// #endif
+	import { createResizeTransitionContext, RESIZE_TRANSITION_NOTIFY } from './resize-transition-context'
+	import { createResizeTransitionMotion } from './resize-transition-motion'
+	import { createResizeTransitionObserve } from './resize-transition-observe'
+
+	const emit = defineEmits<{
+		// 内容高度有了新目标（px）与这次变化的过渡时长（ms，直接落位为 0）
+		(e : 'resize', height : number, duration : number) : void
+	}>()
+
+	// 共享状态与各职责模块：模块之间只经 ctx 互调
+	const ctx = createResizeTransitionContext(emit)
+	ctx.platform = createPlatform(ctx)
+	ctx.observe = createResizeTransitionObserve(ctx)
+	ctx.motion = createResizeTransitionMotion(ctx)
+
+	// 模板绑定：只别名模板要用的
+	const { boxEl, contentEl } = ctx
+	const { carrierStyle } = ctx.platform
+
+	// CSS 过渡类在首次落值之后才挂，逐次直接落位期间摘掉
+	const animCls = computed<string>(() => ctx.ready.value && !ctx.mirroring.value ? ctx.platform.boxCls : '')
+
+	// 内容自己动高度时经注入收到每一刻的变化量，盒子同一拍加上去
+	provide(RESIZE_TRANSITION_NOTIFY, ctx.observe.notify)
+
+	onMounted(() => {
+		ctx.observe.start()
+	})
+
+	// 插槽内容经本组件更新后重量
+	onUpdated(() => {
+		ctx.observe.refresh()
+	})
+
+	onUnmounted(() => {
+		ctx.observe.stop()
+		ctx.motion.cancel()
+	})
+
+	// 内容变化不经本组件更新时主动重量
+	defineExpose({ refresh : ctx.observe.refresh })
+</script>
+
+<style lang="scss">
+	/* 外层盒子：高度由 JS 下发，溢出裁切；内容层比它高时只露出顶部一段 */
+	.app-resize-transition {
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	/* Web/小程序的高度过渡开关：挂上时带时长的写入才播过渡；时长每次由 JS 写在内联样式上。
+	   曲线同 resize-transition-motion.ts 的补间，成对改 */
+	.app-resize-transition-anim {
+		transition-property: height;
+		transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+
+	/* 内容层：恒取自然高度，不随外层盒子压缩 */
+	.app-resize-transition-content {
+		flex-direction: column;
+		flex-shrink: 0;
+	}
+</style>

@@ -1,0 +1,237 @@
+<template>
+	<view class="page-padding">
+		<app-card title="增删行（页面状态驱动）">
+			<app-resize-transition ref="rtA" @resize="onResizeA">
+				<app-list>
+					<app-list-item v-for="i in 6" :key="i" v-show="i <= rowsA" :divider="i > 1" icon="star-filled"
+						:title="'第 ' + i + ' 行'" value="常驻行" />
+				</app-list>
+			</app-resize-transition>
+			<view class="rt-actions">
+				<button size="mini" :disabled="rowsA <= 0" @click="removeA">减一行</button>
+				<button size="mini" type="primary" class="rt-btn-gap" :disabled="rowsA >= 6" @click="addA">加一行</button>
+				<button size="mini" class="rt-btn-gap" @click="refreshA">重量</button>
+			</view>
+			<text class="demo-value">内容高 {{ heightA }}px · 本次用时 {{ durationA }}ms · 可见 {{ rowsA }} 行</text>
+		</app-card>
+
+		<app-card class="demo-card" title="展开收起块（页面状态驱动）">
+			<app-resize-transition @resize="onResizeB">
+				<view v-show="openB" class="rt-block">
+					<text class="demo-body-text">展开后出现的说明文字，占三行高度。收起时这段内容整体折叠，外层卡片跟着收矮。</text>
+				</view>
+			</app-resize-transition>
+			<view class="rt-actions">
+				<button size="mini" type="primary" @click="toggleB">{{ openB ? '收起' : '展开' }}</button>
+			</view>
+			<text class="demo-value">内容高 {{ heightB }}px · 本次用时 {{ durationB }}ms</text>
+		</app-card>
+
+		<app-card class="demo-card" title="树形控件（组件内部状态驱动）" extra="点箭头">
+			<app-resize-transition ref="rtC" @resize="onResizeC">
+				<app-tree :data="demoTree" default-expand-all :max-height="600" />
+			</app-resize-transition>
+			<view class="rt-actions">
+				<button size="mini" @click="refreshC">重量</button>
+			</view>
+			<text class="demo-value">内容高 {{ heightC }}px · 展开状态在树内部；点箭头，卡片应与行同时收、同时到位</text>
+		</app-card>
+
+		<app-card class="demo-card" title="嵌套（过渡里套过渡）">
+			<app-resize-transition @resize="onResizeD">
+				<view class="rt-block">
+					<text class="demo-body-text">外层常驻内容</text>
+				</view>
+				<app-resize-transition>
+					<view v-show="openD" class="rt-block rt-block-gap">
+						<text class="demo-body-text">内层过渡包住的内容：它自己展开收起，外层过渡跟着它的高度变化再过渡一次。</text>
+					</view>
+				</app-resize-transition>
+			</app-resize-transition>
+			<view class="rt-actions">
+				<button size="mini" type="primary" @click="toggleD">{{ openD ? '收起内层' : '展开内层' }}</button>
+			</view>
+			<text class="demo-value">内容高 {{ heightD }}px</text>
+		</app-card>
+
+		<app-card class="demo-card" title="对照：不包过渡">
+			<view v-show="openE" class="rt-block">
+				<text class="demo-body-text">同一段内容，外面没有 app-resize-transition：卡片高度应当直接跳变。</text>
+			</view>
+			<view class="rt-actions">
+				<button size="mini" type="primary" @click="toggleE">{{ openE ? '收起' : '展开' }}</button>
+			</view>
+		</app-card>
+
+		<app-card class="demo-card" title="探针：CSS 高度过渡在本端是否生效（仅验证用）">
+			<view class="rt-probe" :style="{ height: probeH + 'px' }">
+				<view class="rt-probe-block">
+					<text class="demo-body-text">固定 120px 高的探针内容</text>
+				</view>
+			</view>
+			<view class="rt-actions">
+				<button size="mini" type="primary" @click="toggleProbe">{{ probeOpen ? '收起' : '展开' }}</button>
+			</view>
+			<text class="demo-value">盒子高 {{ probeH }}px · 平滑变化=本端 CSS 可用；瞬跳=不可用</text>
+		</app-card>
+
+		<app-card class="demo-card" title="环境">
+			<text class="demo-value">运行时 {{ runtimeVersion }}</text>
+		</app-card>
+	</view>
+</template>
+
+<script setup lang="ts">
+	import AppCard from '@/components/app-card/app-card.uvue'
+	import AppList from '@/components/app-list/app-list.uvue'
+	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
+	import AppResizeTransition from '@/components/app-resize-transition/index.uvue'
+	import AppTree from '@/components/app-tree/index.uvue'
+	import type { TreeItem } from '@/components/app-tree/tree-context'
+
+	// 增删行：六行常驻，按可见行数显隐
+	const rtA = ref<any>(null)
+	const rowsA = ref<number>(3)
+	const heightA = ref<number>(0)
+	const durationA = ref<number>(0)
+	const addA = () => {
+		if (rowsA.value < 6) {
+			rowsA.value++
+		}
+	}
+	const removeA = () => {
+		if (rowsA.value > 0) {
+			rowsA.value--
+		}
+	}
+	// 自动检测没跟上时手动重量
+	const refreshA = () => {
+		rtA.value?.refresh()
+	}
+
+	// 展开收起块
+	const openB = ref<boolean>(false)
+	const heightB = ref<number>(0)
+	const durationB = ref<number>(0)
+
+	// 树：展开状态在组件内部，页面不参与
+	const rtC = ref<any>(null)
+	const heightC = ref<number>(0)
+	const demoTree : TreeItem[] = [
+		{
+			key: 'hq', title: '狸花猫科技', children: [
+				{
+					key: 'hq-rd', title: '研发部', children: [
+						{ key: 'hq-rd-fe', title: '前端组' },
+						{ key: 'hq-rd-be', title: '后端组' }
+					]
+				},
+				{ key: 'hq-pd', title: '产品部' },
+				{ key: 'hq-hr', title: '人事部' }
+			]
+		},
+		{
+			key: 'sh', title: '上海分公司', children: [
+				{
+					key: 'sh-rd', title: '研发部', children: [
+						{ key: 'sh-rd-fe', title: '前端组' }
+					]
+				},
+				{ key: 'sh-sale', title: '销售部' }
+			]
+		}
+	]
+
+	// 嵌套：内层过渡包住的块
+	const openD = ref<boolean>(false)
+	const heightD = ref<number>(0)
+
+	// 对照：不包过渡
+	const openE = ref<boolean>(false)
+
+	// 探针：盒子高度在 0 与 120 之间直写
+	const probeOpen = ref<boolean>(false)
+	const probeH = ref<number>(0)
+
+	// resize 事件：内容高（px）与这次变化的过渡时长（ms，直接落位为 0）
+	const onResizeA = (height : number, duration : number) => {
+		heightA.value = Math.round(height)
+		durationA.value = duration
+	}
+	const onResizeB = (height : number, duration : number) => {
+		heightB.value = Math.round(height)
+		durationB.value = duration
+	}
+	const onResizeC = (height : number) => {
+		heightC.value = Math.round(height)
+	}
+	const onResizeD = (height : number) => {
+		heightD.value = Math.round(height)
+	}
+
+	const toggleB = () => {
+		openB.value = !openB.value
+	}
+	const toggleD = () => {
+		openD.value = !openD.value
+	}
+	const toggleE = () => {
+		openE.value = !openE.value
+	}
+	const toggleProbe = () => {
+		probeOpen.value = !probeOpen.value
+		probeH.value = probeOpen.value ? 120 : 0
+	}
+
+	// 自动跟随没跟上时手动重量
+	const refreshC = () => {
+		rtC.value?.refresh()
+	}
+
+	const runtimeVersion = uni.getSystemInfoSync().uniRuntimeVersion
+</script>
+
+<style lang="scss">
+	/* 组件 demo 页公共样式（styles/demo.scss，编译期合并） */
+	@import '@/styles/demo.scss';
+
+	/* 操作按钮行 */
+	.rt-actions {
+		flex-direction: row;
+		align-items: center;
+		margin-top: var(--std-gap-md);
+	}
+
+	/* 同行的第二颗按钮 */
+	.rt-btn-gap {
+		margin-left: var(--std-gap-sm);
+	}
+
+	/* 过渡包住的说明块 */
+	.rt-block {
+		padding: var(--std-card-pad-y) var(--std-card-pad-x);
+		border-radius: var(--std-radius);
+		background-color: var(--std-secondary-bg);
+	}
+
+	/* 相邻说明块的间距 */
+	.rt-block-gap {
+		margin-top: var(--std-gap-md);
+	}
+
+	/* 探针盒子：高度由页面状态直写，全端带 CSS 过渡 */
+	.rt-probe {
+		overflow: hidden;
+		transition-property: height;
+		transition-duration: 200ms;
+		transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+	}
+
+	/* 探针内容：定高 120px */
+	.rt-probe-block {
+		height: 120px;
+		justify-content: center;
+		padding: 0 var(--std-card-pad-x);
+		background-color: var(--std-secondary-bg);
+	}
+</style>

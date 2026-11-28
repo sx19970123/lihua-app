@@ -113,6 +113,12 @@
 			}
 		},
 		{
+			"path": "pages/component/resize-transition",
+			"style": {
+				"navigationBarTitleText": "app-resize-transition"
+			}
+		},
+		{
 			"path": "pages/protocol/UserAgreement",
 			"style": {
 				"navigationBarTitleText": "用户协议"
