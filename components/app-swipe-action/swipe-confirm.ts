@@ -20,8 +20,11 @@ export type SwipeConfirm = {
 export const createSwipeConfirm = (ctx : SwipeContext) : SwipeConfirm => {
 	let confirmAction : SwipeAction | null = null
 	const confirmSpring = createSpringControl(CONFIRM_K, 28, 0.008, 0.3)
+	// 进确认补间在途
+	let confirmTweening = false
 	// 确认动画停表统一口（弹簧与归心补间两源齐停）
 	const cancelConfirmAnim = () => {
+		confirmTweening = false
 		confirmSpring.cancel()
 		ctx.motion.confirmCtl.cancel()
 	}
@@ -52,6 +55,7 @@ export const createSwipeConfirm = (ctx : SwipeContext) : SwipeConfirm => {
 			const ratio = Math.min(0.12, 6 / Math.max(range, 1))
 			const lzi = Math.log(1 / ratio)
 			const cRun = 2 * Math.sqrt(CONFIRM_K) * lzi / Math.sqrt(Math.PI * Math.PI + lzi * lzi)
+			confirmTweening = true
 			confirmSpring.run(0, 1, 0, (e : number) => {
 				ctx.confirmW = ctx.motion.safe(fromW + (toW - fromW) * e, toW)
 				ctx.confirmM = ctx.motion.safe(fromM + (toM - fromM) * e, toM)
@@ -65,7 +69,9 @@ export const createSwipeConfirm = (ctx : SwipeContext) : SwipeConfirm => {
 					const d = ctx.motion.safe(s.g.fan[j] * e, s.g.fan[j])
 					s.wBtn(j, 'transform', `translateX(${s.fixedSign * d}px)`)
 				}
-			}, null, cRun)
+			}, () => {
+				confirmTweening = false
+			}, cRun)
 	}
 
 	// 进确认：从按钮态延长到对接 item（extra=装不下时 item 顶开量）；入口把 currentX 归一 -W
@@ -88,6 +94,10 @@ export const createSwipeConfirm = (ctx : SwipeContext) : SwipeConfirm => {
 	// 确认态下延长彩带盖住全场（唯一可点=它自己）：再点=确认执行
 	const onActionClick = (action : SwipeAction, sideId : number, index : number) => {
 		if (ctx.props.loading === true) {
+			return
+		}
+		// 进确认补间播完前不响应点击
+		if (confirmTweening) {
 			return
 		}
 		if (ctx.confirming.value) {
