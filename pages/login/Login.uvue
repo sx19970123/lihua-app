@@ -67,7 +67,7 @@ import { queryPostLoginCheckData } from '@/api/system/profile/profile'
 import { login } from "@/api/system/authentication/authentication"
 import AppInput from '@/components/app-input/app-input.uvue'
 import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
-import Captcha from '@/components/captcha/captcha.uvue'
+import Captcha from '@/components/captcha/index.uvue'
 
 type ProtocolPendingAction = (() => void | Promise<void>) | null
 

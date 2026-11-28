@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 	import AppCard from '@/components/app-card/app-card.uvue'
-	import Captcha from '@/components/captcha/captcha.uvue'
+	import Captcha from '@/components/captcha/index.uvue'
 
 	// captcha 弹窗（open 触发，success 回执校验通过的后端 id）
 	const captchaRef = ref<any>(null)

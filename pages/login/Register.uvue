@@ -52,7 +52,7 @@ import { register, checkUserName } from '@/api/system/authentication/authenticat
 import { toast, toastRequestError } from '@/utils/toast'
 import { useSettingStore } from '@/stores/setting'
 import AppInput from '@/components/app-input/app-input.uvue'
-import Captcha from '@/components/captcha/captcha.uvue'
+import Captcha from '@/components/captcha/index.uvue'
 
 const captchaRef = ref()
 
