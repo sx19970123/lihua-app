@@ -12,7 +12,7 @@
 </template>
 
 <script setup lang="ts">
-	import AppTree from '@/components/app-tree/app-tree.uvue'
+	import AppTree from '@/components/app-tree/index.uvue'
 
 	// 示例数据（key 须全树唯一）
 	const demoTree = [

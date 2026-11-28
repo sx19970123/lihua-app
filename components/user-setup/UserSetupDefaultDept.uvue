@@ -32,7 +32,7 @@
 	import { toast, toastRequestError } from '@/utils/toast'
 	import { useUserStore } from '@/stores/user'
 	import type { SysDept } from '@/api/system/dept/type/sys-dept'
-	import AppTree from '@/components/app-tree/app-tree.uvue'
+	import AppTree from '@/components/app-tree/index.uvue'
 
 	const emit = defineEmits<{next: [], skip: [], prev: []}>()
 
