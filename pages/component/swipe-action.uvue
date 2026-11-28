@@ -16,7 +16,7 @@
 	// 侧滑操作演示：app-list-item 作行内容（swipe 包行，两者插槽协作）
 	import AppList from '@/components/app-list/app-list.uvue'
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
-	import AppSwipeAction from '@/components/app-swipe-action/app-swipe-action.uvue'
+	import AppSwipeAction from '@/components/app-swipe-action/index.uvue'
 
 	// 第 1 行=单删除钮；2-3 行三按钮全带二次确认；4 行双侧演示（左三右一）；均为预生成常量数组
 	const swipeActionsDelete = [

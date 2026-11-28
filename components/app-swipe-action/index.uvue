@@ -1,0 +1,322 @@
+<template>
+		<view class="app-swipe-action" :class="removing ? 'app-swipe-action-removing' : ''"
+			@touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd" @touchcancel="onTouchEnd">
+		<!-- 行底分隔线（消费方内层行须 :divider="false"） -->
+		<view v-if="divider" class="app-swipe-line app-pressed-row" />
+		<!-- 裁切层（上探 1px 的按钮容器）：裁掉初始藏行外的按钮组，并盖住上一行底线 -->
+		<view class="app-swipe-clip">
+			<!-- 色块（恒宽叠塔）：宽=自身+靠内容侧全部，初始整体藏行外；DOM 顺序=层序 -->
+			<!-- 左组：锚行左缘，数组序=远端→贴内容 -->
+			<!-- 元素 ref 仅 app/鸿蒙/H5 使用；属性级无条件编译，按钮组按平台分两份（只差 ref） -->
+			<!-- #ifndef MP-WEIXIN -->
+			<view v-for="(action, index) in leftList" :key="action.event" ref="btnElsL" class="app-swipe-btn app-swipe-btn--left"
+					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
+					:style="btnStyleL[index]"
+					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
+					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+				</view>
+				<text ref="textElsL" class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
+			</view>
+			<!-- 右组（恒宽叠塔）：锚行右缘藏行右外 -->
+			<view v-for="(action, index) in rightList" :key="action.event" ref="btnElsR" class="app-swipe-btn"
+					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
+					:style="btnStyleR[index]"
+					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
+					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+				</view>
+				<text ref="textElsR" class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
+			</view>
+			<!-- #endif -->
+			<!-- #ifdef MP-WEIXIN -->
+			<view v-for="(action, index) in leftList" :key="action.event" class="app-swipe-btn app-swipe-btn--left"
+					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
+					:style="btnStyleL[index]"
+					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
+					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+				</view>
+				<text class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
+			</view>
+			<!-- 右组（恒宽叠塔）：锚行右缘藏行右外 -->
+			<view v-for="(action, index) in rightList" :key="action.event" class="app-swipe-btn"
+					:class="action.type === 'danger' ? 'app-swipe-btn-danger' : 'app-swipe-btn-primary'"
+					:style="btnStyleR[index]"
+					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
+				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
+					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+				</view>
+				<text class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
+			</view>
+			<!-- #endif -->
+		</view>
+		<!-- 内容层：透明，流内撑行高 -->
+		<!-- #ifndef MP-WEIXIN -->
+		<view ref="contentEl" class="app-swipe-content" :style="contentStyle">
+			<slot />
+		</view>
+		<!-- #endif -->
+		<!-- #ifdef MP-WEIXIN -->
+		<view class="app-swipe-content" :style="contentStyle">
+			<slot />
+		</view>
+		<!-- #endif -->
+	</view>
+</template>
+
+<script setup lang="ts">
+	// 侧滑操作（双侧恒宽叠塔）：actions 按 side 分左右组，彩带宽=自身+靠内容侧全部，初始藏行外；
+	// 展开做进入位移，松手弹簧/惯性落位；confirm 型点击先进确认态再点执行；loading 冻结现场并在钮上转圈。
+	// 平台分叉（第 3 级，因 MP 端 v-for 元素 ref 无 .style、无同步量测）：状态机单份，模板按钮组/内容层按平台各一份（只差元素 ref），
+	// 写层/量测经 platform/ 适配器（契约见 swipe-platform.ts）；动画全部 JS 驱动。
+	// 文件分工：swipe-context 共享状态；swipe-platform 与 platform/ 写层量测；swipe-carrier 载体构建；swipe-side 侧实体；swipe-motion 位移驱动与补间；swipe-confirm 确认链；swipe-gesture 手势；swipe-gear 档位与程序化控制。
+
+	// #ifdef MP-WEIXIN
+	import { createPlatform } from './platform/mp'
+	// #endif
+	// #ifndef MP-WEIXIN
+	import { createPlatform } from './platform/app'
+	// #endif
+	import { clearOpen } from './mutex'
+	import { SIDE_L, SIDE_R, estimateWidth } from './swipe-platform'
+	import { createSwipeCarrier } from './swipe-carrier'
+	import { createSwipeConfirm } from './swipe-confirm'
+	import { createSwipeContext } from './swipe-context'
+	import { createSwipeGear } from './swipe-gear'
+	import { createSwipeGesture } from './swipe-gesture'
+	import { createSwipeMotion } from './swipe-motion'
+	import { createSwipeSides } from './swipe-side'
+	import type { SwipeAction } from './swipe-context'
+
+	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
+	const props = withDefaults(defineProps<{
+		// 侧滑按钮组（组件自渲染，宽度自适应文案）
+		actions : SwipeAction[]
+		// 禁用手势（按钮不可滑出）
+		disabled ?: boolean
+		// 行底分隔线；末行或组内单行显式 :divider="false"
+		divider ?: boolean
+		// 行级加载态（两级通用）：确认链冻结二次确认现场（彩带不收回）、直点钮冻结
+		// 展开档；被点钮文字前 spinner；期间全操作拒绝；撤离自动收起（删除走 remove()）
+		loading ?: boolean
+	}>(), {
+		divider : true
+	})
+
+	const emit = defineEmits<{
+		// 按钮最终确认（唯一业务回调）：非 confirm 型点击即回传；confirm 型在行消失动画
+		// 播完后回传（业务此时清数据动画不被截断）——回传整个按钮 item（event+data 均可读）
+		(e : 'action', action : SwipeAction) : void
+		// 展开完成（side='left'|'right'，含程序化 open）
+		(e : 'open', side : string) : void
+		// 收起完成（含互斥/程序化 close）
+		(e : 'close') : void
+	}>()
+
+	// 共享状态与各职责模块：模块之间只经 ctx 互调
+	const ctx = createSwipeContext(props, emit)
+	ctx.platform = createPlatform(ctx)
+	ctx.carrier = createSwipeCarrier(ctx)
+	ctx.carrier.syncCarriers()
+	ctx.sides = createSwipeSides(ctx)
+	ctx.motion = createSwipeMotion(ctx)
+	ctx.confirm = createSwipeConfirm(ctx)
+	ctx.gesture = createSwipeGesture(ctx)
+	ctx.gear = createSwipeGear(ctx)
+
+	// 模板绑定：只别名模板要用的；普通状态一律经 ctx 读写
+	const { removing, leftList, rightList, btnStyleL, btnStyleR, textStyleL, textStyleR, contentStyle, contentEl, btnElsL, textElsL, btnElsR, textElsR, spinnerAtL, spinnerAtR, spinnerStyle, confirmSide, confirmIndex, confirmLabel } = ctx
+	const { onBtnTouchStart, onTouchStart, onTouchMove, onTouchEnd } = ctx.gesture
+	const { onActionClick } = ctx.confirm
+
+	// loading 抵达冻结现场：spinner+文字整组归心（彩带宽/item 位不动）；loading 撤离仍未删行则自动收起
+	watch(() => props.loading, (on : boolean) => {
+		if (ctx.removing.value) {
+			return
+		}
+		if (on !== true) {
+			if (ctx.confirming.value || ctx.directBusy.value) {
+				ctx.gear.closeSelf()
+			}
+			return
+		}
+		let s = ctx.sides[SIDE_R]
+		let idx = -1
+		let fromM = 0
+		let toM = 0
+		if (ctx.confirming.value) {
+			s = ctx.sides[ctx.confirmSide.value]
+			idx = ctx.confirmIndex.value
+			const tw = estimateWidth(ctx.confirmLabel.value)
+			fromM = ctx.confirmM
+			toM = Math.max(0, (s.g.total + ctx.confirmExtra - tw) / 2 + ctx.SPIN_PAD / 2)
+		} else if (ctx.directBusy.value) {
+			// 直点冻结：钮内 32px 内距容纳 spinner 组，文字自钮内居中位归心
+			s = ctx.sides[ctx.directSide.value]
+			idx = ctx.directIndex.value
+			fromM = s.g.margins[idx] ?? 0
+			toM = fromM + ctx.SPIN_PAD / 2
+		} else {
+			return
+		}
+		ctx.confirm.cancelConfirmAnim()
+		ctx.motion.confirmCtl.run((e : number) => {
+			ctx.confirmM = ctx.motion.safe(fromM + (toM - fromM) * e, toM)
+			s.wText(idx, 'margin-left', `${ctx.confirmM}px`)
+			ctx.spinnerLeft.value = Math.max(0, ctx.confirmM - ctx.SPIN_PAD)
+		})
+	})
+
+	// ---------- 量测与生命周期 ----------
+	onMounted(() => {
+		// 双侧各自量测+静态锁定+初始全藏行外（单侧组 total=0 自然跳过）
+		for (let s = 0; s < 2; s++) {
+			const labels = (s === SIDE_L ? leftList.value : rightList.value).map((a : SwipeAction) => a.text)
+			ctx.sides[s].measure(labels)
+			ctx.sides[s].driveAt(0)
+		}
+	})
+
+	// actions 动态变化兜底：掐断补间→载体重建→新按钮渲染后重量测并按当前档位重驱动
+	watch(() => props.actions, () => {
+		ctx.motion.cancelSpringTween()
+		ctx.confirm.cancelConfirmTween()
+		ctx.carrier.syncCarriers()
+		nextTick(() => {
+			for (let s = 0; s < 2; s++) {
+				const labels = (s === SIDE_L ? leftList.value : rightList.value).map((a : SwipeAction) => a.text)
+				ctx.sides[s].measure(labels)
+				ctx.sides[s].driveAt(0)
+			}
+			ctx.motion.drive(ctx.motion.clamp(ctx.currentX, -ctx.sides[SIDE_R].g.total, ctx.sides[SIDE_L].g.total))
+		})
+	})
+
+	defineExpose({ open : ctx.gear.openBy, close : ctx.gear.closeSelf, remove : ctx.gear.remove })
+
+	onUnmounted(() => {
+		// 卸载掐断补间（死引用防线最后一环——v-for 行销毁、页面返回等全部路径）
+		ctx.motion.cancelSpringTween()
+		ctx.gear.cancelInertia()
+		ctx.confirm.cancelConfirmTween()
+		clearOpen(ctx.gear.closeSelf)
+	})
+</script>
+
+<style lang="scss">
+	/* 按压类（styles/press.scss） */
+	@import '@/styles/press.scss';
+
+	/* 根：消失动画时收口裁切；relative 供线/裁切层/按钮定位 */
+	.app-swipe-action {
+		position: relative;
+		flex-direction: column;
+		overflow: visible;
+	}
+
+	.app-swipe-action-removing {
+		overflow: hidden;
+		animation: app-swipe-remove 300ms ease forwards;
+	}
+
+	/* 行收起动画（首档 52=列表行高，须与 --std-row-height 同值） */
+	@keyframes app-swipe-remove {
+		0% {
+			max-height: 52px;
+			opacity: 1;
+		}
+
+		100% {
+			max-height: 0;
+			opacity: 0;
+		}
+	}
+
+	/* 裁切层：absolute 上探 1px 的纯按钮容器，裁掉初始藏行外的按钮组 */
+	.app-swipe-clip {
+		position: absolute;
+		top: -1px;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		overflow: hidden;
+	}
+
+	/* 行底分隔线：色挂同名按压类 */
+	.app-swipe-line {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		height: 1px;
+	}
+
+	/* 色块：右缘锚行右界，宽=叠塔宽（量测后设）；位移由 JS 内联直驱，首帧藏行右外 */
+	.app-swipe-btn {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		right: 0;
+		flex-direction: row;
+		align-items: center;
+		transform: translateX(999px);
+		background-color: var(--std-primary);
+	}
+
+	.app-swipe-btn-danger {
+		background-color: var(--std-danger);
+	}
+
+	/* 左向模式：锚行左缘（首帧藏行左外，方向镜像） */
+	.app-swipe-btn--left {
+		left: 0;
+		right: auto;
+		transform: translateX(-999px);
+	}
+
+	/* loading spinner：absolute 不入流，盒宽钉 20，left 由归心补间逐帧设定；常驻零销毁，默认 display:none */
+	.app-swipe-btn-spinner {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 20px;
+		display: none;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.app-swipe-btn-spinner--on {
+		display: flex;
+	}
+
+	.app-swipe-btn-spinner-icon {
+		font-size: 20px;
+		color: #ffffff;
+		animation: app-swipe-spin 0.8s linear infinite;
+	}
+
+	@keyframes app-swipe-spin {
+		from {
+			transform: rotate(0deg);
+		}
+
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
+	.app-swipe-btn-text {
+		font-size: 15px;
+		color: #ffffff;
+		white-space: nowrap;
+	}
+
+	/* 内容层：透明；z-index 钉在彩带之上 */
+	.app-swipe-content {
+		position: relative;
+		z-index: 10;
+		flex: 1;
+		flex-direction: column;
+	}
+</style>
