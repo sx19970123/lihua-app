@@ -14,7 +14,7 @@
 					:style="btnStyleL[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
 				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
-					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+					<app-loading :size="20" color="#ffffff" :paused="spinnerAtL !== index" />
 				</view>
 				<text ref="textElsL" class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
@@ -24,7 +24,7 @@
 					:style="btnStyleR[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
 				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
-					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+					<app-loading :size="20" color="#ffffff" :paused="spinnerAtR !== index" />
 				</view>
 				<text ref="textElsR" class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
@@ -35,7 +35,7 @@
 					:style="btnStyleL[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_L, index)" @click="onActionClick(action, SIDE_L, index)">
 				<view class="app-swipe-btn-spinner" :class="spinnerAtL === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
-					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+					<app-loading :size="20" color="#ffffff" :paused="spinnerAtL !== index" />
 				</view>
 				<text class="app-swipe-btn-text" :style="textStyleL[index]">{{ confirmSide === SIDE_L && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
@@ -45,7 +45,7 @@
 					:style="btnStyleR[index]"
 					@touchstart="onBtnTouchStart($event, SIDE_R, index)" @click="onActionClick(action, SIDE_R, index)">
 				<view class="app-swipe-btn-spinner" :class="spinnerAtR === index ? 'app-swipe-btn-spinner--on' : ''" :style="spinnerStyle">
-					<uni-icons class="app-swipe-btn-spinner-icon" type="spinner-cycle" />
+					<app-loading :size="20" color="#ffffff" :paused="spinnerAtR !== index" />
 				</view>
 				<text class="app-swipe-btn-text" :style="textStyleR[index]">{{ confirmSide === SIDE_R && confirmIndex === index ? confirmLabel : action.text }}</text>
 			</view>
@@ -78,6 +78,7 @@
 	// #ifndef MP-WEIXIN
 	import { createPlatform } from './platform/app'
 	// #endif
+	import AppLoading from '@/components/app-loading/index.uvue'
 	import { clearOpen } from './mutex'
 	import { SIDE_L, SIDE_R, estimateWidth } from './swipe-platform'
 	import { createSwipeCarrier } from './swipe-carrier'
@@ -288,22 +289,6 @@
 
 	.app-swipe-btn-spinner--on {
 		display: flex;
-	}
-
-	.app-swipe-btn-spinner-icon {
-		font-size: 20px;
-		color: #ffffff;
-		animation: app-swipe-spin 0.8s linear infinite;
-	}
-
-	@keyframes app-swipe-spin {
-		from {
-			transform: rotate(0deg);
-		}
-
-		to {
-			transform: rotate(360deg);
-		}
 	}
 
 	.app-swipe-btn-text {

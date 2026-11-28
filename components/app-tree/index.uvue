@@ -22,7 +22,7 @@
 							class="app-tree-title-hit">{{ state.segHit }}</text><text
 							class="app-tree-title-seg">{{ state.segAfter }}</text></text>
 					<!-- 行尾三态：loadingKey 行转圈（loading 态优先）→ 选中对勾 -->
-					<loading v-if="loading && state.item.key === loadingKey" class="app-tree-loading" />
+					<app-loading v-if="loading && state.item.key === loadingKey" class="app-tree-loading" />
 					<uni-icons v-else-if="state.item.key === current" class="app-tree-check"
 						type="checkmarkempty" />
 					<!-- 行底分隔线：色挂按压类（按压时同色隐形）；显隐烘焙 state.showLine -->
@@ -39,6 +39,7 @@
 	// 渲染=全量常驻+可见性切换（不销毁元素）；整块点击=选中，箭头点击=展开收起
 	// 文件分工：tree-context 共享状态；tree-model 数据拍平与展开选中；tree-filter 关键字与可见集；tree-bake 状态烘焙与容器高度。
 	import AppInput from '@/components/app-input/app-input.uvue'
+	import AppLoading from '@/components/app-loading/index.uvue'
 	import { RESIZE_TRANSITION_NOTIFY } from '@/components/app-resize-transition/resize-transition-context'
 	import { useThemeStore } from '@/stores/theme'
 	import { createTreeContext } from './tree-context'
@@ -303,11 +304,8 @@
 		margin-left: 8px;
 	}
 
-	/* 行内加载转圈（与对勾同位） */
+	/* 行内加载（与对勾同位） */
 	.app-tree-loading {
-		width: 16px;
-		height: 16px;
-		border-color: var(--std-primary);
 		margin-left: 8px;
 	}
 
