@@ -26,7 +26,7 @@
 	import AppList from '@/components/app-list/app-list.uvue'
 	import AppListItem from '@/components/app-list-item/app-list-item.uvue'
 	import AppCheckbox from '@/components/app-checkbox/app-checkbox.uvue'
-	import AppMask from '@/components/app-mask/app-mask.uvue'
+	import AppMask from '@/components/app-mask/index.uvue'
 	import { useDemoProbeStore } from '@/stores/demo-probe'
 
 	const demoProbe = useDemoProbeStore()

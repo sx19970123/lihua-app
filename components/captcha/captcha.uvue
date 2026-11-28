@@ -144,7 +144,7 @@
 
 	import type { CaptchaRequestData, CaptchaResponseData } from '@/api/system/captcha/type/captcha-type'
 	import { useThemeStore } from '@/stores/theme'
-	import AppMask from '@/components/app-mask/app-mask.uvue'
+	import AppMask from '@/components/app-mask/index.uvue'
 
 	type TrackItem = { x : number, y : number, type : string, t : number }
 

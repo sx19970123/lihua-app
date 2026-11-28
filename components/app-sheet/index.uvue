@@ -99,7 +99,7 @@
 	// 文件分工：sheet-context 共享状态；sheet-platform 与 platform/ 写层；sheet-motion 运动；sheet-gesture 手势；sheet-layout 量测布局。
 	// 平台分叉（第 3 级，因小程序端元素引用无 .style）：写层 App/Web 走 setProperty 直驱，小程序走 :style 载体。
 
-	import AppMask from '@/components/app-mask/app-mask.uvue'
+	import AppMask from '@/components/app-mask/index.uvue'
 	import { useThemeStore } from '@/stores/theme'
 	// #ifdef MP-WEIXIN
 	import { createPlatform } from './platform/mp'

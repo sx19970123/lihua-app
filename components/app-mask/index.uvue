@@ -1,0 +1,168 @@
+<template>
+	<view v-if="shown" ref="rootEl" class="app-mask" :class="rootCls" :style="carrierStyle" @click="onClick" @touchmove.stop.prevent="onTouchMove" />
+</template>
+
+<script setup lang="ts">
+	// 全窗口遮罩：页面内容区由本组件的页面内层压暗。内容区之外在 App 上由原生条带压暗（lihua-mask 插件），两层同值同帧；
+	// Web 的导航栏与 tabBar 是页内元素，本层以层序直接盖过；小程序两者皆原生，覆盖不到。
+	// 对外只有进度（0~1）、点击和返回键（显示期间拦下不透传，并以 backpress 通知调用方）；要浮在遮罩上的内容须与其做同父兄弟、同为 fixed、层序大于 999。
+	// 平台分叉（第 3 级，因小程序端元素引用无 .style）：写层 App/Web 走 setProperty 直驱，小程序走 :style 载体。
+	// 文件分工：mask-context 共享状态；mask-platform 与 platform/ 写层与平台能力；mask-motion 进度与补间；mask-native 原生条带的挂摘。
+
+	// #ifdef MP-WEIXIN
+	import { createPlatform } from './platform/mp'
+	// #endif
+	// #ifndef MP-WEIXIN
+	import { createPlatform } from './platform/app'
+	// #endif
+	import { createMaskContext } from './mask-context'
+	import { createMaskMotion } from './mask-motion'
+	import { createMaskNative } from './mask-native'
+
+	// 可选布尔属性不传即为 false，默认开的开关须在 withDefaults 里显式给
+	const props = withDefaults(defineProps<{
+		// 显示（切换时按 duration 淡入淡出）
+		visible?: boolean
+		// 淡入淡出时长（ms），缺省 200；0=瞬变，供外部逐帧驱动 setProgress 的场景
+		duration?: number
+		// tab 页上是否压暗 tabBar
+		coverTabBar?: boolean
+	}>(), {
+		coverTabBar : true
+	})
+
+	const emit = defineEmits<{
+		(e : 'click') : void
+		(e : 'backpress') : void
+	}>()
+
+	// 宿主页：原生条带的几何与 tabBar 避让取自其内容区位置
+	let page : any = null
+	// #ifdef APP
+	page = getCurrentInstance()?.proxy?.$page
+	// #endif
+
+	// 共享状态与各职责模块：模块之间只经 ctx 互调
+	const ctx = createMaskContext(props, emit, page)
+	ctx.platform = createPlatform(ctx)
+	ctx.native = createMaskNative(ctx)
+	ctx.motion = createMaskMotion(ctx)
+
+	// 模板绑定：只别名模板要用的；普通状态一律经 ctx 读写
+	const { shown, rootEl } = ctx
+	const { carrierStyle } = ctx.platform
+	const { setProgress } = ctx.motion
+
+	// 不盖 tabBar 时挂修饰类（仅 Web 有定义：底边上移一个 tabBar 高度；iOS 悬浮 tabBar 由 syncBottom 抬底边）
+	const rootCls = computed<string>(() => props.coverTabBar ? '' : 'app-mask-uncover-tabbar')
+
+	const onClick = () => {
+		emit('click')
+	}
+
+	// 遮罩上的触摸不带动宿主页滚动；模板上的 stop/prevent 修饰符不可删：小程序端 preventDefault 不生效，靠它编译成 catch
+	const onTouchMove = (e : TouchEvent) => {
+		e.preventDefault()
+	}
+
+	watch(() => props.visible, (v : boolean) => {
+		ctx.motion.tweenTo(v ? 1 : 0)
+	})
+
+	// 切换 tabBar 覆盖：显示中按新范围重挂条带（页面内层底边随之同步）
+	watch(() => props.coverTabBar, () => {
+		if (ctx.nativeOn) {
+			ctx.native.attachNative()
+		}
+	})
+
+	// 页面内层随显示才创建：创建后补写当前进度与底边（挂原生层那一刻元素可能还不存在）
+	watch(rootEl, (el : any) => {
+		if (el != null) {
+			ctx.platform.write(ctx.progress)
+			ctx.platform.syncBottom()
+		}
+	}, { flush: 'post' })
+
+	// 原生层悬在窗口上，不随宿主页一起被盖住：被别的页面盖住时摘掉，回来后按当前进度重挂。
+	// App 切后台不算被盖住（条带留着，回前台不闪）；延后一拍再判，等页面栈更新
+	onPageHide(() => {
+		if (!ctx.nativeOn) {
+			return
+		}
+		if (ctx.hideTimer != null) {
+			clearTimeout(ctx.hideTimer)
+		}
+		ctx.hideTimer = setTimeout(() => {
+			ctx.hideTimer = null
+			if (ctx.nativeOn && ctx.platform.isCovered()) {
+				ctx.nativePaused = true
+				ctx.nativeOn = false
+				ctx.native.detachNative()
+			}
+		}, 0)
+	})
+	onPageShow(() => {
+		if (!ctx.nativePaused) {
+			return
+		}
+		ctx.nativePaused = false
+		if (ctx.shown.value) {
+			ctx.nativeOn = true
+			ctx.native.attachNative()
+		}
+	})
+
+	onMounted(() => {
+		ctx.platform.write(ctx.progress)
+		if (ctx.progress > 0 && ctx.nativeReady) {
+			ctx.nativeOn = true
+			ctx.native.attachNative()
+		}
+	})
+
+	onUnmounted(() => {
+		ctx.motion.cancelTween()
+		if (ctx.hideTimer != null) {
+			clearTimeout(ctx.hideTimer)
+			ctx.hideTimer = null
+		}
+		if (ctx.nativeReady) {
+			ctx.native.detachNative()
+		}
+	})
+
+	// 返回键、返回手势、导航栏返回：显示期间拦下并以 backpress 通知调用方，不透传给页面
+	// #ifdef APP || WEB
+	onBackPress(() : boolean => {
+		if (ctx.shown.value) {
+			emit('backpress')
+		}
+		return ctx.shown.value
+	})
+	// #endif
+
+	defineExpose({ setProgress })
+</script>
+
+<style lang="scss">
+	/* 页面内遮罩层：铺满可覆盖区域，色挂 --std-mask，透明度与底边由 JS 下发；
+	   缺省透明度 0，元素刚创建、JS 还没写到之前不会全显；层序须盖过 Web 导航栏/tabBar 的 998 */
+	.app-mask {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 999;
+		background-color: var(--std-mask);
+		opacity: 0;
+	}
+
+	/* #ifdef WEB */
+	/* Web：不盖 tabBar 时底边抬到 tabBar 上方 */
+	.app-mask-uncover-tabbar {
+		bottom: var(--uni-safe-area-inset-bottom, 0px);
+	}
+	/* #endif */
+</style>
