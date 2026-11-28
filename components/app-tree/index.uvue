@@ -39,6 +39,7 @@
 	// 渲染=全量常驻+可见性切换（不销毁元素）；整块点击=选中，箭头点击=展开收起
 	// 文件分工：tree-context 共享状态；tree-model 数据拍平与展开选中；tree-filter 关键字与可见集；tree-bake 状态烘焙与容器高度。
 	import AppInput from '@/components/app-input/app-input.uvue'
+	import { RESIZE_TRANSITION_NOTIFY } from '@/components/app-resize-transition/resize-transition-context'
 	import { useThemeStore } from '@/stores/theme'
 	import { createTreeContext } from './tree-context'
 	import type { TreeItem, TreeState } from './tree-context'
@@ -87,24 +88,32 @@
 	}, { immediate: true })
 	ctx.bake = createTreeBake(ctx)
 
+	// 外层包着 app-resize-transition 时，滚动区高度的每次变化都报给它；没有外层时注入值为 null
+	const notifyResize = inject(RESIZE_TRANSITION_NOTIFY, null) as ((delta : number, duration : number) => void) | null
+	if (notifyResize != null) {
+		ctx.notifyResize = notifyResize
+	}
+
 	// 模板绑定：只别名模板要用的；普通状态一律经 ctx 读写
 	const { allStates, keyword } = ctx
 	const { hasChildren, toggleByItem, onSelect } = ctx.model
 	const { visibleCount, scrollHeight } = ctx.bake
 
-	// 容器行数延迟跟随（收起方向）：动画播完容器再收终值，否则渐收中的末尾行会被裁在视口外；
-	// 展开/收起后 200ms 重烘焙一次，把播完的动画变体切回稳态类
+	// 容器行数跟随可见行数：收起方向在渲染提交后起步、与行的收起动画同时长补间，展开方向立即到位；
+	// 行的动画类何时切回稳态类由烘焙模块自行安排（见 tree-bake）
 	watch(ctx.bake.visibleCount, (rows) => {
-		const collapsing = rows < ctx.bake.deferredRows.value
-		if (!collapsing) {
-			ctx.bake.deferredRows.value = rows
+		if (rows < ctx.bake.containerRows.value) {
+			nextTick(() => {
+				ctx.bake.tweenRows(ctx.bake.visibleCount.value)
+			})
+		} else {
+			ctx.bake.setRowsNow(rows)
 		}
-		setTimeout(() => {
-			if (collapsing) {
-				ctx.bake.deferredRows.value = ctx.bake.visibleCount.value
-			}
-			ctx.animEpoch.value++
-		}, 200)
+	})
+
+	onUnmounted(() => {
+		ctx.bake.stopTween()
+		ctx.bake.cancelRebake()
 	})
 
 	// 按压高亮亮暗感知（选 hover 亮/暗类）
@@ -141,6 +150,8 @@
 	.app-tree-node {
 		/* 高度权威源=max-height 单属性：展开=行高，收起=0，由动画过渡 */
 		max-height: var(--std-row-height);
+		/* max-height 与 opacity 由收展动画以 forwards 驱动：各状态类都显式声明这两个属性，动画类撤掉后才有值还原 */
+		opacity: 1;
 		position: relative;
 		/* 允许按压块上探 1px 渲染 */
 		overflow: visible;
@@ -153,38 +164,50 @@
 	/* 收起稳态：静态无 animation（常驻动画切后台恢复时会被重置） */
 	.app-tree-node-collapsed {
 		max-height: 0px;
+		opacity: 0;
 		overflow: hidden;
 	}
 
-	/* 刚收起行的动画变体：静态值取起始高，forwards 保持终值到重烘焙切回静态类 */
+	/* 刚收起行的动画变体：静态值取起始值（行高、不透明），forwards 保持终值到重烘焙切回静态类 */
 	.app-tree-node-collapsed-anim {
 		max-height: var(--std-row-height);
+		opacity: 1;
 		overflow: hidden;
 		/* 内容贴底：行高变化时内容随底边滑动 */
 		justify-content: flex-end;
 		animation-name: app-tree-shrink;
 		animation-duration: 180ms;
-		/* 缓起快收，与展开的 ease-out 互为时间镜像 */
-		animation-timing-function: ease-in;
+		/* 快起缓收，与展开同曲线；容器的补间曲线须不快于它 */
+		animation-timing-function: ease-out;
 		animation-fill-mode: forwards;
 	}
 
-	/* 收起动画只动 max-height（各状态类都显式声明它，类切换后有值可还原）；勿加 opacity */
+	/* 收起动画动 max-height 与透明度；这两个属性各状态类都须显式声明（见 .app-tree-node），新增动画属性同此。
+	   透明度只占前 15%（约 27ms）先淡完：行在位移最大的头两帧已经看不见；高度仍是整段 180ms */
 	@keyframes app-tree-shrink {
 		from {
 			/* 字面量须与 --std-row-height 同值（keyframes 不支持 var） */
 			max-height: 52px;
+			opacity: 1;
 		}
+
+		15% {
+			opacity: 0;
+		}
+
 		to {
 			max-height: 0px;
+			opacity: 0;
 		}
 	}
 
-	/* 刚展开行的动画变体：与收起同构（起始 0、forwards 保持终值到重烘焙） */
+	/* 刚展开行的动画变体：与收起同构（起始 0 高、全透明，forwards 保持终值到重烘焙） */
 	.app-tree-node-entering {
 		max-height: 0px;
+		opacity: 0;
 		overflow: hidden;
-		justify-content: flex-end; // 同收起动画类：内容贴底
+		/* 内容贴底，同收起动画类 */
+		justify-content: flex-end;
 		animation-name: app-tree-grow;
 		animation-duration: 180ms;
 		animation-timing-function: ease-out;
@@ -194,10 +217,12 @@
 	@keyframes app-tree-grow {
 		from {
 			max-height: 0px;
+			opacity: 0;
 		}
 		to {
 			/* 字面量须与 --std-row-height 同值（keyframes 不支持 var） */
 			max-height: 52px;
+			opacity: 1;
 		}
 	}
 

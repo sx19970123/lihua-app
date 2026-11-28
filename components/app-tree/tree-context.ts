@@ -28,6 +28,8 @@ export interface TreeState {
 	// 行/按压块的完整 class（模板纯读；x 端仅单类选择器）
 	nodeCls: string
 	hitCls: string
+	// 行动画变体类的保持截止时刻（Date.now 毫秒时间戳）：早于它不切回稳态类；0=没有在保持
+	animUntil: number
 	// 标题三段（命中段高亮；非过滤态 segBefore=整段、其余空串）
 	segBefore: string
 	segHit: string
@@ -67,6 +69,9 @@ export type TreeContext = {
 	filtering : ComputedRef<boolean>
 	// 动画收尾重烘焙触发器：收起/展开动画播完后自增，把动画变体切回静态类
 	animEpoch : Ref<number>
+	// 滚动区高度变化时调用：delta=变化量（px），duration=行这段动画的时长（ms；0=容器补间中的一帧）。
+	// 入口换成外层 app-resize-transition 注入的处理；外面包着它时外层才跟得上
+	notifyResize : (delta : number, duration : number) => void
 	// ---- 组装时挂上的模块 ----
 	model : TreeModel
 	filter : TreeFilter
@@ -91,6 +96,9 @@ export const createTreeContext = (props : TreeProps, emit : TreeEmit) : TreeCont
 		keyword,
 		filtering,
 		animEpoch,
+		// 滚动区高度变化时调用：delta=变化量（px），duration=行这段动画的时长（ms；0=容器补间中的一帧）。
+		// 入口换成外层 app-resize-transition 注入的处理；外面包着它时外层才跟得上
+		notifyResize : (_delta : number, _duration : number) : void => {},
 		model : null as any as TreeModel,
 		filter : null as any as TreeFilter,
 		bake : null as any as TreeBake

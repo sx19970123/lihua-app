@@ -18,7 +18,7 @@ export const createTreeModel = (ctx : TreeContext) : TreeModel => {
 	const buildStates = (items : TreeItem[], level : number, out : TreeState[]) => {
 		items.forEach(item => {
 			out.push({item, level, shown: true, arrowCls: '', showLine: false, firstVisible: false,
-				nodeCls: 'app-tree-node', hitCls: 'app-tree-hit', segBefore: '', segHit: '', segAfter: ''})
+				nodeCls: 'app-tree-node', hitCls: 'app-tree-hit', animUntil: 0, segBefore: '', segHit: '', segAfter: ''})
 			if (item.children && item.children.length > 0) {
 				buildStates(item.children, level + 1, out)
 			}
