@@ -1,6 +1,6 @@
 ---
 name: create-component
-description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系/行高 padding 直构禁 min-height）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范、注释规范（只写用途不写背景）。跨端坑点详规见 cross-platform-pitfalls.md。
+description: 指导 lihua-app（uni-app x 蒸汽版）新建或修改公共组件（components/app-* 族）。适用于手搓组件的完整规范：官方优先三档、sard 源码参考、x 端样式铁律（单类选择器/rpx 归零/token 体系/行高 padding 直构禁 min-height）、暗色模式、按压反馈四等级（press.scss）、theme store 亮暗感知、动画瞬态化与后台恢复防御、元素常驻与烘焙字段、触区规范、注释规范（只写用途不写背景）、组件按职责拆分（入口统一 index.uvue、ctx 共享状态、platform/ 写层、等价性对数验证）。跨端坑点详规见 cross-platform-pitfalls.md。
 ---
 
 # 新建/修改公共组件（uni-app x 手搓组件规范）
@@ -15,6 +15,10 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
    ② uni-ui x 官方扩展（uni_modules，如 uni-icons-x）覆盖则导入用；
    ③ 都没有才手搓。已定案：弹窗=uni.showModal（不封装）；badge、tag 自建组件
    （app-badge / app-tag，不用 uni-badge-view）。
+   内置 loading 统一经 `components/app-loading/` 薄壳消费：iOS 出系统雪花（非矢量勿超
+   37px）、其余端引擎弧线；border-color/color 不支持 CSS 变量——色值壳内 JS 解
+   （优先级 color prop > primary prop 走主色 > 默认文本色，随亮暗切换）；常驻但隐藏的
+   实例须传 paused 停转。
 2. **读 sard 源码再落笔**，别凭文档脑补样式（app-tree 复刻走弯路的教训）。
 3. 通用组件不带业务名（app-steps 非 setup-track），进 `app-*` 族；业务组件进业务域目录。
 
@@ -210,8 +214,9 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 2. **多端兼容且不伤体验的替代实现**：换全端受支持且 UX 无损的机制（如逐帧 setProperty
    直驱改全端响应式 :style——各端帧率观感可接受时；量测改全端字符估算）。降级条件=
    兼容做法在某端有可感知体验损失。
-3. **组件内零星条件编译**：单文件，只在个别分歧点 #ifdef（写层适配器/单条 API 分支），
-   模板不分叉（属性级 #ifdef 不存在，模板分叉=升成本）。
+3. **组件内零星条件编译**：单核（各平台共用同一份逻辑），只在个别分歧点 #ifdef（写层
+   适配器/单条 API 分支），模板不分叉（属性级 #ifdef 不存在，模板分叉=升成本）。
+   「单核」说的是逻辑不分份，与文件拆不拆无关——文件按职责拆见下节。
 4. **核心组件分叉**：状态机抽共享模块（engine.ts）单源，仅模板+写层壳按平台分文件；
    薄入口条件 import 选核心（见下「薄入口形态」）。
 5. **完全分叉（最下策）**：按平台独立完整实现（状态机也双份）——仅当交互模型被迫
@@ -220,10 +225,11 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 先例：app-swipe-action 已降至第 3 级（单核+platform/{app,mp}.ts 适配器；模板按钮组与
 内容层按平台 #ifdef 各一份、只差元素 ref——MP 真机上模板 ref 致拖动失效，开发工具掩盖）；
-其动画全面 JS 补间/弹簧驱动（CSS 过渡退役，见 cross-platform-pitfalls）。
+其动画全面 JS 补间/弹簧驱动（CSS 过渡退役，见 cross-platform-pitfalls）。app-sheet 同为
+第 3 级，且已按职责拆成多文件（见「组件按职责拆分」）。
 
 **薄入口形态**（第 4/5 级共用）：
-- 入口 `app-*.uvue`：**script 条件 import** 选核心（`#ifdef MP-WEIXIN` 等），模板单份
+- 入口 `index.uvue`：**script 条件 import** 选核心（`#ifdef MP-WEIXIN` 等），模板单份
   `<Core>`+透传 props/events/slot/expose 代理——模板不做 #ifdef。
 - `core/` 核心按后端矩阵开份数：app(iOS/Android/鸿蒙)/H5 元素 API 同构**一份通吃**；
   新平台真机冒分歧再拆（入口加一行条件 import），不预写份数。
@@ -232,6 +238,66 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 - MP 量测兜底（各级通用）：`try el.getBoundingClientRect()` 抛错/零宽 → 字符宽估算
   （CJK≈1em、其余≈0.55em × 字号），纯中文误差 ±2px。
+
+## 组件按职责拆分（入口统一 `index.uvue`）
+
+脚本里有两类以上互不相干的职责（写层、量测、手势、动画、校验、请求…）或超过 300 行的
+组件按职责拆文件；职责单一的小组件不拆，汇报里列出没拆的和理由。**拆过的入口统一叫
+`index.uvue`**（用户定）。先例=`components/app-sheet/`，拆别的组件前先通读它：
+
+```
+components/app-sheet/
+  index.uvue          入口：模板、props/emits/slots、样式、模板绑定的别名、watch、生命周期、defineExpose、组装
+  sheet-context.ts    共享状态：createSheetContext(props, emit, 页面实例, 组件实例)
+  sheet-platform.ts   写层契约（句柄与适配器两个类型）
+  platform/app.ts     App/Web 写层；platform/mp.ts 小程序写层（入口条件 import 二选一）
+  sheet-motion.ts     运动｜sheet-gesture.ts 手势｜sheet-layout.ts 量测（各一个工厂 createXxx(ctx)）
+```
+
+- **入口改名的前提是全仓显式 import**：本仓组件没有一处靠 easycom（默认规则只认
+  `组件名/组件名.uvue`，不认 index），pages.json 不用改。用 `git mv`，紧接着全仓 grep
+  旧路径改引用——HBuilder 开着会自动重编，这两步之间报一次「Cannot find module」属预期。
+  拆后入口内容过半，git 不识别为改名，追溯用 `git log --follow -M20%`。
+- **入口只留**：模板、props/emits/slots、样式、模板绑定的别名、watch、生命周期、
+  defineExpose、各模块的组装；脚本 200 行以内。
+- **共享状态集中在一个 context 工厂**（`<名>-context.ts`）：建响应式状态、计算属性、
+  元素 id，以及跨模块读写的普通状态，类型全部写全。模块之间**不互相 import**（只许
+  `import type`），一律经 ctx 读写；要调晚于自己创建的模块写 `ctx.xxx.fn()`（调用时
+  才取，天然解环）。
+- **普通可变状态只经 `ctx.xxx` 读写**（数字/字符串/布尔/相位——解构成局部变量就是陈旧
+  副本）；ref、computed、函数可以解构。入口只别名模板要用的绑定。
+- **平台条件编译全部收进 `platform/<平台>.ts`**，契约类型写在 `<名>-platform.ts`；核心
+  里原来的平台分支改成契约上的方法，不需要的平台给空实现（先例=安卓静止位同步载体落点
+  → `platform.rest(y)`）。小程序模板不能带
+  ref 的组件，元素引用由写层创建并交回入口绑定，不用的平台给 null。
+- **setup 专属调用留在入口**：`getCurrentInstance`、`useSlots`、各宏只能在入口 setup
+  里调，结果以参数传入。`.ts` 里 Vue API 显式 `import { ref, computed, watch, nextTick }
+  from 'vue'`（先例=stores）；`uni.*` 可直接用；事件参数类型写 `any`（`.ts` 里用
+  `TouchEvent` 没有先例）。
+- **原样搬运**：函数体、常量、注释照搬，只把自由变量换成 `ctx.xxx`；不顺手改行为、
+  调参数、重命名。结构改动与行为改动分开提交。
+- **模板与样式逐字节不变**：用脚本拼接（保留原文件的模板段与样式段，只替换 script 段），
+  不手抄。
+
+**验证三件套（拆分必做，数字写进汇报）**：
+
+1. **类型检查**：APP-ANDROID / APP-IOS / WEB / MP-WEIXIN 各自展开条件编译后，把入口
+   脚本与全部 `.ts` 放进同一个 TypeScript 程序（入口的宏与自动导入给声明桩；编译器用
+   HBuilder 自带的 `uni-uts-v1/lib/typescript`），0 诊断；再故意删一个契约成员，确认
+   会报错。
+2. **等价性对数**：`git show HEAD:旧路径` 的单文件版与新模块版放进同一个假时钟、假
+   定时器、假响应式，跑同一批场景（每个公开行为至少一个：开关、拖动、慢放与快甩、点按、
+   属性变化、生命周期、各平台分支），逐帧比对每一次样式写入、对外事件、关键状态与
+   终态，必须完全一致；再做一次故意改动（时长改 10ms，或只交换两行语句）确认比对能
+   抓到。桩的要点：假时钟要全局 patch `Date/setTimeout/uni`；属性对象做成响应式代理；
+   `withDefaults` 不能把代理摊平；Web 给按 id 前缀识别的最小 `document` 桩。
+3. **模板、样式、props 声明与拆分前逐字节一致**（拼接前后比对）。
+
+真实编译与真机交用户；跑完核对产物：两端 `app-service.js` 的 sourcemap 应含全部拆分
+源文件，没有被折成空值的语句（折叠现象见 cross-platform-pitfalls 坑⑯）、没有残留的
+条件编译标记，各平台写层的写法正确；小程序产物为 `index.*` + `platform/<平台>.js`。
+拆 captcha 之前先出方案给用户确认。多窗口并行拆分时各窗只动自己的组件目录与引用它的
+import 行，skills/docs 不改。
 
 ## 交互
 
@@ -273,7 +339,7 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 
 - **写**：用途；关键参数与取值含义（单位、阈值、方向约定）；改这段代码必须知道的一句话
   禁忌（如「内距必须挂段位，不挂轨道/组」「勿换 requestAnimationFrame」「idle 须沿用 mp-in」）。
-- **不写（背景一律不留）**：
+- **不写（背景一律不留，用户明确要求时才写）**：
   - 日期、轮次、「某日用户反馈/拍板」这类经过；
   - 真机实测数值与量法、诊断结论（「实测 52.3pt」「诊断卡实锤」）；
   - 被否的备选方案与取舍推理（「曾用 X，因 Y 改 Z」「根因」「教训」「坑①」）；
@@ -294,3 +360,5 @@ sard-uniapp 为视觉/交互基准（源码参考：`npm pack sard-uniapp` 解�
 - 标签配对校验（模板改动必做）；pages/ 零 #ifdef；注释按「注释规范」节。
 - 新组件在 `pages/component/` 建独立 demo 页（@import `styles/demo.scss`），并在
   `pages/component/menu.uvue` 对应分组登记。
+- 拆分过的组件：「组件按职责拆分」节的验证三件套都做了，数字写进汇报；真实编译与
+  真机列为未验证，等用户跑完再核对产物。
